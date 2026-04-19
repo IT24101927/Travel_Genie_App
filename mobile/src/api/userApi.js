@@ -10,7 +10,13 @@ export const updateMyProfileApi = async (payload) => {
 
   Object.entries(payload).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      formData.append(key, value);
+      if (key === 'profileImage') {
+        formData.append(key, value);
+      } else if (Array.isArray(value) || typeof value === 'object') {
+        formData.append(key, JSON.stringify(value));
+      } else {
+        formData.append(key, value);
+      }
     }
   });
 

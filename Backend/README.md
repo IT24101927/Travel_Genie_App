@@ -10,7 +10,7 @@
 
 REST API for the TravelGenie travel planning platform, built with Express and Mongoose on MongoDB.
 
-[� Mobile Docs](../mobile/README.md) · [🏠 Project Overview](../README.md)
+[📱 Mobile Docs](../mobile/README.md) · [🏠 Project Overview](../README.md)
 
 </div>
 

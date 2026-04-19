@@ -1,49 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
 import colors from '../../constants/colors';
 import AppInput from '../../components/common/AppInput';
 import AppButton from '../../components/common/AppButton';
 import ErrorText from '../../components/common/ErrorText';
-import { forgotPasswordRequestApi } from '../../api/authApi';
-import { validateEmail } from '../../utils/validators';
+import { forgotPasswordRequestApi, forgotPasswordVerifyCodeApi } from '../../api/authApi';
+import { isEmail } from '../../utils/validators';
 import { getApiErrorMessage } from '../../utils/apiError';
 
-const ForgotPasswordScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+const ForgotPasswordVerifyCodeScreen = ({ navigation, route }) => {
+  const email = route?.params?.email || '';
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
+  const [resendLoading, setResendLoading] = useState(false);
 
-  useEffect(() => {
-    if (cooldown <= 0) {
-      return undefined;
-    }
+  const onVerifyCode = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = code.replace(/\D/g, '');
 
-    const timer = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [cooldown]);
-
-  const onRequestReset = async () => {
-    const emailCheck = validateEmail(email);
-    if (!emailCheck.valid) {
-      setError(emailCheck.message);
-      setSuccess('');
+    if (!isEmail(normalizedEmail)) {
+      setError('Invalid email address passed.');
       return;
     }
 
-    if (cooldown > 0 || loading) {
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      setError('Please enter the 6-digit reset code.');
       return;
     }
 
@@ -51,21 +37,41 @@ const ForgotPasswordScreen = ({ navigation }) => {
       setLoading(true);
       setError('');
       setSuccess('');
-      await forgotPasswordRequestApi({ email: email.trim() });
-      setSuccess('If that email exists, a reset code has been sent.');
-      setCooldown(60);
-      navigation.navigate('ForgotPasswordVerifyCode', { email: email.trim().toLowerCase() });
+
+      const response = await forgotPasswordVerifyCodeApi({
+        email: normalizedEmail,
+        code: normalizedCode
+      });
+
+      navigation.navigate('ResetPassword', {
+        email: normalizedEmail,
+        resetToken: response?.data?.resetToken
+      });
     } catch (err) {
-      const message = getApiErrorMessage(err, 'Failed to request password reset');
-      setError(message);
-      if (typeof message === 'string') {
-        const match = message.match(/(\d+)s/);
-        if (match?.[1]) {
-          setCooldown(Number(match[1]));
-        }
-      }
+      setError(getApiErrorMessage(err, 'Failed to verify reset code'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onResendCode = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isEmail(normalizedEmail)) {
+      setError('Invalid email address passed.');
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+      setError('');
+      setSuccess('');
+      await forgotPasswordRequestApi({ email: normalizedEmail });
+      setSuccess('A new reset code has been sent to your email.');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to resend reset code'));
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -83,32 +89,33 @@ const ForgotPasswordScreen = ({ navigation }) => {
           {/* Icon/Illustration Area */}
           <View style={styles.iconWrapper}>
             <View style={styles.iconCircle}>
-              <Ionicons name="lock-closed-outline" size={40} color={colors.primary} />
+              <Ionicons name="mail-unread-outline" size={40} color={colors.primary} />
             </View>
           </View>
 
           {/* Text Area */}
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Forgot Password?</Text>
+            <Text style={styles.title}>Check Your Email</Text>
             <Text style={styles.subtitle}>
-              Don't worry! It happens. Please enter the email address linked to your account.
+              We've sent a 6-digit reset code to{'\n'}
+              <Text style={styles.emailText}>{email}</Text>
             </Text>
           </View>
 
           {/* Input Area */}
           <View style={styles.formContainer}>
             <AppInput
-              leftIcon="mail-outline"
-              label="Email Address"
-              value={email}
-              autoCapitalize="none"
-              keyboardType="email-address"
+              leftIcon="keypad-outline"
+              label="Reset Code"
+              value={code}
+              keyboardType="number-pad"
               onChangeText={(text) => {
-                setEmail(text);
+                setCode(text.replace(/\D/g, '').slice(0, 6));
                 setError('');
                 setSuccess('');
               }}
-              placeholder="Enter your email"
+              placeholder="Enter 6-digit code"
+              maxLength={6}
             />
 
             {success ? <Text style={styles.successText}>{success}</Text> : null}
@@ -116,9 +123,9 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
             <View style={styles.buttonWrap}>
               <AppButton
-                title={loading ? 'Sending...' : cooldown > 0 ? `Resend Code in ${cooldown}s` : 'Send Reset Code'}
-                onPress={onRequestReset}
-                disabled={loading || cooldown > 0}
+                title={loading ? 'Verifying...' : 'Verify Code'}
+                onPress={onVerifyCode}
+                disabled={loading || resendLoading || code.length < 6}
                 allowPressWhenKeyboardOpen
               />
             </View>
@@ -126,9 +133,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
           {/* Bottom Link */}
           <View style={styles.bottomContainer}>
-            <Text style={styles.bottomText}>Remember password? </Text>
-            <Pressable onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Log in</Text>
+            <Text style={styles.bottomText}>Didn't receive the code? </Text>
+            <Pressable onPress={onResendCode} disabled={loading || resendLoading}>
+              <Text style={[styles.resendLink, resendLoading && styles.resendLinkDisabled]}>
+                {resendLoading ? 'Sending...' : 'Click to resend'}
+              </Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -140,7 +149,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background
   },
   container: {
     flex: 1,
@@ -186,6 +195,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     marginBottom: 32,
+    alignItems: 'flex-start',
   },
   title: {
     fontSize: 28,
@@ -196,7 +206,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: colors.textMuted,
-    lineHeight: 22,
+    lineHeight: 24,
+  },
+  emailText: {
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   formContainer: {
     marginBottom: 24,
@@ -221,11 +235,14 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
   },
-  loginLink: {
+  resendLink: {
     color: colors.primary,
     fontWeight: '700',
     fontSize: 14,
   },
+  resendLinkDisabled: {
+    opacity: 0.6,
+  }
 });
 
-export default ForgotPasswordScreen;
+export default ForgotPasswordVerifyCodeScreen;

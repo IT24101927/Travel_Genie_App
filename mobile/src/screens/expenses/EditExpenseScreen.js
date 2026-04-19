@@ -98,7 +98,7 @@ const EditExpenseScreen = ({ navigation, route }) => {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content}>
         
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Link to Trip</Text>

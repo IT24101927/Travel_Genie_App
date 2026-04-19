@@ -11,7 +11,11 @@ const updateMyProfile = asyncHandler(async (req, res) => {
   const payload = {
     fullName: req.body.fullName,
     email: req.body.email,
-    phone: req.body.phone
+    phone: req.body.phone,
+    travelStyle: req.body.travelStyle,
+    interests: req.body.interests,
+    currency: req.body.currency,
+    preferred_weather: req.body.preferred_weather
   };
 
   if (req.file) {

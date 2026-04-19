@@ -30,6 +30,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    travelStyle: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    interests: {
+      type: [String],
+      default: []
+    },
+    preferences: {
+      currency: {
+        type: String,
+        trim: true,
+        default: 'LKR'
+      },
+      preferred_weather: {
+        type: String,
+        trim: true,
+        default: 'Any'
+      }
+    },
     role: {
       type: String,
       enum: ['user', 'admin'],
@@ -65,6 +86,9 @@ userSchema.methods.toSafeObject = function toSafeObject() {
     email: this.email,
     phone: this.phone,
     profileImage: this.profileImage,
+    travelStyle: this.travelStyle,
+    interests: this.interests,
+    preferences: this.preferences,
     role: this.role,
     isActive: this.isActive,
     createdAt: this.createdAt,

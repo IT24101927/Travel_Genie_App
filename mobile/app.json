@@ -15,10 +15,15 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {},
+    "android": {
+      "softwareKeyboardLayoutMode": "pan"
+    },
     "web": {},
     "extra": {
       "apiBaseUrl": "http://10.0.2.2:5000/api/v1"
-    }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

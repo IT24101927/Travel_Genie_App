@@ -1,69 +1,59 @@
-import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
 import colors from '../../constants/colors';
 import AppInput from '../../components/common/AppInput';
 import AppButton from '../../components/common/AppButton';
 import ErrorText from '../../components/common/ErrorText';
-import { forgotPasswordRequestApi } from '../../api/authApi';
-import { validateEmail } from '../../utils/validators';
+import { forgotPasswordResetApi } from '../../api/authApi';
+import { isRequired } from '../../utils/validators';
 import { getApiErrorMessage } from '../../utils/apiError';
 
-const ForgotPasswordScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+const ResetPasswordScreen = ({ navigation, route }) => {
+  const email = route?.params?.email || '';
+  const resetToken = route?.params?.resetToken || '';
+
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
 
-  useEffect(() => {
-    if (cooldown <= 0) {
-      return undefined;
-    }
-
-    const timer = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [cooldown]);
-
-  const onRequestReset = async () => {
-    const emailCheck = validateEmail(email);
-    if (!emailCheck.valid) {
-      setError(emailCheck.message);
-      setSuccess('');
+  const onResetPassword = async () => {
+    if (!isRequired(email) || !isRequired(resetToken)) {
+      setError('Reset session expired. Please request and verify a new reset code.');
       return;
     }
 
-    if (cooldown > 0 || loading) {
+    if (!isRequired(password) || password.length < 6) {
+      setError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
 
     try {
       setLoading(true);
       setError('');
-      setSuccess('');
-      await forgotPasswordRequestApi({ email: email.trim() });
-      setSuccess('If that email exists, a reset code has been sent.');
-      setCooldown(60);
-      navigation.navigate('ForgotPasswordVerifyCode', { email: email.trim().toLowerCase() });
-    } catch (err) {
-      const message = getApiErrorMessage(err, 'Failed to request password reset');
-      setError(message);
-      if (typeof message === 'string') {
-        const match = message.match(/(\d+)s/);
-        if (match?.[1]) {
-          setCooldown(Number(match[1]));
+
+      await forgotPasswordResetApi({
+        email,
+        resetToken,
+        newPassword: password
+      });
+
+      Alert.alert('Password Updated', 'Your password has been changed successfully. You can now log in with your new password.', [
+        {
+          text: 'Sign In',
+          onPress: () => navigation.navigate('Login')
         }
-      }
+      ]);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to reset password'));
     } finally {
       setLoading(false);
     }
@@ -83,53 +73,54 @@ const ForgotPasswordScreen = ({ navigation }) => {
           {/* Icon/Illustration Area */}
           <View style={styles.iconWrapper}>
             <View style={styles.iconCircle}>
-              <Ionicons name="lock-closed-outline" size={40} color={colors.primary} />
+              <Ionicons name="shield-checkmark-outline" size={40} color={colors.primary} />
             </View>
           </View>
 
           {/* Text Area */}
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Forgot Password?</Text>
+            <Text style={styles.title}>Create New Password</Text>
             <Text style={styles.subtitle}>
-              Don't worry! It happens. Please enter the email address linked to your account.
+              Your new password must be different from previous used passwords.
             </Text>
           </View>
 
           {/* Input Area */}
           <View style={styles.formContainer}>
             <AppInput
-              leftIcon="mail-outline"
-              label="Email Address"
-              value={email}
-              autoCapitalize="none"
-              keyboardType="email-address"
+              leftIcon="lock-closed-outline"
+              label="New Password"
+              value={password}
+              secureTextEntry
               onChangeText={(text) => {
-                setEmail(text);
+                setPassword(text);
                 setError('');
-                setSuccess('');
               }}
-              placeholder="Enter your email"
+              placeholder="At least 6 characters"
             />
 
-            {success ? <Text style={styles.successText}>{success}</Text> : null}
+            <AppInput
+              leftIcon="lock-closed-outline"
+              label="Confirm New Password"
+              value={confirmPassword}
+              secureTextEntry
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                setError('');
+              }}
+              placeholder="Re-enter new password"
+            />
+
             <ErrorText message={error} />
 
             <View style={styles.buttonWrap}>
               <AppButton
-                title={loading ? 'Sending...' : cooldown > 0 ? `Resend Code in ${cooldown}s` : 'Send Reset Code'}
-                onPress={onRequestReset}
-                disabled={loading || cooldown > 0}
+                title={loading ? 'Saving...' : 'Reset Password'}
+                onPress={onResetPassword}
+                disabled={loading || password.length < 6 || confirmPassword.length < 6}
                 allowPressWhenKeyboardOpen
               />
             </View>
-          </View>
-
-          {/* Bottom Link */}
-          <View style={styles.bottomContainer}>
-            <Text style={styles.bottomText}>Remember password? </Text>
-            <Pressable onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Log in</Text>
-            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -140,7 +131,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background
   },
   container: {
     flex: 1,
@@ -186,6 +177,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     marginBottom: 32,
+    alignItems: 'flex-start',
   },
   title: {
     fontSize: 28,
@@ -196,36 +188,14 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: colors.textMuted,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   formContainer: {
     marginBottom: 24,
   },
-  successText: {
-    marginTop: 4,
-    color: colors.success,
-    fontWeight: '600',
-    fontSize: 13,
-  },
   buttonWrap: {
     marginTop: 24,
-  },
-  bottomContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 'auto',
-    paddingTop: 40,
-  },
-  bottomText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  loginLink: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
+  }
 });
 
-export default ForgotPasswordScreen;
+export default ResetPasswordScreen;
