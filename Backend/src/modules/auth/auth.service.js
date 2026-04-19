@@ -114,7 +114,11 @@ const registerUser = async ({
   interests,
   currency,
   preferred_weather,
-  preferences
+  preferences,
+  phone,
+  dob,
+  nic,
+  gender
 }) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const existingUser = await User.findOne({ email: normalizedEmail });
@@ -142,10 +146,19 @@ const registerUser = async ({
     preferred_weather || preferences?.preferred_weather || preferences?.weather || 'Any'
   );
 
+  const validGenders = ['MALE', 'FEMALE', 'OTHER'];
+  const resolvedGender = validGenders.includes(String(gender || '').toUpperCase())
+    ? String(gender).toUpperCase()
+    : '';
+
   const user = await User.create({
     fullName,
     email: normalizedEmail,
     password,
+    phone: String(phone || '').trim(),
+    dob: String(dob || '').trim(),
+    nic: String(nic || '').trim(),
+    gender: resolvedGender,
     travelStyle: resolvedTravelStyle,
     interests: resolvedInterests,
     preferences: {

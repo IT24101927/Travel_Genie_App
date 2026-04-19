@@ -87,6 +87,12 @@ const updateProfile = async (userId, payload) => {
     }
   }
 
+  const validGenders = ['MALE', 'FEMALE', 'OTHER', ''];
+  if (payload.gender !== undefined) {
+    const g = String(payload.gender || '').toUpperCase();
+    payload.gender = validGenders.includes(g) ? g : '';
+  }
+
   if (payload.travelStyle !== undefined) {
     payload.travelStyle = normalizeTravelStyle(payload.travelStyle);
   }
@@ -118,7 +124,34 @@ const updateProfile = async (userId, payload) => {
   return user.toSafeObject();
 };
 
+const changePassword = async (userId, { currentPassword, newPassword }) => {
+  const user = await User.findById(userId).select('+password');
+  if (!user) throw new AppError('User not found', 404);
+
+  const isValid = await user.comparePassword(currentPassword);
+  if (!isValid) throw new AppError('Current password is incorrect', 401);
+
+  if (!newPassword || newPassword.length < 8) {
+    throw new AppError('New password must be at least 8 characters', 400);
+  }
+
+  user.password = newPassword;
+  await user.save();
+};
+
+const deleteAccount = async (userId, { password }) => {
+  const user = await User.findById(userId).select('+password');
+  if (!user) throw new AppError('User not found', 404);
+
+  const isValid = await user.comparePassword(password);
+  if (!isValid) throw new AppError('Incorrect password', 401);
+
+  await user.deleteOne();
+};
+
 module.exports = {
   getProfile,
-  updateProfile
+  updateProfile,
+  changePassword,
+  deleteAccount
 };

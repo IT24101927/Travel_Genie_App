@@ -9,6 +9,7 @@ import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import RegisterStep1Screen from '../screens/auth/RegisterStep1Screen';
 import RegisterStep2VerifyScreen from '../screens/auth/RegisterStep2VerifyScreen';
 import RegisterStep3PreferencesScreen from '../screens/auth/RegisterStep3PreferencesScreen';
+import AdminLoginScreen from '../screens/admin/AdminLoginScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +24,7 @@ const AuthNavigator = () => {
       <Stack.Screen name="Register" component={RegisterStep1Screen} />
       <Stack.Screen name="RegisterStep2" component={RegisterStep2VerifyScreen} />
       <Stack.Screen name="RegisterStep3" component={RegisterStep3PreferencesScreen} />
+      <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
     </Stack.Navigator>
   );
 };

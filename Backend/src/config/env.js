@@ -19,8 +19,7 @@ const env = {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
-  uploadBaseUrl: process.env.UPLOAD_BASE_URL || '',
-  aiServiceUrl: process.env.AI_SERVICE_URL || ''
+  uploadBaseUrl: process.env.UPLOAD_BASE_URL || ''
 };
 
 module.exports = env;

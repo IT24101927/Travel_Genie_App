@@ -5,6 +5,16 @@ export const getMyProfileApi = async () => {
   return res.data;
 };
 
+export const changePasswordApi = async (payload) => {
+  const res = await client.post('/users/me/change-password', payload);
+  return res.data;
+};
+
+export const deleteAccountApi = async (payload) => {
+  const res = await client.delete('/users/me', { data: payload });
+  return res.data;
+};
+
 export const updateMyProfileApi = async (payload) => {
   const formData = new FormData();
 

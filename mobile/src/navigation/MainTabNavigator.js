@@ -20,6 +20,7 @@ import EditTransportScreen from '../screens/transport/EditTransportScreen';
 import NotificationListScreen from '../screens/notifications/NotificationListScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 import ExpenseStackNavigator from './ExpenseStackNavigator';
 import colors from '../constants/colors';
 
@@ -76,6 +77,7 @@ const ProfileStackNavigator = () => (
   <ProfileStack.Navigator screenOptions={defaultStackOptions}>
     <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} options={{ title: 'Profile' }} />
     <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
+    <ProfileStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
   </ProfileStack.Navigator>
 );
 

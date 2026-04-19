@@ -7,6 +7,7 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import AppInput from '../../components/common/AppInput';
 import AppButton from '../../components/common/AppButton';
 import ErrorText from '../../components/common/ErrorText';
+import GenderPicker from '../../components/common/GenderPicker';
 import colors from '../../constants/colors';
 import { validateEmail, validateName, validatePhone, validateNic, validatePassword, isRequired } from '../../utils/validators';
 import { Ionicons } from '@expo/vector-icons';
@@ -209,22 +210,11 @@ const RegisterStep1Screen = ({ navigation }) => {
               helperText="12 digits or old format ending with V"
             />
 
-            <Text style={styles.genderLabel}>Gender</Text>
-            <View style={styles.genderContainer}>
-              {['MALE', 'FEMALE', 'OTHER'].map((gender, idx) => (
-                <Pressable
-                  key={gender}
-                  style={[
-                    styles.genderChip,
-                    form.gender === gender && styles.genderChipActive,
-                    idx === 2 && styles.genderChipLast
-                  ]}
-                  onPress={() => handleGenderChange(gender)}
-                >
-                  <Text style={[styles.genderChipText, form.gender === gender && styles.genderChipTextActive]}>{gender}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <GenderPicker
+              label="Gender"
+              value={form.gender}
+              onChange={handleGenderChange}
+            />
 
             <AppInput
               label="Password"
@@ -396,46 +386,6 @@ const styles = StyleSheet.create({
   formCard: {
     paddingHorizontal: 2,
     paddingVertical: 8
-  },
-  genderLabel: {
-    color: colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-    marginTop: 2
-  },
-  genderContainer: {
-    flexDirection: 'row',
-    marginBottom: 18
-  },
-  genderChip: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8
-  },
-  genderChipLast: {
-    marginRight: 0
-  },
-  genderChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#EAF7F2'
-  },
-  genderChipText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '700'
-  },
-  genderChipTextActive: {
-    color: colors.primary,
-    fontWeight: '800'
   },
   bottomBar: {
     paddingTop: 8,

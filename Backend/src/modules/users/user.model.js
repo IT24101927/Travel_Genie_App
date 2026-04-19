@@ -30,6 +30,20 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    dob: {
+      type: String,
+      default: ''
+    },
+    nic: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    gender: {
+      type: String,
+      enum: ['MALE', 'FEMALE', 'OTHER', ''],
+      default: ''
+    },
     travelStyle: {
       type: String,
       trim: true,
@@ -86,6 +100,9 @@ userSchema.methods.toSafeObject = function toSafeObject() {
     email: this.email,
     phone: this.phone,
     profileImage: this.profileImage,
+    dob: this.dob,
+    nic: this.nic,
+    gender: this.gender,
     travelStyle: this.travelStyle,
     interests: this.interests,
     preferences: this.preferences,

@@ -1,8 +1,16 @@
 # TravelGenie Mobile (React Native + Expo)
 
-## Run
+An integrated multi-role mobile application supporting User, Guest, and Admin workflows.
 
-1. Install dependencies
+## 📱 App Navigation Flow
+
+- 🌍 **Guest Mode (`GuestNavigator`)**: Open exploration of destinations, places, and hotels without requiring registration.
+- 🎒 **User Mode (`MainTabNavigator`)**: Full access to trip planning, budgeting, reviews, and profile management after logging in.
+- 👑 **Admin Dashboard (`AdminNavigator`)**: Privileged access route for moderation, user management, and viewing system-wide analytics.
+
+---
+
+## 🚀 Run locally
    ```bash
    npm install
    ```

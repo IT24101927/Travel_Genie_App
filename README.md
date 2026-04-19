@@ -12,6 +12,8 @@
 
 TravelGenie helps users plan multi-day trips across Sri Lanka — select a district, explore places on an interactive map, choose accommodation, plan a budget, and track expenses in one seamless workflow.
 
+🔥 **Multi-Role Support**: Switch between 🌍 **Guest Mode** (browse destinations without an account), 🎒 **User Mode** (full trip planning), and 👑 **Admin Mode** (advanced dashboard and moderation rights).
+
 [📖 Backend Docs](Backend/README.md) · [📱 Mobile Docs](mobile/README.md)
 
 </div>
@@ -176,17 +178,22 @@ Data models managed by Mongoose:
 ```
 Travelgenie/
 ├── Backend/                # Express API & MongoDB Logic
-│   ├── modules/
-│   ├── config/
-│   ├── middleware/
-│   ├── utils/
-│   └── server.js
+│   └── src/
+│       ├── config/
+│       ├── middleware/
+│       ├── modules/
+│       ├── routes/
+│       ├── utils/
+│       └── server.js
 └── mobile/                 # React Native / Expo Mobile App
     └── src/
         ├── api/
         ├── components/
+        ├── constants/
+        ├── context/
         ├── navigation/
-        └── screens/
+        ├── screens/
+        └── utils/
 ```
 
 ---
