@@ -51,6 +51,8 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
+.claude/
+.cursor/
 *.suo
 *.ntvs*
 *.njsproj
@@ -74,14 +76,13 @@ pids
 # TypeScript
 *.tsbuildinfo
 
-# Python (Aiml)
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 .venv/
 venv/
-Aiml/.venv/
 
 # Optional
 .node_repl_history

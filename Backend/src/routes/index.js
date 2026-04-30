@@ -8,7 +8,8 @@ const hotelRoutes = require('../modules/hotels/hotel.routes');
 const expenseRoutes = require('../modules/expenses/expense.routes');
 const reviewRoutes = require('../modules/reviews/review.routes');
 const notificationRoutes = require('../modules/notifications/notification.routes');
-const aiRoutes = require('../modules/ai/ai.routes');
+const transportRoutes = require('../modules/transport/routes/transportRoutes');
+const adminRoutes = require('../modules/admin/admin.routes');
 
 const router = express.Router();
 
@@ -41,6 +42,7 @@ router.use('/hotels', hotelRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/notifications', notificationRoutes);
-router.use('/ai', aiRoutes);
+router.use('/transport', transportRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;

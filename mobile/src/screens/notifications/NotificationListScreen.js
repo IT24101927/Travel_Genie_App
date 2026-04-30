@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EmptyState from '../../components/common/EmptyState';
 import ErrorText from '../../components/common/ErrorText';
@@ -31,13 +32,14 @@ const NotificationListScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerTitle}>Activity Alerts</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <Text style={styles.headerTitle}>Activity Alerts</Text>
 
-      <ErrorText message={error} />
-      
-      <FlatList
-        data={notifications}
+        <ErrorText message={error} />
+        
+        <FlatList
+          data={notifications}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <View style={[styles.card, item.read === false && styles.cardUnread]}>
@@ -62,7 +64,8 @@ const NotificationListScreen = () => {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={<EmptyState title="No alerts" subtitle="You are all caught up with your journey." icon="notifications-off-outline" />}
       />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -136,6 +139,10 @@ const styles = StyleSheet.create({
   meta: {
     color: colors.textSecondary,
     fontSize: 12
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background
   }
 });
 

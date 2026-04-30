@@ -20,7 +20,6 @@
    - `JWT_SECRET=<strong-secret>`
    - `JWT_EXPIRES_IN=7d`
    - `CORS_ORIGINS=*` (tighten for production)
-   - `AI_SERVICE_ENABLED=false` (or true with URL)
 
 ## 3. Mobile API Base URL
 
@@ -38,14 +37,7 @@ In `mobile/app.json`, set:
 
 Then restart Expo.
 
-## 4. Optional AI Deploy
-
-- Deploy Flask service separately on Railway/Render
-- Set backend:
-  - `AI_SERVICE_ENABLED=true`
-  - `AI_SERVICE_BASE_URL=<ai-service-url>`
-
-## 5. Viva Demo Flow
+## 4. Viva Demo Flow
 
 - Show mobile login
 - Show create trip
