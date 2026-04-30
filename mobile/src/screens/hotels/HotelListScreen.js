@@ -1,41 +1,56 @@
-import React, { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import AppInput from '../../components/common/AppInput';
 import EmptyState from '../../components/common/EmptyState';
 import ErrorText from '../../components/common/ErrorText';
 import colors from '../../constants/colors';
 import { getHotelsApi } from '../../api/hotelApi';
 import { getApiErrorMessage } from '../../utils/apiError';
-import { Pressable } from 'react-native';
 
 const HotelListScreen = ({ navigation }) => {
   const [location, setLocation] = useState('');
   const [hotels, setHotels] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const locationRef = useRef('');
 
-  const loadHotels = useCallback(async () => {
+  const fetchHotels = useCallback(async (locationFilter = '') => {
     try {
       setLoading(true);
       setError('');
-      const response = await getHotelsApi(location ? { location } : {});
+      const cleanLocation = String(locationFilter).trim();
+      const response = await getHotelsApi(cleanLocation ? { location: cleanLocation } : {});
       setHotels(response?.data?.hotels || []);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load hotels'));
     } finally {
       setLoading(false);
     }
-  }, [location]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadHotels();
-    }, [loadHotels])
+      fetchHotels(locationRef.current);
+    }, [fetchHotels])
   );
+
+  const handleLocationChange = useCallback((text) => {
+    locationRef.current = text;
+    setLocation(text);
+  }, []);
+
+  const handleSearch = useCallback(() => {
+    fetchHotels(location);
+  }, [fetchHotels, location]);
+
+  const handleClearSearch = useCallback(() => {
+    locationRef.current = '';
+    setLocation('');
+    fetchHotels('');
+  }, [fetchHotels]);
 
   const renderStars = (rating) => {
     const num = Number(rating) || 0;
@@ -58,53 +73,73 @@ const HotelListScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
         <Text style={styles.headerTitle}>Find Stays</Text>
-        
+
         <View style={styles.searchContainer}>
-        <AppInput 
-          label="" 
-          value={location} 
-          onChangeText={setLocation} 
-          placeholder="Search by city e.g. Tokyo" 
-          style={styles.searchInput}
-        />
-        <Pressable style={styles.searchBtn} onPress={loadHotels}>
-          {loading ? <ActivityIndicator color={colors.white} /> : <Ionicons name="search" size={20} color={colors.white} />}
-        </Pressable>
-      </View>
-
-      <ErrorText message={error} />
-
-      <FlatList
-        data={hotels}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() => navigation.navigate('HotelDetails', { hotel: item })}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.title} numberOfLines={1}>{item.name}</Text>
-              <View style={styles.priceChip}>
-                 <Text style={styles.priceText}>{item.priceRange ? `$${item.priceRange}` : 'Contact'}</Text>
-              </View>
-            </View>
-
-            <View style={styles.locationRow}>
-              <Ionicons name="location" size={14} color={colors.accent} />
-              <Text style={styles.location}>{item.location}</Text>
-            </View>
-
-            {renderStars(item.rating)}
-
-            <View style={styles.tapHint}>
-              <Text style={styles.tapHintText}>Tap to view details & reviews</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-            </View>
+          <View style={styles.searchInputShell}>
+            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
+            <TextInput
+              value={location}
+              onChangeText={handleLocationChange}
+              placeholder="Search by city"
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="search"
+              autoCapitalize="words"
+              autoCorrect={false}
+              onSubmitEditing={handleSearch}
+              style={styles.searchInput}
+            />
+            {location ? (
+              <Pressable
+                hitSlop={10}
+                onPress={handleClearSearch}
+                style={styles.clearButton}
+              >
+                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+          </View>
+          <Pressable style={styles.searchBtn} onPress={handleSearch}>
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Ionicons name="arrow-forward" size={22} color={colors.white} />
+            )}
           </Pressable>
-        )}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={<EmptyState title="No hotels found" subtitle="Try another location for stays." icon="bed-outline" />}
-      />
+        </View>
+
+        <ErrorText message={error} />
+
+        <FlatList
+          data={hotels}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.card}
+              onPress={() => navigation.navigate('HotelDetails', { hotel: item })}
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.title} numberOfLines={1}>{item.name}</Text>
+                <View style={styles.priceChip}>
+                   <Text style={styles.priceText}>{item.priceRange ? `$${item.priceRange}` : 'Contact'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={14} color={colors.accent} />
+                <Text style={styles.location}>{item.location}</Text>
+              </View>
+
+              {renderStars(item.rating)}
+
+              <View style={styles.tapHint}>
+                <Text style={styles.tapHintText}>Tap to view details & reviews</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+              </View>
+            </Pressable>
+          )}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={<EmptyState title="No hotels found" subtitle="Try another location for stays." icon="bed-outline" />}
+        />
       </View>
     </SafeAreaView>
   );
@@ -127,11 +162,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
-    marginBottom: 8
+    marginBottom: 12
+  },
+  searchInputShell: {
+    flex: 1,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DDE6E1',
+    backgroundColor: '#F7FAF8',
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0
   },
   searchInput: {
     flex: 1,
-    marginBottom: 0 // Override AppInput default margin
+    height: '100%',
+    color: colors.textPrimary,
+    fontSize: 15,
+    paddingHorizontal: 10,
+    minWidth: 0
+  },
+  clearButton: {
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   searchBtn: {
     width: 52,
@@ -139,11 +194,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -16 // Align with input instead of generic View wrap
+    justifyContent: 'center'
   },
   listContent: {
-    paddingBottom: 40
+    paddingBottom: 120
   },
   card: {
     backgroundColor: colors.surface,

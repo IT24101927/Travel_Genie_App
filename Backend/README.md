@@ -50,15 +50,21 @@ MONGO_URI=mongodb://localhost:27017/travelgenie
 
 # Auth
 JWT_SECRET=your_jwt_secret_key_here
+JWT_EXPIRES_IN=7d
 
 # CORS
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGINS=http://localhost:8081,http://127.0.0.1:8081
 
-# SMTP (optional — OTP codes are always printed to terminal as fallback)
+# SMTP (optional — OTP codes print in development and when email cannot be sent)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
+SMTP_SECURE=false
 SMTP_USER=your@email.com
 SMTP_PASS=your_app_password
+SMTP_FROM=TravelGenie <your@email.com>
+
+# Uploads
+UPLOAD_BASE_URL=http://localhost:5000
 ```
 
 ### 3 — Start the server
@@ -111,7 +117,7 @@ Backend/src/
 
 ## 🔌 API Reference
 
-All endpoints are prefixed with `/api`.
+All endpoints are prefixed with `/api/v1`.
 
 > 🔓 **Public** — no token needed  
 > 🔐 **Protected** — requires `Authorization: Bearer <token>`  
@@ -119,7 +125,42 @@ All endpoints are prefixed with `/api`.
 
 ---
 
-### 👑 Admin — `/api/admin`
+### Health — `/api/v1`
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `GET` | `/health` | 🔓 | Health check |
+| `GET` | `/version` | 🔓 | API version |
+
+---
+
+### 🔐 Auth — `/api/v1/auth`
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `POST` | `/register/send-code` | 🔓 | Send email verification code |
+| `POST` | `/register/verify-code` | 🔓 | Verify email code |
+| `POST` | `/register` | 🔓 | Register a verified user |
+| `POST` | `/login` | 🔓 | Login and receive JWT |
+| `POST` | `/password-reset/request` | 🔓 | Request password reset code |
+| `POST` | `/password-reset/verify-code` | 🔓 | Verify password reset code |
+| `POST` | `/password-reset/reset` | 🔓 | Set a new password |
+| `GET` | `/me` | 🔐 | Get authenticated user |
+
+---
+
+### 👤 Users — `/api/v1/users`
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `GET` | `/me` | 🔐 | Get own profile |
+| `PUT` | `/me` | 🔐 | Update own profile and optional profile image |
+| `POST` | `/me/change-password` | 🔐 | Change own password |
+| `DELETE` | `/me` | 🔐 | Delete own account |
+
+---
+
+### 👑 Admin — `/api/v1/admin`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
@@ -134,43 +175,7 @@ All endpoints are prefixed with `/api`.
 
 ---
 
-### 👤 Users — `/api/users`
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `POST` | `/register` | 🔓 | Register new user |
-| `POST` | `/login` | 🔓 | Login → returns JWT |
-| `POST` | `/forgot-password` | 🔓 | Send reset code to email |
-| `POST` | `/verify-reset-code` | 🔓 | Verify 6-digit reset code |
-| `POST` | `/reset-password` | 🔓 | Set new password |
-| `POST` | `/send-verification-code` | 🔓 | Send email OTP |
-| `POST` | `/verify-email-code` | 🔓 | Confirm email OTP |
-| `GET` | `/profile` | 🔐 | Get own profile |
-| `PUT` | `/profile` | 🔐 | Update own profile |
-| `DELETE` | `/profile` | 🔐 | Delete own account |
-| `PUT` | `/change-password` | 🔐 | Change password |
-| `GET` | `/` | 🛡️ | List all users |
-| `POST` | `/` | 🛡️ | Create user |
-| `GET` | `/:id` | 🛡️ | Get user by ID |
-| `PUT` | `/:id` | 🛡️ | Update user |
-| `DELETE` | `/:id` | 🛡️ | Delete user |
-
----
-
-### ⚙️ Preferences — `/api/preferences`
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `GET` | `/` | 🔐 | Get user preferences |
-| `PUT` | `/` | 🔐 | Update user preferences |
-| `GET` | `/destinations` | 🔐 | Get destination preferences |
-| `PUT` | `/destinations` | 🔐 | Update destination preferences |
-| `GET` | `/trip-defaults` | 🔐 | Get trip defaults |
-| `PUT` | `/trip-defaults` | 🔐 | Update trip defaults |
-
----
-
-### 🗺️ Districts — `/api/districts`
+### 🗺️ Districts — `/api/v1/districts`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
@@ -179,51 +184,27 @@ All endpoints are prefixed with `/api`.
 | `POST` | `/` | 🛡️ | Create district |
 | `PUT` | `/:id` | 🛡️ | Update district |
 | `DELETE` | `/:id` | 🛡️ | Delete district |
-| `POST` | `/:id/image` | 🛡️ | Upload district image |
+| `POST` | `/upload` | 🛡️ | Upload district image |
 
 ---
 
-### 📍 Places — `/api/places`
+### 📍 Places — `/api/v1/places`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| `GET` | `/search` | 🔓 | Search places |
-| `GET` | `/` | 🔓 | List all places |
+| `GET` | `/` | 🔓 | List and search places |
 | `GET` | `/:id` | 🔓 | Get place |
 | `POST` | `/` | 🛡️ | Create place |
 | `PUT` | `/:id` | 🛡️ | Update place |
 | `DELETE` | `/:id` | 🛡️ | Delete place |
-| `GET` | `/:placeId/images` | 🔓 | Get place image gallery |
-| `POST` | `/:placeId/images` | 🛡️ | Upload place images |
-| `POST` | `/:placeId/images/url` | 🛡️ | Add image by URL |
-| `DELETE` | `/images/:imageId` | 🛡️ | Delete place image |
 
 ---
 
-### 🏖️ Destinations — `/api/destinations`
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `GET` | `/` | 🔓 | List all destinations |
-| `GET` | `/popular` | 🔓 | Popular destinations |
-| `GET` | `/types` | 🔓 | List destination types |
-| `GET` | `/district/:districtId` | 🔓 | Destinations by district |
-| `GET` | `/suggested` | 🔐 | Personalized suggestions |
-| `GET` | `/suggested/:userId` | 🛡️ | Suggestions for user |
-| `GET` | `/:id` | 🔓 | Get destination |
-| `POST` | `/` | 🛡️ | Create destination |
-| `PUT` | `/:id` | 🛡️ | Update destination |
-| `DELETE` | `/:id` | 🛡️ | Delete destination |
-
----
-
-### 🏨 Hotels — `/api/hotels`
+### 🏨 Hotels — `/api/v1/hotels`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
 | `GET` | `/` | 🔓 | List hotels (filterable) |
-| `GET` | `/near` | 🔓 | Hotels near a place |
-| `GET` | `/district/:districtId` | 🔓 | Hotels in district |
 | `GET` | `/:id` | 🔓 | Get hotel |
 | `POST` | `/` | 🛡️ | Create hotel |
 | `PUT` | `/:id` | 🛡️ | Update hotel |
@@ -231,41 +212,26 @@ All endpoints are prefixed with `/api`.
 
 ---
 
-### 🏷️ Tags — `/api/tags`
+### 🧳 Trips — `/api/v1/trips`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| `GET` | `/` | 🔓 | List tags (filter by `?type=`) |
-| `POST` | `/` | 🛡️ | Create tag |
-| `PUT` | `/:id` | 🛡️ | Update tag |
-| `DELETE` | `/:id` | 🛡️ | Delete tag |
-| `POST` | `/place/:placeId` | 🛡️ | Assign tags to place |
-
----
-
-### 🧳 Trips — `/api/trips`
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `GET` | `/my` | 🔐 | Get own trips |
-| `GET` | `/all` | 🛡️ | Get all trips |
-| `GET` | `/:id` | 🔐 | Get trip |
 | `POST` | `/` | 🔐 | Create trip |
+| `GET` | `/` | 🔐 | Get own trips |
+| `GET` | `/:id` | 🔐 | Get trip |
 | `PUT` | `/:id` | 🔐 | Update trip |
 | `DELETE` | `/:id` | 🔐 | Delete trip |
 
 ---
 
-### 💸 Expenses — `/api/expenses`
+### 💸 Expenses — `/api/v1/expenses`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| `GET` | `/categories` | 🔓 | List expense categories |
-| `POST` | `/categories` | 🛡️ | Create category |
-| `GET` | `/admin/all` | 🛡️ | All users' expenses |
-| `GET` | `/stats` | 🔐 | Expense statistics |
-| `GET` | `/trip/:tripId/summary` | 🔐 | Trip expense summary |
-| `GET` | `/trip/:tripId` | 🔐 | Trip expenses |
+| `GET` | `/summary/user-total` | 🔐 | Total spend for current user |
+| `GET` | `/summary/recent` | 🔐 | Recent expenses |
+| `GET` | `/summary/trip/:tripId` | 🔐 | Total spend for one trip |
+| `GET` | `/summary/budget-usage/:tripId` | 🔐 | Budget usage percentage |
 | `GET` | `/` | 🔐 | Own expenses |
 | `POST` | `/` | 🔐 | Create expense |
 | `GET` | `/:id` | 🔐 | Get expense |
@@ -274,18 +240,7 @@ All endpoints are prefixed with `/api`.
 
 ---
 
-### 💰 Price Records — `/api/price-records`
-
-| Method | Path | Access | Description |
-|---|---|---|---|
-| `GET` | `/` | 🔐 | List price records |
-| `GET` | `/place/:placeId` | 🔐 | Records for a place |
-| `POST` | `/` | 🛡️ | Create record |
-| `DELETE` | `/:id` | 🛡️ | Delete record |
-
----
-
-### ⭐ Reviews — `/api/reviews`
+### ⭐ Reviews — `/api/v1/reviews`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
@@ -293,31 +248,33 @@ All endpoints are prefixed with `/api`.
 | `GET` | `/` | 🔓 | All reviews |
 | `GET` | `/place/:placeId` | 🔓 | Reviews for a place |
 | `GET` | `/admin/all` | 🛡️ | All reviews (admin view) |
+| `GET` | `/:id` | 🔓 | Get review |
 | `POST` | `/` | 🔐 | Create review |
-| `PUT` | `/:id` | 🔐 | Update review |
-| `DELETE` | `/:id` | 🔐 | Delete review |
-| `POST` | `/:id/helpful` | 🔐 | Mark as helpful |
-| `POST` | `/:id/flag` | 🔐 | Flag review |
-| `POST` | `/:id/unflag` | 🔐 | Unflag review |
-| `PUT` | `/:id/status` | 🛡️ | Approve / reject |
-| `POST` | `/:id/response` | 🛡️ | Add admin response |
+| `PUT` | `/:id` | 🔐 | Update own review |
+| `DELETE` | `/:id` | 🔐 | Delete own review |
 
 ---
 
-### 🔔 Notifications — `/api/notifications`
+### 🔔 Notifications — `/api/v1/notifications`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
 | `GET` | `/` | 🔐 | Own notifications |
-| `GET` | `/:id` | 🔐 | Get notification |
-| `PUT` | `/read-all` | 🔐 | Mark all as read |
-| `PUT` | `/:id/read` | 🔐 | Mark as read |
-| `PUT` | `/:id` | 🔐 | Update notification |
+| `PATCH` | `/:id/read` | 🔐 | Mark as read |
 | `DELETE` | `/:id` | 🔐 | Delete notification |
 | `POST` | `/` | 🛡️ | Create notification |
-| `GET` | `/admin/budget-auto-status` | 🛡️ | Budget alert status |
-| `GET` | `/admin/expense-alert-status` | 🛡️ | Expense alert status |
-| `GET` | `/admin/expense-alert-history` | 🛡️ | Alert history |
+
+---
+
+### 🚌 Transport — `/api/v1/transport`
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `POST` | `/` | 🔐 | Create transport booking |
+| `GET` | `/` | 🔐 | List own transport bookings |
+| `GET` | `/:id` | 🔐 | Get transport booking |
+| `PUT` | `/:id` | 🔐 | Update transport booking |
+| `DELETE` | `/:id` | 🔐 | Delete transport booking |
 
 ---
 
@@ -329,7 +286,7 @@ Include the JWT token in all protected requests:
 Authorization: Bearer <your_jwt_token>
 ```
 
-Tokens are valid for **7 days**. Obtain a token via `POST /api/users/login`.
+Tokens are valid for **7 days** by default. Obtain a token via `POST /api/v1/auth/login`.
 
 ---
 
@@ -359,4 +316,4 @@ All error responses follow a consistent format:
 - **MongoDB Collections**: All data models map to standard MongoDB collections via Mongoose.
 - Creating or updating an expense automatically triggers a `BUDGET_100` notification when spend reaches 100% of trip budget.
 - Ratings and reviews are embedded or cross-referenced correctly based on the Place schema.
-- OTP codes are always printed to the server terminal as a fallback when SMTP is not configured.
+- OTP codes are printed to the server terminal in development, and as a fallback when SMTP is not configured.

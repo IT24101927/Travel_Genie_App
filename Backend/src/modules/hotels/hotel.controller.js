@@ -37,7 +37,7 @@ const updateHotelHandler = asyncHandler(async (req, res) => {
       ? req.body.amenities
       : req.body.amenities
         ? [req.body.amenities]
-        : req.body.amenities
+        : []
   };
 
   if (req.file) {

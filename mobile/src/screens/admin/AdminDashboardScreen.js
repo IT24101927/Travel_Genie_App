@@ -17,16 +17,23 @@ import { adminStatsApi } from '../../api/adminApi';
 import { useAuth } from '../../context/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiError';
 
-const RESOURCES = [
-  { key: 'users', label: 'Users', icon: 'people-outline', color: colors.primary },
-  { key: 'admins', label: 'Admins', icon: 'shield-checkmark-outline', color: colors.accent, readOnly: true },
-  { key: 'trips', label: 'Trips', icon: 'map-outline', color: colors.statusOngoing },
-  { key: 'places', label: 'Places', icon: 'location-outline', color: colors.info },
-  { key: 'hotels', label: 'Hotels', icon: 'bed-outline', color: colors.primaryDark },
-  { key: 'expenses', label: 'Expenses', icon: 'wallet-outline', color: colors.warning },
-  { key: 'reviews', label: 'Reviews', icon: 'star-outline', color: colors.success },
-  { key: 'notifications', label: 'Alerts', icon: 'notifications-outline', color: colors.statusPlanned },
-  { key: 'transports', label: 'Transport', icon: 'bus-outline', color: colors.accentDark }
+const STAT_CARDS = [
+  { key: 'users',         label: 'Users',     icon: 'people-outline',           color: colors.primary },
+  { key: 'admins',        label: 'Admins',    icon: 'shield-checkmark-outline', color: colors.accent },
+  { key: 'places',        label: 'Places',    icon: 'location-outline',         color: colors.info,
+    subKey: 'districts',  subLabel: 'districts' },
+  { key: 'hotels',        label: 'Hotels',    icon: 'bed-outline',              color: colors.primaryDark },
+  { key: 'trips',         label: 'Trips',     icon: 'map-outline',              color: colors.statusOngoing },
+  { key: 'expenses',      label: 'Expenses',  icon: 'wallet-outline',           color: colors.warning },
+  { key: 'reviews',       label: 'Reviews',   icon: 'star-outline',             color: colors.success },
+  { key: 'notifications', label: 'Alerts',    icon: 'notifications-outline',    color: colors.statusPlanned },
+  { key: 'transports',    label: 'Transport', icon: 'bus-outline',              color: colors.accentDark }
+];
+
+const QUICK_ACTIONS = [
+  { label: 'Manage Users',  icon: 'people',   color: colors.primary,       screen: 'AdminUsers' },
+  { label: 'Manage Places', icon: 'location', color: colors.statusOngoing, screen: 'AdminDistricts',
+    hint: 'Districts → Places' }
 ];
 
 const AdminDashboardScreen = ({ navigation }) => {
@@ -49,24 +56,16 @@ const AdminDashboardScreen = ({ navigation }) => {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
-
-  const openResource = (resource) => {
-    if (resource.key === 'users') {
-      navigation.navigate('AdminUsers');
-      return;
-    }
-    if (resource.readOnly) return;
-    navigation.navigate('AdminResource', { resource: resource.key, label: resource.label });
+  const openStatCard = (key) => {
+    if (key === 'users')  { navigation.navigate('AdminUsers');     return; }
+    if (key === 'places') { navigation.navigate('AdminDistricts'); return; }
+    if (key === 'admins') { return; }
+    navigation.navigate('AdminResource', {
+      resource: key,
+      label: STAT_CARDS.find(r => r.key === key)?.label
+    });
   };
 
   return (
@@ -76,14 +75,21 @@ const AdminDashboardScreen = ({ navigation }) => {
           <Text style={styles.hello}>Welcome back,</Text>
           <Text style={styles.adminName}>{user?.fullName || 'Admin'}</Text>
         </View>
-        <Pressable onPress={logout} style={styles.logoutBtn}>
+        <Pressable onPress={logout} style={styles.logoutBtn} hitSlop={8}>
           <Ionicons name="log-out-outline" size={22} color={colors.danger} />
         </Pressable>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); load(); }}
+            tintColor={colors.primary}
+          />
+        }
       >
         <Text style={styles.sectionTitle}>Overview</Text>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -92,24 +98,51 @@ const AdminDashboardScreen = ({ navigation }) => {
           <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
         ) : (
           <View style={styles.grid}>
-            {RESOURCES.map((r) => (
-              <Pressable key={r.key} onPress={() => openResource(r)} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-                <View style={[styles.cardIcon, { backgroundColor: `${r.color}22` }]}>
-                  <Ionicons name={r.icon} size={22} color={r.color} />
-                </View>
-                <Text style={styles.cardCount}>{stats?.[r.key] ?? 0}</Text>
-                <Text style={styles.cardLabel}>{r.label}</Text>
-              </Pressable>
-            ))}
+            {STAT_CARDS.map((r) => {
+              const count = stats?.[r.key] ?? 0;
+              const subCount = r.subKey ? (stats?.[r.subKey] ?? 0) : null;
+
+              return (
+                <Pressable
+                  key={r.key}
+                  onPress={() => openStatCard(r.key)}
+                  style={({ pressed }) => [styles.statCard, pressed && styles.cardPressed]}
+                >
+                  <View style={[styles.iconBox, { backgroundColor: `${r.color}18` }]}>
+                    <Ionicons name={r.icon} size={20} color={r.color} />
+                  </View>
+                  <Text style={styles.count}>{count}</Text>
+                  <Text style={styles.label}>{r.label}</Text>
+                  {subCount !== null && (
+                    <View style={styles.subRow}>
+                      <Ionicons name="globe-outline" size={10} color={colors.textMuted} />
+                      <Text style={styles.subText}>{subCount} districts</Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <Pressable onPress={() => navigation.navigate('AdminUsers')} style={styles.actionRow}>
-          <Ionicons name="people" size={22} color={colors.primary} />
-          <Text style={styles.actionText}>Manage Users</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
+
+        {QUICK_ACTIONS.map((action) => (
+          <Pressable
+            key={action.screen}
+            onPress={() => navigation.navigate(action.screen)}
+            style={({ pressed }) => [styles.actionRow, pressed && styles.cardPressed]}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: `${action.color}18` }]}>
+              <Ionicons name={action.icon} size={20} color={action.color} />
+            </View>
+            <View style={styles.actionText}>
+              <Text style={styles.actionLabel}>{action.label}</Text>
+              {action.hint ? <Text style={styles.actionHint}>{action.hint}</Text> : null}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -117,63 +150,66 @@ const AdminDashboardScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
+
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 14
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16
   },
-  hello: { color: colors.textMuted, fontSize: 13 },
-  adminName: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
+  hello: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
+  adminName: { color: colors.textPrimary, fontSize: 20, fontWeight: '900', marginTop: 1 },
   logoutBtn: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border
   },
-  content: { paddingHorizontal: 20, paddingBottom: 40 },
+
+  content: { paddingHorizontal: 20, paddingBottom: 48 },
   sectionTitle: {
-    fontSize: 16, fontWeight: '800', color: colors.textPrimary,
-    marginTop: 16, marginBottom: 12
+    fontSize: 15, fontWeight: '800', color: colors.textPrimary,
+    marginTop: 20, marginBottom: 12
   },
   errorText: { color: colors.danger, fontSize: 13, marginBottom: 8 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between'
-  },
-  card: {
-    width: '31%',
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+
+  statCard: {
+    width: '30.5%',
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'flex-start'
+    borderRadius: 16, padding: 12,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'flex-start',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 2
   },
-  cardPressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
-  cardIcon: {
-    width: 38, height: 38, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 10
+  cardPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
+  iconBox: {
+    width: 38, height: 38, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 10
   },
-  cardCount: { fontSize: 22, fontWeight: '900', color: colors.textPrimary },
-  cardLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  count: { fontSize: 22, fontWeight: '900', color: colors.textPrimary, lineHeight: 26 },
+  label: { fontSize: 11, color: colors.textSecondary, marginTop: 2, fontWeight: '600' },
+  subRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    marginTop: 5, paddingTop: 5,
+    borderTopWidth: 1, borderTopColor: colors.border, width: '100%'
+  },
+  subText: { fontSize: 10, color: colors.textMuted, fontWeight: '600' },
+
   actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 10
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 14,
+    borderWidth: 1, borderColor: colors.border, marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1
   },
-  actionText: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '600', color: colors.textPrimary }
+  actionIcon: {
+    width: 40, height: 40, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center', marginRight: 12
+  },
+  actionText: { flex: 1 },
+  actionLabel: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  actionHint: { fontSize: 12, color: colors.textMuted, marginTop: 2, fontWeight: '500' }
 });
 
 export default AdminDashboardScreen;

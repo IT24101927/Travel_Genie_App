@@ -25,9 +25,15 @@ const RegisterStep1Screen = ({ navigation }) => {
     confirmPassword: '',
     photo: null
   });
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [photoError, setPhotoError] = useState('');
   const [dobDate, setDobDate] = useState(new Date(2000, 0, 1));
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const setField = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    setErrors(prev => ({ ...prev, [key]: '' }));
+  };
 
   const formatDate = (date) => {
     const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -37,26 +43,35 @@ const RegisterStep1Screen = ({ navigation }) => {
   };
 
   const onContinue = () => {
+    const next = {};
+
     const nameCheck = validateName(form.fullName);
-    if (!nameCheck.valid) return setError(nameCheck.message);
+    if (!nameCheck.valid) next.fullName = nameCheck.message;
 
     const emailCheck = validateEmail(form.email);
-    if (!emailCheck.valid) return setError(emailCheck.message);
+    if (!emailCheck.valid) next.email = emailCheck.message;
 
     const phoneCheck = validatePhone(form.phone);
-    if (!phoneCheck.valid) return setError(phoneCheck.message);
+    if (!phoneCheck.valid) next.phone = phoneCheck.message;
 
     const nicCheck = validateNic(form.nic);
-    if (!nicCheck.valid) return setError(nicCheck.message);
+    if (!nicCheck.valid) next.nic = nicCheck.message;
 
-    if (!isRequired(form.dob)) return setError('Date of Birth is required.');
+    if (!isRequired(form.dob)) next.dob = 'Date of Birth is required.';
 
     const passCheck = validatePassword(form.password);
-    if (!passCheck.valid) return setError(passCheck.message);
+    if (!passCheck.valid) next.password = passCheck.message;
 
-    if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
+    if (isRequired(form.password) && form.password !== form.confirmPassword) {
+      next.confirmPassword = 'Passwords do not match.';
+    }
 
-    setError('');
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
+      return;
+    }
+
+    setErrors({});
     navigation.navigate('RegisterStep2', { userData: form });
   };
 
@@ -68,7 +83,7 @@ const RegisterStep1Screen = ({ navigation }) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permission.status !== 'granted') {
-      setError('Please allow gallery access to upload a profile photo.');
+      setPhotoError('Please allow gallery access to upload a profile photo.');
       return;
     }
 
@@ -80,7 +95,7 @@ const RegisterStep1Screen = ({ navigation }) => {
     });
 
     if (!result.canceled) {
-      setError('');
+      setPhotoError('');
       setForm(prev => ({ ...prev, photo: result.assets[0].uri }));
     }
   };
@@ -108,9 +123,9 @@ const RegisterStep1Screen = ({ navigation }) => {
 
   const handleDateConfirm = (selectedDate) => {
     setDobDate(selectedDate);
-    setForm((prev) => ({ ...prev, dob: formatDate(selectedDate) }));
+    setForm(prev => ({ ...prev, dob: formatDate(selectedDate) }));
+    setErrors(prev => ({ ...prev, dob: '' }));
     setShowDatePicker(false);
-    setError('');
   };
 
   return (
@@ -163,12 +178,17 @@ const RegisterStep1Screen = ({ navigation }) => {
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
 
+          {photoError ? (
+            <Text style={styles.photoErrorText}>{photoError}</Text>
+          ) : null}
+
           <View style={styles.formCard}>
             <AppInput
               label="Full Name"
               leftIcon="person-outline"
               value={form.fullName}
-              onChangeText={(text) => setForm((prev) => ({ ...prev, fullName: text }))}
+              error={errors.fullName}
+              onChangeText={(text) => setField('fullName', text)}
               placeholder="Jane Smith"
             />
 
@@ -178,7 +198,8 @@ const RegisterStep1Screen = ({ navigation }) => {
               value={form.email}
               autoCapitalize="none"
               keyboardType="email-address"
-              onChangeText={(text) => setForm((prev) => ({ ...prev, email: text }))}
+              error={errors.email}
+              onChangeText={(text) => setField('email', text)}
               placeholder="jane@example.com"
             />
 
@@ -187,27 +208,31 @@ const RegisterStep1Screen = ({ navigation }) => {
               leftIcon="call-outline"
               value={form.phone}
               keyboardType="phone-pad"
-              onChangeText={(text) => setForm((prev) => ({ ...prev, phone: text }))}
+              error={errors.phone}
+              onChangeText={(text) => setField('phone', text.replace(/\D/g, '').slice(0, 10))}
               placeholder="07XXXXXXXX"
+              helperText={errors.phone ? undefined : '10 digits starting with 0 (e.g. 0771234567)'}
             />
 
             <AppInput
               label="Date of Birth"
               leftIcon="calendar-outline"
               value={form.dob}
+              error={errors.dob}
               onContainerPress={handleOpenDatePicker}
               editable={false}
               placeholder="mm/dd/yyyy"
-              helperText="Tap to choose your birth date"
+              helperText={errors.dob ? undefined : 'Tap to choose your birth date'}
             />
 
             <AppInput
               label="NIC Number"
               leftIcon="card-outline"
               value={form.nic}
-              onChangeText={(text) => setForm((prev) => ({ ...prev, nic: text }))}
+              error={errors.nic}
+              onChangeText={(text) => setField('nic', text.replace(/\s/g, '').replace(/[vVxX]$/, (m) => m.toUpperCase()))}
               placeholder="e.g. 200012345678 or 991234567V"
-              helperText="12 digits or old format ending with V"
+              helperText={errors.nic ? undefined : '12 digits or old format ending with V/X'}
             />
 
             <GenderPicker
@@ -221,8 +246,10 @@ const RegisterStep1Screen = ({ navigation }) => {
               leftIcon="lock-closed-outline"
               value={form.password}
               secureTextEntry
-              onChangeText={(text) => setForm((prev) => ({ ...prev, password: text }))}
+              error={errors.password}
+              onChangeText={(text) => setField('password', text)}
               placeholder="Create password"
+              helperText={errors.password ? undefined : 'Needs uppercase, lowercase, number and symbol'}
             />
 
             <AppInput
@@ -230,14 +257,14 @@ const RegisterStep1Screen = ({ navigation }) => {
               leftIcon="lock-closed-outline"
               value={form.confirmPassword}
               secureTextEntry
-              onChangeText={(text) => setForm((prev) => ({ ...prev, confirmPassword: text }))}
+              error={errors.confirmPassword}
+              onChangeText={(text) => setField('confirmPassword', text)}
               placeholder="Repeat password"
             />
           </View>
         </ScrollView>
 
-        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}> 
-          <ErrorText message={error} />
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <AppButton title="Continue" onPress={onContinue} />
         </View>
 
@@ -341,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#DCEBE4',
-    marginBottom: 12
+    marginBottom: 6
   },
   photoUploadCircle: {
     width: 58,
@@ -382,6 +409,12 @@ const styles = StyleSheet.create({
   photoSubtitle: {
     fontSize: 12,
     color: colors.textMuted
+  },
+  photoErrorText: {
+    color: colors.danger,
+    fontSize: 12,
+    marginBottom: 8,
+    marginLeft: 4
   },
   formCard: {
     paddingHorizontal: 2,

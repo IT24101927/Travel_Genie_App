@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../users/user.model');
 const AppError = require('../../utils/appError');
 const { generateToken } = require('../../utils/jwt');
@@ -48,6 +49,10 @@ const adminLogin = async ({ email, password }) => {
     throw new AppError('Access denied. Admin account required.', 403);
   }
 
+  if (user.isActive === false) {
+    throw new AppError('Your account has been deactivated. Please contact support.', 403);
+  }
+
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     throw new AppError('Invalid email or password', 401);
@@ -62,10 +67,11 @@ const adminLogin = async ({ email, password }) => {
 };
 
 const getDashboardStats = async () => {
-  const [users, admins, trips, places, hotels, expenses, reviews, notifications, transports] = await Promise.all([
+  const [users, admins, trips, districts, places, hotels, expenses, reviews, notifications, transports] = await Promise.all([
     User.countDocuments({ role: 'user' }),
     User.countDocuments({ role: 'admin' }),
     safeCount(Trip),
+    mongoose.connection.db.collection('districts').countDocuments().catch(() => 0),
     safeCount(Place),
     safeCount(Hotel),
     safeCount(Expense),
@@ -78,6 +84,7 @@ const getDashboardStats = async () => {
     users,
     admins,
     trips,
+    districts,
     places,
     hotels,
     expenses,
@@ -99,18 +106,56 @@ const VALID_TRAVEL_STYLES = ['Adventure', 'Relax', 'Culture', 'Luxury', 'Budget'
 const VALID_WEATHER = ['Sunny', 'Mild', 'Rainy', 'Cold', 'Any'];
 const VALID_CURRENCIES = ['LKR', 'USD', 'EUR'];
 
-const createUser = async ({ fullName, email, password, phone, travelStyle, interests, currency, preferred_weather, role, isActive }) => {
+const validateNicValue = (nic) => {
+  if (!nic) return; // optional
+  const trimmed = String(nic).trim();
+  if (!/^\d{12}$/.test(trimmed) && !/^\d{9}[VvXx]$/.test(trimmed)) {
+    throw new AppError('NIC must be either 12 digits or 9 digits followed by V/X', 400);
+  }
+};
+
+const validateDobValue = (dob) => {
+  if (!dob) return; // optional
+  const trimmed = String(dob).trim();
+  const dateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!dateMatch) {
+    throw new AppError('Date of Birth must be in mm/dd/yyyy format', 400);
+  }
+  const parsed = new Date(parseInt(dateMatch[3], 10), parseInt(dateMatch[1], 10) - 1, parseInt(dateMatch[2], 10));
+  if (isNaN(parsed.getTime())) {
+    throw new AppError('Date of Birth is not a valid date', 400);
+  }
+  const now = new Date();
+  if (parsed > now) {
+    throw new AppError('Date of Birth cannot be in the future', 400);
+  }
+  const age = now.getFullYear() - parsed.getFullYear() - ((now.getMonth() < parsed.getMonth() || (now.getMonth() === parsed.getMonth() && now.getDate() < parsed.getDate())) ? 1 : 0);
+  if (age < 16) throw new AppError('User must be at least 16 years old', 400);
+  if (age > 120) throw new AppError('Date of Birth appears invalid (age over 120)', 400);
+};
+
+const createUser = async ({ fullName, email, password, phone, dob, nic, gender, travelStyle, interests, currency, preferred_weather, role, isActive }) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const existing = await User.findOne({ email: normalizedEmail });
   if (existing) {
     throw new AppError('Email is already registered', 409);
   }
 
+  const validGenders = ['MALE', 'FEMALE', 'OTHER', ''];
+  const g = String(gender || '').toUpperCase();
+
+  // Validate NIC and DOB before saving
+  validateNicValue(nic);
+  validateDobValue(dob);
+
   const user = await User.create({
     fullName: String(fullName || '').trim(),
     email: normalizedEmail,
     password: String(password || ''),
     phone: String(phone || '').trim(),
+    dob: String(dob || '').trim(),
+    nic: String(nic || '').trim(),
+    gender: validGenders.includes(g) ? g : '',
     travelStyle: VALID_TRAVEL_STYLES.includes(travelStyle) ? travelStyle : '',
     interests: Array.isArray(interests) ? interests : [],
     preferences: {
@@ -133,8 +178,14 @@ const updateUserById = async (userId, { fullName, phone, dob, nic, gender, trave
   const validGenders = ['MALE', 'FEMALE', 'OTHER', ''];
   if (fullName !== undefined) user.fullName = String(fullName).trim();
   if (phone !== undefined) user.phone = String(phone).trim();
-  if (dob !== undefined) user.dob = String(dob).trim();
-  if (nic !== undefined) user.nic = String(nic).trim();
+  if (nic !== undefined) {
+    validateNicValue(nic);
+    user.nic = String(nic).trim();
+  }
+  if (dob !== undefined) {
+    validateDobValue(dob);
+    user.dob = String(dob).trim();
+  }
   if (gender !== undefined) {
     const g = String(gender || '').toUpperCase();
     user.gender = validGenders.includes(g) ? g : '';

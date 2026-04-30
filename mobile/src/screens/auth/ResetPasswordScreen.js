@@ -8,7 +8,7 @@ import AppInput from '../../components/common/AppInput';
 import AppButton from '../../components/common/AppButton';
 import ErrorText from '../../components/common/ErrorText';
 import { forgotPasswordResetApi } from '../../api/authApi';
-import { isRequired } from '../../utils/validators';
+import { isRequired, validatePassword } from '../../utils/validators';
 import { getApiErrorMessage } from '../../utils/apiError';
 
 const ResetPasswordScreen = ({ navigation, route }) => {
@@ -17,28 +17,30 @@ const ResetPasswordScreen = ({ navigation, route }) => {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const onResetPassword = async () => {
     if (!isRequired(email) || !isRequired(resetToken)) {
-      setError('Reset session expired. Please request and verify a new reset code.');
+      setApiError('Reset session expired. Please request and verify a new reset code.');
       return;
     }
 
-    if (!isRequired(password) || password.length < 6) {
-      setError('New password must be at least 6 characters long.');
-      return;
-    }
+    const next = {};
+    const passCheck = validatePassword(password);
+    if (!passCheck.valid) next.password = passCheck.message;
+    if (isRequired(password) && password !== confirmPassword) next.confirmPassword = 'Passwords do not match.';
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
+      setErrors({});
+      setApiError('');
 
       await forgotPasswordResetApi({
         email,
@@ -53,7 +55,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
         }
       ]);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to reset password'));
+      setApiError(getApiErrorMessage(err, 'Failed to reset password'));
     } finally {
       setLoading(false);
     }
@@ -92,11 +94,14 @@ const ResetPasswordScreen = ({ navigation, route }) => {
               label="New Password"
               value={password}
               secureTextEntry
+              error={errors.password}
               onChangeText={(text) => {
                 setPassword(text);
-                setError('');
+                setErrors((prev) => ({ ...prev, password: '' }));
+                setApiError('');
               }}
-              placeholder="At least 6 characters"
+              placeholder="Min. 8 characters, upper+lower+digit+special"
+              helperText={errors.password ? undefined : 'Needs uppercase, lowercase, number and symbol'}
             />
 
             <AppInput
@@ -104,20 +109,22 @@ const ResetPasswordScreen = ({ navigation, route }) => {
               label="Confirm New Password"
               value={confirmPassword}
               secureTextEntry
+              error={errors.confirmPassword}
               onChangeText={(text) => {
                 setConfirmPassword(text);
-                setError('');
+                setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                setApiError('');
               }}
               placeholder="Re-enter new password"
             />
 
-            <ErrorText message={error} />
+            <ErrorText message={apiError} />
 
             <View style={styles.buttonWrap}>
               <AppButton
                 title={loading ? 'Saving...' : 'Reset Password'}
                 onPress={onResetPassword}
-                disabled={loading || password.length < 6 || confirmPassword.length < 6}
+                disabled={loading || password.length < 8 || confirmPassword.length < 8}
                 allowPressWhenKeyboardOpen
               />
             </View>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,22 @@ const ForgotPasswordVerifyCodeScreen = ({ navigation, route }) => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(60);
+
+  // Cooldown timer — starts at 60s (code was just sent from the previous screen)
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const timer = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const onVerifyCode = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -55,6 +71,8 @@ const ForgotPasswordVerifyCodeScreen = ({ navigation, route }) => {
   };
 
   const onResendCode = async () => {
+    if (cooldown > 0 || resendLoading) return;
+
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!isEmail(normalizedEmail)) {
@@ -68,6 +86,7 @@ const ForgotPasswordVerifyCodeScreen = ({ navigation, route }) => {
       setSuccess('');
       await forgotPasswordRequestApi({ email: normalizedEmail });
       setSuccess('A new reset code has been sent to your email.');
+      setCooldown(60);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to resend reset code'));
     } finally {
@@ -131,14 +150,23 @@ const ForgotPasswordVerifyCodeScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {/* Bottom Link */}
+          {/* Cooldown Timer + Resend Link */}
           <View style={styles.bottomContainer}>
-            <Text style={styles.bottomText}>Didn't receive the code? </Text>
-            <Pressable onPress={onResendCode} disabled={loading || resendLoading}>
-              <Text style={[styles.resendLink, resendLoading && styles.resendLinkDisabled]}>
-                {resendLoading ? 'Sending...' : 'Click to resend'}
-              </Text>
-            </Pressable>
+            {cooldown > 0 ? (
+              <View style={styles.cooldownBadge}>
+                <Ionicons name="time-outline" size={16} color={colors.primary} />
+                <Text style={styles.cooldownText}>Resend code in {cooldown}s</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.resendRow}>
+              <Text style={styles.bottomText}>Didn't receive the code? </Text>
+              <Pressable onPress={onResendCode} disabled={loading || resendLoading || cooldown > 0}>
+                <Text style={[styles.resendLink, (resendLoading || cooldown > 0) && styles.resendLinkDisabled]}>
+                  {resendLoading ? 'Sending...' : 'Click to resend'}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -225,11 +253,30 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   bottomContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     marginTop: 'auto',
     paddingTop: 40,
+    gap: 12,
+  },
+  cooldownBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EAF4F1',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DCEBE4',
+  },
+  cooldownText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bottomText: {
     color: colors.textSecondary,
@@ -241,7 +288,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   resendLinkDisabled: {
-    opacity: 0.6,
+    opacity: 0.4,
   }
 });
 

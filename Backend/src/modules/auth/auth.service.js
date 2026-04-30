@@ -1,4 +1,5 @@
 const User = require('../users/user.model');
+const env = require('../../config/env');
 const AppError = require('../../utils/appError');
 const { generateToken } = require('../../utils/jwt');
 const { sendMail } = require('../../utils/mailer');
@@ -7,6 +8,23 @@ const { issueResetCode, verifyResetCode, consumeResetToken } = require('./passwo
 
 const PASSWORD_RESET_COOLDOWN_SECONDS = 60;
 const passwordResetCooldownStore = new Map();
+
+const logVerificationCode = ({ label, email, code, expiresInMinutes, mailResult }) => {
+  if (env.nodeEnv === 'production' && mailResult.sent) {
+    return;
+  }
+
+  console.log('========================================');
+  console.log(`[${label}] Verification code for: ${email}`);
+  console.log(`[${label}] CODE: ${code}`);
+  console.log(`[${label}] Expires in ${expiresInMinutes} minutes`);
+
+  if (!mailResult.sent && mailResult.reason) {
+    console.log(`[${label}] Email not sent: ${mailResult.reason}`);
+  }
+
+  console.log('========================================');
+};
 
 const normalizeTravelStyle = (value = '') => {
   const input = String(value || '').trim();
@@ -55,12 +73,6 @@ const sendRegistrationCode = async ({ email }) => {
   const expiresInMinutes = 15;
   const { code } = issueCode({ email: normalizedEmail, expiresInMinutes });
 
-  console.log('========================================');
-  console.log(`[SignupVerify] Verification code for: ${normalizedEmail}`);
-  console.log(`[SignupVerify] CODE: ${code}`);
-  console.log(`[SignupVerify] Expires in ${expiresInMinutes} minutes`);
-  console.log('========================================');
-
   const subject = 'TravelGenie Verification Code';
   const text = `Your TravelGenie verification code is ${code}. It expires in ${expiresInMinutes} minutes.`;
   const html = `<p>Your TravelGenie verification code is <strong>${code}</strong>.</p><p>This code expires in ${expiresInMinutes} minutes.</p>`;
@@ -70,6 +82,14 @@ const sendRegistrationCode = async ({ email }) => {
     subject,
     text,
     html
+  });
+
+  logVerificationCode({
+    label: 'SignupVerify',
+    email: normalizedEmail,
+    code,
+    expiresInMinutes,
+    mailResult
   });
 
   return {
@@ -183,6 +203,10 @@ const loginUser = async ({ email, password }) => {
     throw new AppError('Invalid email or password', 401);
   }
 
+  if (user.isActive === false) {
+    throw new AppError('Your account has been deactivated. Please contact support.', 403);
+  }
+
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     throw new AppError('Invalid email or password', 401);
@@ -221,12 +245,6 @@ const requestPasswordReset = async ({ email }) => {
   const expiresInMinutes = 15;
   const { code: resetCode } = issueResetCode({ email: normalizedEmail, expiresInMinutes });
 
-  console.log('========================================');
-  console.log(`[ResetPassword] Verification code for: ${normalizedEmail}`);
-  console.log(`[ResetPassword] CODE: ${resetCode}`);
-  console.log('[ResetPassword] Expires in 15 minutes');
-  console.log('========================================');
-
   const subject = 'TravelGenie Password Reset Request';
   const text = `We received a password reset request for your account. Your code is ${resetCode}. It expires in 15 minutes.`;
   const html = `<p>We received a password reset request for your account.</p><p>Your code is <strong>${resetCode}</strong>.</p><p>This code expires in ${expiresInMinutes} minutes.</p>`;
@@ -236,6 +254,14 @@ const requestPasswordReset = async ({ email }) => {
     subject,
     text,
     html
+  });
+
+  logVerificationCode({
+    label: 'ResetPassword',
+    email: normalizedEmail,
+    code: resetCode,
+    expiresInMinutes,
+    mailResult
   });
 
   return {

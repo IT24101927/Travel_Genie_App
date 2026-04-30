@@ -131,8 +131,14 @@ const changePassword = async (userId, { currentPassword, newPassword }) => {
   const isValid = await user.comparePassword(currentPassword);
   if (!isValid) throw new AppError('Current password is incorrect', 401);
 
-  if (!newPassword || newPassword.length < 8) {
-    throw new AppError('New password must be at least 8 characters', 400);
+  const missing = [];
+  if (!newPassword || newPassword.length < 8) missing.push('8+ characters');
+  if (!/[A-Z]/.test(newPassword || '')) missing.push('uppercase letter');
+  if (!/[a-z]/.test(newPassword || '')) missing.push('lowercase letter');
+  if (!/\d/.test(newPassword || '')) missing.push('number');
+  if (!/[!@#$%^&*()\-_=+[\]{};:'",.<>?/\\|`~]/.test(newPassword || '')) missing.push('special character');
+  if (missing.length > 0) {
+    throw new AppError(`New password needs: ${missing.join(', ')}.`, 400);
   }
 
   user.password = newPassword;
