@@ -35,10 +35,10 @@ const getExpenseHandler = asyncHandler(async (req, res) => {
 });
 
 const updateExpenseHandler = asyncHandler(async (req, res) => {
-  const payload = {
-    ...req.body,
-    tags: Array.isArray(req.body.tags) ? req.body.tags : req.body.tags ? [req.body.tags] : req.body.tags
-  };
+  const payload = { ...req.body };
+  if ('tags' in req.body) {
+    payload.tags = Array.isArray(req.body.tags) ? req.body.tags : req.body.tags ? [req.body.tags] : [];
+  }
 
   const expense = await updateExpense(req.params.id, req.user, payload);
   return sendSuccess(res, 200, 'Expense updated successfully', { expense });

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -24,6 +25,10 @@ const AdminUsersScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [resetTarget, setResetTarget] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -61,24 +66,33 @@ const AdminUsersScreen = ({ navigation }) => {
   };
 
   const confirmResetPassword = (user) => {
-    Alert.prompt(
-      'Reset Password',
-      `Set a new password for "${user.fullName}". Min. 8 characters.`,
-      async (newPassword) => {
-        if (!newPassword) return;
-        if (newPassword.length < 8) {
-          Alert.alert('Error', 'Password must be at least 8 characters.');
-          return;
-        }
-        try {
-          await adminResetUserPasswordApi(user._id, { newPassword });
-          Alert.alert('Done', `Password for ${user.fullName} has been reset.`);
-        } catch (err) {
-          Alert.alert('Error', getApiErrorMessage(err, 'Failed to reset password'));
-        }
-      },
-      'secure-text'
-    );
+    setResetTarget(user);
+    setNewPassword('');
+    setResetError('');
+  };
+
+  const submitResetPassword = async () => {
+    const missing = [];
+    if (newPassword.length < 8) missing.push('8+ characters');
+    if (!/[A-Z]/.test(newPassword)) missing.push('uppercase letter');
+    if (!/[a-z]/.test(newPassword)) missing.push('lowercase letter');
+    if (!/\d/.test(newPassword)) missing.push('number');
+    if (!/[!@#$%^&*()\-_=+[\]{};:'",.<>?/\\|`~]/.test(newPassword)) missing.push('special character');
+    if (missing.length > 0) {
+      setResetError(`Password needs: ${missing.join(', ')}.`);
+      return;
+    }
+    try {
+      setResetLoading(true);
+      setResetError('');
+      await adminResetUserPasswordApi(resetTarget._id, { newPassword });
+      setResetTarget(null);
+      Alert.alert('Done', `Password for ${resetTarget.fullName} has been reset.`);
+    } catch (err) {
+      setResetError(getApiErrorMessage(err, 'Failed to reset password'));
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   const confirmDelete = (user) => {
@@ -200,6 +214,37 @@ const AdminUsersScreen = ({ navigation }) => {
       >
         <Ionicons name="person-add-outline" size={24} color={colors.white} />
       </Pressable>
+
+      {/* Password reset modal */}
+      <Modal visible={!!resetTarget} transparent animationType="fade" onRequestClose={() => setResetTarget(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Reset Password</Text>
+            <Text style={styles.modalSub}>
+              New password for{' '}
+              <Text style={{ fontWeight: '800' }}>{resetTarget?.fullName}</Text>
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter new password"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              value={newPassword}
+              onChangeText={(t) => { setNewPassword(t); setResetError(''); }}
+              autoFocus
+            />
+            {resetError ? <Text style={styles.modalError}>{resetError}</Text> : null}
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setResetTarget(null)} style={styles.modalCancel}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={submitResetPassword} style={styles.modalConfirm} disabled={resetLoading}>
+                <Text style={styles.modalConfirmText}>{resetLoading ? 'Saving...' : 'Reset'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -285,6 +330,38 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center'
   },
   empty: { textAlign: 'center', color: colors.textMuted, marginTop: 40 },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center', alignItems: 'center', padding: 32
+  },
+  modalBox: {
+    backgroundColor: colors.surface, borderRadius: 20,
+    padding: 24, width: '100%',
+    borderWidth: 1, borderColor: colors.border
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
+  modalSub: { fontSize: 13, color: colors.textMuted, marginBottom: 16 },
+  modalInput: {
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, color: colors.textPrimary,
+    backgroundColor: colors.surface2
+  },
+  modalError: { color: colors.danger, fontSize: 12, marginTop: 6 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  modalCancel: {
+    flex: 1, paddingVertical: 13, borderRadius: 12,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center'
+  },
+  modalCancelText: { fontSize: 15, fontWeight: '700', color: colors.textSecondary },
+  modalConfirm: {
+    flex: 1, paddingVertical: 13, borderRadius: 12,
+    backgroundColor: colors.primary, alignItems: 'center'
+  },
+  modalConfirmText: { fontSize: 15, fontWeight: '700', color: colors.white },
+
   fab: {
     position: 'absolute',
     bottom: 28,

@@ -45,6 +45,7 @@ const WEATHER = [
 const CURRENCIES = ['LKR (Rs)', 'USD ($)', 'EUR (€)'];
 
 const RegisterStep3PreferencesScreen = ({ navigation, route }) => {
+  const insets = useSafeAreaInsets();
   const { userData } = route.params || {};
   const verificationToken = route.params?.verificationToken;
   const { register } = useAuth();

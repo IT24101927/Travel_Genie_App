@@ -37,7 +37,7 @@ const NotificationListScreen = () => {
         <Text style={styles.headerTitle}>Activity Alerts</Text>
 
         <ErrorText message={error} />
-        
+
         <FlatList
           data={notifications}
         keyExtractor={(item) => item._id}
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   listContent: {
-    paddingBottom: 40
+    paddingBottom: 120
   },
   card: {
     flexDirection: 'row',

@@ -192,14 +192,27 @@ const RegisterStep2VerifyScreen = ({ navigation, route }) => {
 
             <ErrorText message={error} />
 
-            <Pressable style={styles.resendWrap} onPress={onResendCode} disabled={resendCooldown > 0}>
-              <Text style={[styles.resendText, resendCooldown > 0 && styles.resendTextMuted]}>
-                {sendingCode ? 'Sending code...' : resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend verification code'}
-              </Text>
-            </Pressable>
-
             <View style={styles.buttonContainer}>
               <AppButton title={loading ? 'Verifying...' : 'Verify Email'} onPress={onVerify} disabled={loading || codeRef.current.join('').length < 6} />
+            </View>
+          </View>
+
+          {/* Cooldown Timer + Resend Link */}
+          <View style={styles.bottomContainer}>
+            {resendCooldown > 0 ? (
+              <View style={styles.cooldownBadge}>
+                <Ionicons name="time-outline" size={16} color={colors.primary} />
+                <Text style={styles.cooldownText}>Resend code in {resendCooldown}s</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.resendRow}>
+              <Text style={styles.bottomText}>Didn't receive the code? </Text>
+              <Pressable onPress={onResendCode} disabled={resendCooldown > 0 || sendingCode}>
+                <Text style={[styles.resendLink, (resendCooldown > 0 || sendingCode) && styles.resendLinkDisabled]}>
+                  {sendingCode ? 'Sending...' : 'Resend code'}
+                </Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -331,7 +344,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   buttonContainer: {
+    marginTop: 24,
+  },
+  bottomContainer: {
+    alignItems: 'center',
     marginTop: 'auto',
+    paddingTop: 40,
+    gap: 12,
+  },
+  cooldownBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EAF4F1',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DCEBE4',
+  },
+  cooldownText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bottomText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  resendLink: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  resendLinkDisabled: {
+    opacity: 0.4,
   },
 });
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import AppButton from '../../components/common/AppButton';
@@ -10,7 +11,7 @@ import { getTripsApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCurrency } from '../../utils/currencyFormat';
 
-const BudgetUsageScreen = () => {
+const BudgetUsageScreen = ({ navigation }) => {
   const [tripId, setTripId] = useState('');
   const [trips, setTrips] = useState([]);
   const [result, setResult] = useState(null);
@@ -59,7 +60,16 @@ const BudgetUsageScreen = () => {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header & Back Button */}
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={20} color={colors.primary} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Budget Usage</Text>
+        <View style={{ width: 36 }} />
+      </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Select a Trip</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -126,17 +136,40 @@ const BudgetUsageScreen = () => {
         </View>
       ) : null}
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
   content: {
     padding: 16,
-    paddingBottom: 40
+    paddingBottom: 120
   },
   section: {
     marginBottom: 20

@@ -105,16 +105,49 @@ const AdminUserFormScreen = ({ route, navigation }) => {
   };
 
   const validate = () => {
-    if (!form.fullName.trim()) return 'Full name is required.';
-    if (form.fullName.trim().length < 2) return 'Name must be at least 2 characters.';
-    if (form.phone && !/^0\d{9}$/.test(form.phone.trim())) return 'Phone must be 10 digits starting with 0.';
+    const name = form.fullName.trim();
+    if (!name) return 'Full name is required.';
+    if (name.length < 2) return 'Full name must be at least 2 characters.';
+    if (name.length > 100) return 'Full name must be less than 100 characters.';
+    if (/[@#$%^*={}[\]|\\<>]/.test(name)) return 'Full name contains invalid characters.';
+
+    if (form.phone.trim() && !/^0\d{9}$/.test(form.phone.trim()))
+      return 'Phone must be 10 digits starting with 0 (e.g. 0771234567).';
+
+    if (form.nic.trim()) {
+      const nic = form.nic.trim();
+      if (!/^\d{12}$/.test(nic) && !/^\d{9}[VvXx]$/.test(nic))
+        return 'NIC must be 12 digits (e.g. 200012345678) or 9 digits + V/X (e.g. 991234567V).';
+    }
+
+    if (form.dob.trim()) {
+      const dob = new Date(form.dob.trim());
+      if (isNaN(dob.getTime())) return 'Enter a valid date of birth (YYYY-MM-DD).';
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (dob > today) return 'Date of birth cannot be in the future.';
+      const age = today.getFullYear() - dob.getFullYear() -
+        (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate()) ? 1 : 0);
+      if (age < 18) return 'User must be at least 18 years old.';
+      if (age > 120) return 'Please enter a valid date of birth.';
+    }
+
     if (!isEdit) {
       if (!form.email.trim()) return 'Email is required.';
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return 'Enter a valid email address.';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return 'Enter a valid email address (e.g. name@example.com).';
+
       if (!form.password) return 'Password is required.';
-      if (form.password.length < 8) return 'Password must be at least 8 characters.';
+      const missing = [];
+      if (form.password.length < 8) missing.push('8+ characters');
+      if (!/[A-Z]/.test(form.password)) missing.push('uppercase letter');
+      if (!/[a-z]/.test(form.password)) missing.push('lowercase letter');
+      if (!/\d/.test(form.password)) missing.push('number');
+      if (!/[!@#$%^&*()\-_=+[\]{};:'",.<>?/\\|`~]/.test(form.password)) missing.push('special character');
+      if (missing.length > 0) return `Password needs: ${missing.join(', ')}.`;
+
       if (form.password !== form.confirmPassword) return 'Passwords do not match.';
     }
+
     return null;
   };
 
@@ -204,9 +237,10 @@ const AdminUserFormScreen = ({ route, navigation }) => {
             label="Phone Number"
             leftIcon="call-outline"
             value={form.phone}
-            onChangeText={(t) => set('phone', t)}
+            onChangeText={(t) => set('phone', t.replace(/\D/g, '').slice(0, 10))}
             keyboardType="phone-pad"
             placeholder="07XXXXXXXX"
+            helperText="10 digits starting with 0 (e.g. 0771234567)"
           />
 
           <AppInput
@@ -221,8 +255,9 @@ const AdminUserFormScreen = ({ route, navigation }) => {
             label="NIC Number"
             leftIcon="card-outline"
             value={form.nic}
-            onChangeText={(t) => set('nic', t)}
+            onChangeText={(t) => set('nic', t.replace(/\s/g, '').replace(/[vVxX]$/, (m) => m.toUpperCase()))}
             placeholder="200012345678 or 991234567V"
+            helperText="12 digits or 9 digits + V/X"
           />
 
           <GenderPicker

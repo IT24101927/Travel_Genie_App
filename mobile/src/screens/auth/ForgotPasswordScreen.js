@@ -12,7 +12,8 @@ import { getApiErrorMessage } from '../../utils/apiError';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [apiError, setApiError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -38,7 +39,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
   const onRequestReset = async () => {
     const emailCheck = validateEmail(email);
     if (!emailCheck.valid) {
-      setError(emailCheck.message);
+      setEmailError(emailCheck.message);
       setSuccess('');
       return;
     }
@@ -49,7 +50,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
-      setError('');
+      setEmailError('');
+      setApiError('');
       setSuccess('');
       await forgotPasswordRequestApi({ email: email.trim() });
       setSuccess('If that email exists, a reset code has been sent.');
@@ -57,7 +59,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       navigation.navigate('ForgotPasswordVerifyCode', { email: email.trim().toLowerCase() });
     } catch (err) {
       const message = getApiErrorMessage(err, 'Failed to request password reset');
-      setError(message);
+      setApiError(message);
       if (typeof message === 'string') {
         const match = message.match(/(\d+)s/);
         if (match?.[1]) {
@@ -103,16 +105,18 @@ const ForgotPasswordScreen = ({ navigation }) => {
               value={email}
               autoCapitalize="none"
               keyboardType="email-address"
+              error={emailError}
               onChangeText={(text) => {
                 setEmail(text);
-                setError('');
+                setEmailError('');
+                setApiError('');
                 setSuccess('');
               }}
               placeholder="Enter your email"
             />
 
             {success ? <Text style={styles.successText}>{success}</Text> : null}
-            <ErrorText message={error} />
+            <ErrorText message={apiError} />
 
             <View style={styles.buttonWrap}>
               <AppButton

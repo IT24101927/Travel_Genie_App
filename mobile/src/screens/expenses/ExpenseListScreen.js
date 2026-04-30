@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -53,6 +54,7 @@ const ExpenseListScreen = ({ navigation }) => {
   const budgetUsed = useMemo(() => 0, []);
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
     <View style={styles.container}>
       <Text style={styles.headerTitle}>My Ledger</Text>
       
@@ -89,10 +91,15 @@ const ExpenseListScreen = ({ navigation }) => {
         <Ionicons name="add" size={32} color={colors.white} />
       </Pressable>
     </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -109,12 +116,12 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   listContent: {
-    paddingBottom: 100
+    paddingBottom: 160
   },
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: 100,
     width: 64,
     height: 64,
     borderRadius: 32,

@@ -10,7 +10,7 @@ import {
   Text,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -22,14 +22,15 @@ const { width } = Dimensions.get('window');
 
 const StartScreen = ({ navigation }) => {
   const { browseAsGuest } = useAuth();
-  
+  const insets = useSafeAreaInsets();
+
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
   // Animations
-  const flyAnim = useRef(new Animated.Value(0)).current; 
-  const fadeAnim = useRef(new Animated.Value(0)).current;     
-  const panelTranslateY = useRef(new Animated.Value(500)).current; 
+  const flyAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const panelTranslateY = useRef(new Animated.Value(500)).current;
 
   useEffect(() => {
     checkOnboarding();
@@ -105,7 +106,7 @@ const StartScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.onboardingContainer}>
-          
+
           {/* Hero Section containing animations */}
           <View style={styles.heroSection}>
             <Animated.View style={[styles.heroCircle, { opacity: fadeAnim, transform: [{ scale: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }]}>
@@ -113,7 +114,7 @@ const StartScreen = ({ navigation }) => {
             </Animated.View>
 
             <Animated.View style={[
-              styles.planeWrapper, 
+              styles.planeWrapper,
               { transform: [{ translateX }, { translateY }, { scale }, { rotate: '-25deg' }] }
             ]}>
               <Ionicons name="airplane" size={60} color={colors.primary} />
@@ -127,9 +128,9 @@ const StartScreen = ({ navigation }) => {
              </View>
              <Text style={styles.title}>Travel<Text style={styles.titleHighlight}>Genie</Text></Text>
              <Text style={styles.tagline}>Let's start planning...</Text>
-             
+
              <View style={{ height: 50 }} />
-             
+
              <Pressable
                 style={({ pressed }) => [styles.btnPrimary, pressed && styles.pressed]}
                 onPress={handleGetStarted}
@@ -146,7 +147,7 @@ const StartScreen = ({ navigation }) => {
 
   // 2. Auth Panel (Seen after clicking Log In from guest, or second app launch)
   return (
-    <SafeAreaView style={styles.safeAreaAuth} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeAreaAuth} edges={['top']}>
       {/* Brand Splash Splash Area */}
       <View style={[styles.brand, { zIndex: 0 }]}>
         <View style={styles.logoWrap}>
@@ -161,7 +162,7 @@ const StartScreen = ({ navigation }) => {
       </View>
 
       {/* Slide Up Actions Panel */}
-      <Animated.View style={[styles.actionsPanel, { transform: [{ translateY: panelTranslateY }] }]}>
+      <Animated.View style={[styles.actionsPanel, { paddingBottom: Math.max(insets.bottom + 20, 40), transform: [{ translateY: panelTranslateY }] }]}>
         <Pressable
           style={({ pressed }) => [styles.btnTealFilled, pressed && styles.pressed]}
           onPress={() => navigation.navigate('Login')}
@@ -291,12 +292,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  btnPrimaryText: { 
-    color: colors.white, 
-    fontSize: 17, 
-    fontWeight: '700' 
+  btnPrimaryText: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '700'
   },
-  
+
   actionsPanel: {
     paddingHorizontal: 24,
     paddingBottom: 40,

@@ -10,16 +10,20 @@ import {
   View
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 
 import AppButton from '../../components/common/AppButton';
 import AppInput from '../../components/common/AppInput';
 import ErrorText from '../../components/common/ErrorText';
 import EmptyState from '../../components/common/EmptyState';
+import FallbackImage from '../../components/common/FallbackImage';
 import colors from '../../constants/colors';
 import { getPlaceApi } from '../../api/placeApi';
 import { getReviewsApi, createReviewApi } from '../../api/reviewApi';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { getPlaceImageCandidates } from '../../utils/placeImages';
 
 const StarRow = ({ rating, size = 16 }) => {
   const num = Number(rating) || 0;
@@ -56,7 +60,7 @@ const ReviewCard = ({ review }) => (
   </View>
 );
 
-const PlaceDetailsScreen = ({ route }) => {
+const PlaceDetailsScreen = ({ route, navigation }) => {
   const { place: initial } = route.params;
   const [place, setPlace] = useState(initial);
   const [reviews, setReviews] = useState([]);
@@ -124,26 +128,46 @@ const PlaceDetailsScreen = ({ route }) => {
       : null;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Header & Back Button */}
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </Pressable>
+        </View>
+
         {/* Hero */}
         <View style={styles.heroCard}>
-          <View style={styles.iconBox}>
-            <Ionicons name="compass" size={40} color={colors.primary} />
+          <View style={styles.imageWrap}>
+            <FallbackImage
+              uri={getPlaceImageCandidates(place)}
+              style={StyleSheet.absoluteFill}
+              iconName="compass-outline"
+              iconSize={40}
+            />
           </View>
-          <Text style={styles.placeName}>{place.name}</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="map" size={15} color={colors.accent} />
-            <Text style={styles.placeDistrict}>{place.district}</Text>
-          </View>
-          <View style={styles.catRow}>
-            <View style={styles.catBadge}>
-              <Text style={styles.catText}>{place.category}</Text>
-            </View>
-          </View>
+          <View style={styles.heroContent}>
+            <Text style={styles.placeName}>{place.name}</Text>
+            
+            {place.district ? (
+              <View style={styles.locationRow}>
+                <Ionicons name="map" size={15} color={colors.accent} />
+                <Text style={styles.placeDistrict}>{place.district}</Text>
+              </View>
+            ) : null}
+            
+            {(place.category || place.type) ? (
+              <View style={styles.catRow}>
+                <View style={styles.catBadge}>
+                  <Text style={styles.catText}>{place.category || place.type}</Text>
+                </View>
+              </View>
+            ) : null}
           {avgRating && (
             <View style={styles.ratingRow}>
               <StarRow rating={avgRating} size={18} />
@@ -151,6 +175,7 @@ const PlaceDetailsScreen = ({ route }) => {
               <Text style={styles.reviewCount}>({reviews.length} reviews)</Text>
             </View>
           )}
+          </View>
         </View>
 
         {/* Info Row */}
@@ -159,9 +184,16 @@ const PlaceDetailsScreen = ({ route }) => {
             <View style={styles.infoCard}>
               <Ionicons name="cash-outline" size={20} color={colors.primary} />
               <Text style={styles.infoLabel}>Est. Cost</Text>
-              <Text style={styles.infoValue}>${place.estimatedCost}</Text>
+              <Text style={styles.infoValue}>LKR {place.estimatedCost}</Text>
             </View>
           )}
+          {place.duration ? (
+            <View style={styles.infoCard}>
+              <Ionicons name="time-outline" size={20} color={colors.primary} />
+              <Text style={styles.infoLabel}>Duration</Text>
+              <Text style={styles.infoValue}>{place.duration}</Text>
+            </View>
+          ) : null}
           {reviews.length > 0 && (
             <View style={styles.infoCard}>
               <Ionicons name="star" size={20} color={colors.warning} />
@@ -190,6 +222,34 @@ const PlaceDetailsScreen = ({ route }) => {
                 </View>
               ))}
             </View>
+          </View>
+        ) : null}
+
+        {/* Location Map */}
+        {place.lat && place.lng ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Location</Text>
+            <View style={styles.mapContainer}>
+              <MapView
+                style={StyleSheet.absoluteFill}
+                initialRegion={{
+                  latitude: Number(place.lat),
+                  longitude: Number(place.lng),
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                }}
+                scrollEnabled={false}
+                zoomEnabled={false}
+              >
+                <Marker
+                  coordinate={{ latitude: Number(place.lat), longitude: Number(place.lng) }}
+                  pinColor={colors.primary}
+                />
+              </MapView>
+            </View>
+            <Text style={styles.addressText}>
+              {place.address_text || place.location || `${place.district || 'Sri Lanka'}`}
+            </Text>
           </View>
         ) : null}
 
@@ -258,34 +318,50 @@ const PlaceDetailsScreen = ({ route }) => {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background
   },
   content: {
     padding: 16,
-    paddingBottom: 40
+    paddingBottom: 120
+  },
+  header: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
   },
   heroCard: {
     backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
+    overflow: 'hidden',
     marginBottom: 16,
-    elevation: 3
+    elevation: 3,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4,
   },
-  iconBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary + '18',
+  imageWrap: {
+    width: '100%',
+    height: 180,
+    backgroundColor: colors.surface2,
+  },
+  heroContent: {
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16
   },
   placeName: {
     fontSize: 22,
@@ -397,6 +473,19 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
     fontSize: 12
+  },
+  mapContainer: {
+    height: 150,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: colors.surface2,
+  },
+  addressText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   reviewsTitleRow: {
     flexDirection: 'row',
