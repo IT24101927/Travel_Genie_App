@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Dimensions,
   FlatList,
+  Platform,
   Pressable,
   ScrollView,
   StatusBar,
@@ -22,6 +23,7 @@ import colors from '../../constants/colors';
 import { getPlacesApi } from '../../api/placeApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getPlaceImageCandidates } from '../../utils/placeImages';
+import { getPlaceType, getPlaceTypeMeta } from '../../utils/placeTypes';
 
 const { width } = Dimensions.get('window');
 const CARD_W = Math.floor((width - 48) / 2);
@@ -60,29 +62,6 @@ const DISTRICT_COORDS = {
   'Kegalle':      { latitude: 7.2513,  longitude: 80.3464 },
 };
 
-/* Category → rich placeholder background + icon color */
-const CAT_PLACEHOLDER = {
-  Temple:            { bg: '#7B4F28', icon: 'rgba(255,255,255,0.45)' },
-  'Religious Site':  { bg: '#7B4F28', icon: 'rgba(255,255,255,0.45)' },
-  Beach:             { bg: '#1A6EA8', icon: 'rgba(255,255,255,0.45)' },
-  Nature:            { bg: '#1A6A3A', icon: 'rgba(255,255,255,0.45)' },
-  'Nature Reserve':  { bg: '#1A6A3A', icon: 'rgba(255,255,255,0.45)' },
-  Heritage:          { bg: '#8B4513', icon: 'rgba(255,255,255,0.45)' },
-  'Archaeological Site': { bg: '#8B5E3C', icon: 'rgba(255,255,255,0.45)' },
-  Museum:            { bg: '#4A3C8A', icon: 'rgba(255,255,255,0.45)' },
-  Gallery:           { bg: '#4A3C8A', icon: 'rgba(255,255,255,0.45)' },
-  Park:              { bg: '#2E6B30', icon: 'rgba(255,255,255,0.45)' },
-  Garden:            { bg: '#2E6B30', icon: 'rgba(255,255,255,0.45)' },
-  Viewpoint:         { bg: '#1C5C80', icon: 'rgba(255,255,255,0.45)' },
-  Attraction:        { bg: '#0C6B4F', icon: 'rgba(255,255,255,0.45)' },
-  Zoo:               { bg: '#5A7A20', icon: 'rgba(255,255,255,0.45)' },
-  Wildlife:          { bg: '#5A7A20', icon: 'rgba(255,255,255,0.45)' },
-  Monument:          { bg: '#7A5C1A', icon: 'rgba(255,255,255,0.45)' },
-  Memorial:          { bg: '#7A5C1A', icon: 'rgba(255,255,255,0.45)' },
-};
-const getCatPlaceholder = (cat) =>
-  CAT_PLACEHOLDER[cat] || { bg: '#3A5A4A', icon: 'rgba(255,255,255,0.4)' };
-
 const getPlaceId = (place) => String(place?._id || place?.place_id || place?.id || '');
 
 const getPlaceCoordinate = (place) => {
@@ -120,8 +99,8 @@ const getMapRegion = (places, districtName) => {
 
 /* ─── Place card ─── */
 const PlaceCard = memo(({ item, isSelected, onPress }) => {
-  const cat = item.category || item.type || '';
-  const ph  = getCatPlaceholder(cat);
+  const cat = getPlaceType(item);
+  const meta = getPlaceTypeMeta(item);
 
   return (
     <TouchableOpacity
@@ -139,8 +118,8 @@ const PlaceCard = memo(({ item, isSelected, onPress }) => {
         style={StyleSheet.absoluteFill}
         iconName="compass-outline"
         iconSize={40}
-        placeholderColor={ph.bg}
-        placeholderIconColor={ph.icon}
+        placeholderColor={meta.color}
+        placeholderIconColor="rgba(255,255,255,0.45)"
       >
         {/* Single bottom scrim — one layer = zero seam lines on photos */}
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.gradBottom} />
@@ -148,15 +127,17 @@ const PlaceCard = memo(({ item, isSelected, onPress }) => {
 
       {/* Category badge — always visible */}
       {cat ? (
-        <View style={styles.catBadge}>
-          <Text style={styles.catBadgeText}>{cat.toUpperCase()}</Text>
+        <View style={[styles.catBadge, { backgroundColor: meta.color }]}>
+          <Text style={styles.catBadgeEmoji}>{meta.emoji}</Text>
+          <Text style={styles.catBadgeText}>{meta.label.toUpperCase()}</Text>
         </View>
       ) : null}
 
-      {/* Cost badge — always visible */}
-      {item.estimatedCost > 0 ? (
-        <View style={styles.costBadge}>
-          <Text style={styles.costBadgeText}>LKR {item.estimatedCost}</Text>
+      {/* Rating badge — always visible if exists */}
+      {Number(item.rating) > 0 ? (
+        <View style={styles.ratingBadge}>
+          <Ionicons name="star" size={10} color={colors.warning} />
+          <Text style={styles.ratingBadgeText}>{Number(item.rating).toFixed(1)}</Text>
         </View>
       ) : null}
 
@@ -177,9 +158,11 @@ const PlaceCard = memo(({ item, isSelected, onPress }) => {
 });
 
 /* ─── Places map — pins come from Mongo lat/lng ─── */
-const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, onMarkerPress, onClose, onViewDetails }) => {
+const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, onMarkerPress, onClose, onViewDetails, onScrollToTop }) => {
   const mapRef = useRef(null);
   const regionRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapLaidOut, setMapLaidOut] = useState(false);
   const mappedPlaces = useMemo(
     () => places.map((place) => ({ place, coordinate: getPlaceCoordinate(place) })).filter((item) => item.coordinate),
     [places]
@@ -188,23 +171,26 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
   const selectedCoordinate = selectedPlace ? getPlaceCoordinate(selectedPlace) : null;
 
   const fitAllPlaces = useCallback((animated = true) => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !mapReady || !mapLaidOut) return;
 
     if (mappedPlaces.length > 1) {
       mapRef.current.fitToCoordinates(
         mappedPlaces.map((item) => item.coordinate),
-        { edgePadding: { top: 50, right: 50, bottom: 80, left: 50 }, animated }
+        { edgePadding: { top: 34, right: 60, bottom: 38, left: 34 }, animated }
       );
     } else {
       regionRef.current = region;
       mapRef.current.animateToRegion(region, animated ? 400 : 0);
     }
-  }, [mappedPlaces, region]);
+  }, [mapLaidOut, mapReady, mappedPlaces, region]);
 
   const handleResetMap = useCallback(() => {
     onClose();
     fitAllPlaces(true);
-  }, [fitAllPlaces, onClose]);
+    setTimeout(() => {
+      onScrollToTop?.();
+    }, 150);
+  }, [fitAllPlaces, onClose, onScrollToTop]);
 
   const changeZoom = useCallback((factor) => {
     const current = regionRef.current || region;
@@ -222,28 +208,33 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
   const zoomOut = useCallback(() => changeZoom(2), [changeZoom]);
 
   useEffect(() => {
+    if (!mapReady || !mapLaidOut) return;
     regionRef.current = region;
-    fitAllPlaces(true);
-  }, [fitAllPlaces, region]);
+    const timers = [0, 250].map((delay) =>
+      setTimeout(() => fitAllPlaces(false), delay)
+    );
+
+    return () => timers.forEach(clearTimeout);
+  }, [fitAllPlaces, mapLaidOut, mapReady, region]);
 
   useEffect(() => {
-    if (selectedCoordinate) {
-      const current = regionRef.current || region;
-      const latitudeDelta = Math.min(current.latitudeDelta, 0.055);
-      const longitudeDelta = Math.min(current.longitudeDelta, 0.055);
-      const nextRegion = {
-        latitude: selectedCoordinate.latitude - latitudeDelta * 0.22,
-        longitude: selectedCoordinate.longitude,
-        latitudeDelta,
-        longitudeDelta,
-      };
-      regionRef.current = nextRegion;
-      mapRef.current?.animateToRegion(nextRegion, 350);
-    }
-  }, [selectedCoordinate?.latitude, selectedCoordinate?.longitude]);
+    if (!selectedCoordinate || !mapReady || !mapLaidOut) return;
+    const latitudeDelta = 0.028;
+    const longitudeDelta = 0.028;
+    const nextRegion = {
+      latitude: selectedCoordinate.latitude - latitudeDelta * 0.22,
+      longitude: selectedCoordinate.longitude,
+      latitudeDelta,
+      longitudeDelta,
+    };
+    regionRef.current = nextRegion;
+    mapRef.current?.animateToRegion(nextRegion, 350);
+  }, [mapLaidOut, mapReady, region, selectedCoordinate?.latitude, selectedCoordinate?.longitude]);
+
+  const selectedMeta = selectedPlace ? getPlaceTypeMeta(selectedPlace) : null;
 
   return (
-    <View style={styles.mapWrap}>
+    <View style={styles.mapWrap} onLayout={() => setMapLaidOut(true)}>
       {mappedPlaces.length > 0 ? (
         <MapView
           ref={mapRef}
@@ -254,6 +245,8 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
           zoomTapEnabled={true}
           pitchEnabled={false}
           rotateEnabled={false}
+          toolbarEnabled={false}
+          onMapReady={() => setMapReady(true)}
           onRegionChangeComplete={(nextRegion) => {
             regionRef.current = nextRegion;
           }}
@@ -265,13 +258,44 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
           {mappedPlaces.map(({ place, coordinate }) => {
             const placeId = getPlaceId(place);
             const isSelected = selectedPlaceId === placeId;
+            const meta = getPlaceTypeMeta(place);
+
+            if (Platform.OS === 'ios') {
+              return (
+                <Marker
+                  key={`${placeId}_${isSelected}`}
+                  coordinate={coordinate}
+                  title={place.name}
+                  description={place.address_text || place.description || districtName}
+                  tracksViewChanges={false}
+                  anchor={{ x: 0.5, y: 1 }}
+                  zIndex={isSelected ? 10 : 1}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    onMarkerPress(place);
+                  }}
+                >
+                  <View style={styles.markerWrap}>
+                    <View style={[
+                      styles.markerBubble,
+                      { backgroundColor: meta.color },
+                      isSelected && styles.markerBubbleSelected,
+                    ]}>
+                      <Text style={styles.markerEmoji}>{meta.emoji}</Text>
+                    </View>
+                    <View style={[styles.markerStem, { borderTopColor: meta.color }]} />
+                  </View>
+                </Marker>
+              );
+            }
+
             return (
               <Marker
                 key={`${placeId}_${isSelected}`}
                 coordinate={coordinate}
                 title={place.name}
                 description={place.address_text || place.description || districtName}
-                pinColor={isSelected ? 'red' : colors.primary}
+                pinColor={isSelected ? colors.accent : meta.color}
                 onPress={(e) => {
                   e.stopPropagation?.();
                   onMarkerPress(place);
@@ -315,28 +339,58 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
 
       {selectedPlace && selectedCoordinate ? (
         <View style={styles.mapDetailCard}>
-          <View style={styles.mapDetailPhoto}>
+          <View
+            style={[
+              styles.mapDetailThumb,
+              { backgroundColor: selectedMeta ? selectedMeta.color + '18' : colors.surface2 },
+            ]}
+          >
             <FallbackImage
               uri={getPlaceImageCandidates(selectedPlace)}
               style={StyleSheet.absoluteFill}
-              iconName="compass-outline"
-              iconSize={22}
+              iconName={selectedMeta?.icon || 'compass-outline'}
+              iconSize={24}
+              placeholderColor={selectedMeta ? selectedMeta.color + '16' : colors.surface2}
+              placeholderIconColor={selectedMeta?.color || colors.primary}
             />
+            {selectedMeta ? (
+              <View style={[styles.mapDetailEmojiBadge, { backgroundColor: selectedMeta.color }]}>
+                <Text style={styles.mapDetailTypeEmoji}>{selectedMeta.emoji}</Text>
+              </View>
+            ) : null}
           </View>
-          <View style={styles.mapDetailBody}>
+
+          <Pressable style={styles.mapDetailBody} onPress={() => onViewDetails(selectedPlace)}>
+            <View style={styles.mapDetailTopLine}>
+              <View
+                style={[
+                  styles.mapDetailTypePill,
+                  { backgroundColor: selectedMeta ? selectedMeta.color + '14' : colors.primary + '14' },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.mapDetailType,
+                    { color: selectedMeta?.color || colors.primary },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {selectedMeta?.label || getPlaceType(selectedPlace)}
+                </Text>
+              </View>
+            </View>
             <Text style={styles.mapDetailName} numberOfLines={1}>{selectedPlace.name}</Text>
-            <Text style={styles.mapDetailType} numberOfLines={1}>{selectedPlace.category || selectedPlace.type || 'Place'}</Text>
             <Text style={styles.mapDetailSub} numberOfLines={1}>
               {selectedPlace.address_text || selectedPlace.description || districtName || 'Tap details to see more'}
             </Text>
-          </View>
+          </Pressable>
+
           <View style={styles.mapDetailActions}>
-            <Pressable style={styles.mapDetailBtn} onPress={() => onViewDetails(selectedPlace)}>
-              <Text style={styles.mapDetailBtnText}>Details</Text>
-              <Ionicons name="arrow-forward" size={13} color={colors.white} />
-            </Pressable>
             <Pressable style={styles.mapDetailClose} onPress={onClose}>
-              <Ionicons name="close" size={15} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </Pressable>
+            <Pressable style={styles.mapDetailBtn} onPress={() => onViewDetails(selectedPlace)}>
+              <Ionicons name="arrow-forward" size={18} color={colors.white} />
             </Pressable>
           </View>
         </View>
@@ -348,7 +402,7 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
 /* ─── Memoised list header ─── */
 const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
                            categories, selectedCat, onCatChange, count,
-                           places, selectedPlaceId, selectedPlace, onMarkerPress, onClearSelection, onViewDetails }) => (
+                           places, selectedPlaceId, selectedPlace, onMarkerPress, onClearSelection, onViewDetails, onScrollToTop }) => (
   <>
     <PlacesMap
       districtName={districtName}
@@ -358,6 +412,7 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
       onMarkerPress={onMarkerPress}
       onClose={onClearSelection}
       onViewDetails={onViewDetails}
+      onScrollToTop={onScrollToTop}
     />
 
     {/* Search bar */}
@@ -393,13 +448,22 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
     {categories.length > 1 && (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
         {categories.map((cat) => (
-          <Pressable
-            key={cat}
-            style={[styles.chip, selectedCat === cat && styles.chipActive]}
-            onPress={() => onCatChange(cat)}
-          >
-            <Text style={[styles.chipText, selectedCat === cat && styles.chipTextActive]}>{cat}</Text>
-          </Pressable>
+          (() => {
+            const active = selectedCat === cat;
+            const meta = cat === 'All'
+              ? { emoji: '🌐', icon: 'globe', color: colors.primary, label: 'All' }
+              : getPlaceTypeMeta(cat);
+            return (
+              <Pressable
+                key={cat}
+                style={[styles.chip, active && { backgroundColor: meta.color, borderColor: meta.color }]}
+                onPress={() => onCatChange(cat)}
+              >
+                <Text style={styles.chipEmoji}>{meta.emoji}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{meta.label}</Text>
+              </Pressable>
+            );
+          })()
         ))}
       </ScrollView>
     )}
@@ -477,6 +541,9 @@ export default function PlaceListScreen({ navigation, route }) {
   }, [load, search]);
   const handleCardPress    = useCallback((p) => navigation.navigate('PlaceDetails', { place: p }), [navigation]);
   const handleClearSelection = useCallback(() => setSelectedPlaceId(null), []);
+  const handleScrollToTop = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
   const handleMarkerPress = useCallback((place) => {
     const placeId = getPlaceId(place);
     if (selectedPlaceId === placeId) {
@@ -522,10 +589,11 @@ export default function PlaceListScreen({ navigation, route }) {
       onMarkerPress={handleMarkerPress}
       onClearSelection={handleClearSelection}
       onViewDetails={handleCardPress}
+      onScrollToTop={handleScrollToTop}
     />
   ), [districtName, search, handleSearchChange, handleSearchSubmit,
       categories, selectedCat, handleCatChange, filtered, selectedPlaceId,
-      selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress]);
+      selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop]);
 
   /* ─── Loading state ─── */
   if (loading) {
@@ -689,6 +757,37 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   mapResetText: { fontSize: 11, fontWeight: '800', color: colors.textPrimary },
+  markerWrap: { alignItems: 'center' },
+  markerBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: colors.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  markerBubbleSelected: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderColor: colors.accent,
+  },
+  markerStem: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 9,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginTop: -2,
+  },
+  markerEmoji: { fontSize: 16 },
   noMapPlaces: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
@@ -700,46 +799,100 @@ const styles = StyleSheet.create({
   noMapPlacesSub: { fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
   mapDetailCard: {
     position: 'absolute',
-    left: 10,
-    right: 10,
-    bottom: 10,
-    minHeight: 78,
+    left: 12,
+    right: 12,
+    bottom: 12,
+    minHeight: 82,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderRadius: 14,
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    padding: 10,
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.16,
     shadowRadius: 8,
   },
-  mapDetailPhoto: { width: 72, height: 78, backgroundColor: colors.surface2 },
-  mapDetailBody: { flex: 1, paddingHorizontal: 10, paddingVertical: 8 },
-  mapDetailName: { fontSize: 14, fontWeight: '900', color: colors.textPrimary, marginBottom: 2 },
-  mapDetailType: { fontSize: 11, color: colors.primary, fontWeight: '800', textTransform: 'uppercase', marginBottom: 3 },
-  mapDetailSub: { fontSize: 11, color: colors.textMuted },
-  mapDetailActions: { alignItems: 'center', gap: 6, paddingRight: 10 },
-  mapDetailBtn: {
+  mapDetailThumb: {
+    width: 62,
+    height: 62,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  mapDetailEmojiBadge: {
+    position: 'absolute',
+    right: 5,
+    bottom: 5,
+    width: 25,
+    height: 25,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  mapDetailBody: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+  },
+  mapDetailTopLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
+    marginBottom: 4,
   },
-  mapDetailBtnText: { color: colors.white, fontSize: 12, fontWeight: '800' },
+  mapDetailTypePill: {
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  mapDetailName: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: colors.textPrimary,
+    marginBottom: 3,
+  },
+  mapDetailType: {
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  mapDetailSub: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  mapDetailActions: {
+    width: 38,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+  },
+  mapDetailTypeEmoji: { fontSize: 13 },
+  mapDetailBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+  },
   mapDetailClose: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 30,
+    height: 30,
+    borderRadius: 12,
     backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 
   /* Search */
@@ -767,10 +920,14 @@ const styles = StyleSheet.create({
   /* Category chips */
   filterRow: { paddingHorizontal: 12, paddingBottom: 10, gap: 8 },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
     backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
   },
   chipActive:     { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipEmoji: { fontSize: 13 },
   chipText:       { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
   chipTextActive: { color: colors.white },
 
@@ -787,7 +944,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   cardSelected: {
-    borderColor: 'red',
+    borderColor: colors.accent,
     elevation: 7,
     shadowOpacity: 0.28,
   },
@@ -795,16 +952,21 @@ const styles = StyleSheet.create({
 
   catBadge: {
     position: 'absolute', top: 10, left: 10,
-    backgroundColor: 'rgba(0,0,0,0.52)', paddingHorizontal: 8, paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
-  catBadgeText: { color: colors.white, fontSize: 8, fontWeight: '800', letterSpacing: 0.6 },
-
-  costBadge: {
+  catBadgeText: { color: colors.white, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  catBadgeEmoji: { fontSize: 11 },
+  ratingBadge: {
     position: 'absolute', top: 10, right: 10,
-    backgroundColor: 'rgba(0,0,0,0.42)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 7, paddingVertical: 4,
+    borderRadius: 8,
   },
-  costBadgeText: { color: colors.white, fontSize: 9, fontWeight: '700' },
+  ratingBadgeText: { color: colors.textPrimary, fontSize: 10, fontWeight: '800' },
 
   cardContent: {
     position: 'absolute', bottom: 0, left: 0, right: 0,

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOKEN_KEY = 'travelgenie_token';
 const USER_KEY = 'travelgenie_user';
+const MAIN_TAB_KEY = 'travelgenie_main_tab';
 
 export const saveAuthSession = async ({ token, user }) => {
   await AsyncStorage.multiSet([
@@ -19,4 +20,15 @@ export const getAuthSession = async () => {
 
 export const clearAuthSession = async () => {
   await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+};
+
+const getMainTabKey = (userKey) => `${MAIN_TAB_KEY}_${userKey || 'default'}`;
+
+export const saveLastMainTab = async (userKey, tabName) => {
+  if (!tabName) return;
+  await AsyncStorage.setItem(getMainTabKey(userKey), tabName);
+};
+
+export const getLastMainTab = async (userKey) => {
+  return AsyncStorage.getItem(getMainTabKey(userKey));
 };
