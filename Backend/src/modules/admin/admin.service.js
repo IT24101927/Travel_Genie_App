@@ -18,6 +18,7 @@ const Expense = loadOptionalModel('../expenses/expense.model');
 const Review = loadOptionalModel('../reviews/review.model');
 const Notification = loadOptionalModel('../notifications/notification.model');
 const Transport = loadOptionalModel('../transport/models/Transport');
+const TransportSchedule = loadOptionalModel('../transport/models/TransportSchedule');
 
 const safeCount = async (Model) => {
   if (!Model) return 0;
@@ -67,7 +68,7 @@ const adminLogin = async ({ email, password }) => {
 };
 
 const getDashboardStats = async () => {
-  const [users, admins, trips, districts, places, hotels, expenses, reviews, notifications, transports] = await Promise.all([
+  const [users, admins, trips, districts, places, hotels, expenses, reviews, notifications, transports, transportSchedules] = await Promise.all([
     User.countDocuments({ role: 'user' }),
     User.countDocuments({ role: 'admin' }),
     safeCount(Trip),
@@ -77,7 +78,8 @@ const getDashboardStats = async () => {
     safeCount(Expense),
     safeCount(Review),
     safeCount(Notification),
-    safeCount(Transport)
+    safeCount(Transport),
+    safeCount(TransportSchedule)
   ]);
 
   return {
@@ -90,7 +92,7 @@ const getDashboardStats = async () => {
     expenses,
     reviews,
     notifications,
-    transports
+    transports: transportSchedules || transports
   };
 };
 

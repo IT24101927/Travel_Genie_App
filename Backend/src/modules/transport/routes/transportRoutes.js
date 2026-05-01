@@ -7,8 +7,15 @@ const {
   updateTransportHandler,
   deleteTransportHandler
 } = require('../controllers/transportController');
+const {
+  getPublicTransportDistricts,
+  getPublicTransportSchedules
+} = require('../controllers/transportAdmin.controller');
 
 const router = express.Router();
+
+router.get('/schedule-districts', getPublicTransportDistricts);
+router.get('/schedules', getPublicTransportSchedules);
 
 router.use(protect);
 

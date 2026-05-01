@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -195,6 +195,9 @@ const AdminPlacesScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [showToTop, setShowToTop] = useState(false);
+
+  const listRef = useRef(null);
 
   const filtered = useMemo(() => {
     let result = places;
@@ -286,10 +289,18 @@ const AdminPlacesScreen = ({ route, navigation }) => {
     clearDrawerFilters();
   };
 
+  const handleListScroll = useCallback((e) => {
+    const next = e.nativeEvent.contentOffset.y > 400;
+    setShowToTop((prev) => (prev === next ? prev : next));
+  }, []);
+
   const load = useCallback(async () => {
     try {
       setError('');
-      const res = await getPlacesApi(district ? { districtId: district.district_id } : {});
+      const res = await getPlacesApi({
+        includeInactive: true,
+        ...(district ? { districtId: district.district_id } : {})
+      });
       setPlaces(res?.data?.places || (Array.isArray(res?.data) ? res.data : []));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load places'));
@@ -462,9 +473,12 @@ const AdminPlacesScreen = ({ route, navigation }) => {
         </View>
       ) : useDistrictSections ? (
         <SectionList
+          ref={listRef}
           style={{ flex: 1 }}
           sections={groupedPlaces}
           keyExtractor={(item) => item._id}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => (
             <Pressable
@@ -520,9 +534,12 @@ const AdminPlacesScreen = ({ route, navigation }) => {
         />
       ) : (
         <FlatList
+          ref={listRef}
           style={{ flex: 1 }}
           data={filtered}
           keyExtractor={(item) => item._id}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
           renderItem={renderItem}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 88 }]}
           refreshControl={
@@ -550,6 +567,21 @@ const AdminPlacesScreen = ({ route, navigation }) => {
       </Pressable>
 
       {/* ── Filter drawer ── */}
+      {showToTop && (
+        <Pressable
+          style={[styles.toTopBtn, { bottom: insets.bottom + 88 }]}
+          onPress={() => {
+            if (useDistrictSections) {
+              listRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, viewPosition: 0, animated: true });
+            } else {
+              listRef.current?.scrollToOffset({ offset: 0, animated: true });
+            }
+          }}
+        >
+          <Ionicons name="arrow-up" size={24} color={colors.white} />
+        </Pressable>
+      )}
+
       <Modal
         visible={filtersOpen}
         transparent
@@ -942,6 +974,23 @@ const styles = StyleSheet.create({
   filterChipEmoji: { fontSize: 13 },
   filterChipText: { fontSize: 12, fontWeight: '800', color: colors.textSecondary },
   filterChipTextActive: { color: colors.white, fontWeight: '900' },
+  toTopBtn: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 999
+  }
 });
 
 export default AdminPlacesScreen;

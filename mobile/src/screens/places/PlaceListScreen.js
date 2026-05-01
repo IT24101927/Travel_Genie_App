@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -473,12 +473,14 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
 /* ─── Main screen ─── */
 export default function PlaceListScreen({ navigation, route }) {
   const { districtId, districtName } = route?.params || {};
+  const insets = useSafeAreaInsets();
 
   const [allPlaces, setAllPlaces]     = useState([]);
   const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState('');
   const [selectedCat, setSelectedCat] = useState('All');
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
+  const [showToTop, setShowToTop] = useState(false);
 
   const listRef = useRef(null);
 
@@ -543,6 +545,10 @@ export default function PlaceListScreen({ navigation, route }) {
   const handleClearSelection = useCallback(() => setSelectedPlaceId(null), []);
   const handleScrollToTop = useCallback(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+  const handleListScroll = useCallback((e) => {
+    const next = e.nativeEvent.contentOffset.y > 350;
+    setShowToTop((prev) => (prev === next ? prev : next));
   }, []);
   const handleMarkerPress = useCallback((place) => {
     const placeId = getPlaceId(place);
@@ -662,6 +668,8 @@ export default function PlaceListScreen({ navigation, route }) {
         maxToRenderPerBatch={8}
         initialNumToRender={8}
         windowSize={5}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="compass-outline" size={44} color={colors.border} />
@@ -674,6 +682,15 @@ export default function PlaceListScreen({ navigation, route }) {
           </View>
         }
       />
+
+      {showToTop ? (
+        <Pressable
+          style={[styles.toTopBtn, { bottom: insets.bottom + 88 }]}
+          onPress={handleScrollToTop}
+        >
+          <Ionicons name="arrow-up" size={22} color={colors.white} />
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -985,4 +1002,20 @@ const styles = StyleSheet.create({
   empty:       { alignItems: 'center', paddingTop: 50, gap: 10, paddingHorizontal: 32 },
   emptyText:   { color: colors.textMuted, fontSize: 16, fontWeight: '700' },
   emptySubText:{ color: colors.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  toTopBtn: {
+    position: 'absolute',
+    right: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 8,
+    zIndex: 999,
+  },
 });
