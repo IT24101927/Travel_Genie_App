@@ -267,10 +267,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border
   },
-  headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
-  headerSub: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginTop: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 50, paddingTop: 8 },
+  headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 10 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, textAlign: 'center' },
+  headerSub: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginTop: 1, textAlign: 'center' },
+  content: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 8 },
   sectionTitle: {
     fontSize: 16, fontWeight: '800', color: colors.textPrimary,
     marginTop: 16, marginBottom: 12

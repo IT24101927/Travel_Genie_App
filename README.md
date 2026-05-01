@@ -72,7 +72,11 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>04 · Hotel and Accommodation Management</strong> <em>(IT24100533)</em></summary>
 <br>
 
-- Full CRUD for hotel records
+- Full CRUD for hotel records via a modern, mobile-optimized Admin Dashboard
+- Mobile-first premium Guest Screen with interactive map integration (custom zoom, reset, and pins)
+- Interactive hotel and place cards with auto-scroll and visual highlighting upon map pin selection
+- Seamless UI/UX design featuring custom floating tab bar interactions and premium gradient layouts
+- Robust form validation and state-lock implementations for Admin inputs
 - Hotel results ranked by budget, preferences, ratings, and proximity
 - Supports 8 hotel categories across all Sri Lankan districts
 - Multi-currency pricing display (LKR / USD / EUR)

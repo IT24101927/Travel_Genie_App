@@ -1,15 +1,17 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
-const { createHotel, getHotels, getHotelById, updateHotel, deleteHotel } = require('./hotel.service');
+const {
+  createHotel,
+  getHotels,
+  getHotelById,
+  updateHotel,
+  deleteHotel
+} = require('./hotel.service');
 
 const createHotelHandler = asyncHandler(async (req, res) => {
   const payload = {
     ...req.body,
-    amenities: Array.isArray(req.body.amenities)
-      ? req.body.amenities
-      : req.body.amenities
-        ? [req.body.amenities]
-        : []
+    amenities: normalizeAmenities(req.body.amenities)
   };
 
   if (req.file) {
@@ -30,15 +32,20 @@ const getHotelHandler = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, 'Hotel fetched successfully', { hotel });
 });
 
+const uploadHotelImageHandler = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No image uploaded' });
+  }
+  const imageUrl = `/uploads/hotels/${req.file.filename}`;
+  return sendSuccess(res, 200, 'Image uploaded successfully', { imageUrl });
+});
+
 const updateHotelHandler = asyncHandler(async (req, res) => {
-  const payload = {
-    ...req.body,
-    amenities: Array.isArray(req.body.amenities)
-      ? req.body.amenities
-      : req.body.amenities
-        ? [req.body.amenities]
-        : []
-  };
+  const payload = { ...req.body };
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'amenities')) {
+    payload.amenities = normalizeAmenities(req.body.amenities);
+  }
 
   if (req.file) {
     payload.image = `/uploads/hotels/${req.file.filename}`;
@@ -57,6 +64,13 @@ module.exports = {
   createHotelHandler,
   getHotelsHandler,
   getHotelHandler,
+  uploadHotelImageHandler,
   updateHotelHandler,
   deleteHotelHandler
 };
+
+function normalizeAmenities(value) {
+  if (Array.isArray(value)) return value;
+  if (value) return [value];
+  return [];
+}

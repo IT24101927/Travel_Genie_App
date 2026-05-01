@@ -4,7 +4,7 @@
 - Member B: Trip management
 - Member C: Places + hotels
 - Member D: Reviews + notifications
-- Member E (You): Expenses module + expense summaries + expense UI + viva prep
+- Member E: Expenses module + expense summaries + expense UI + viva prep
 
 ## Your ownership details
 

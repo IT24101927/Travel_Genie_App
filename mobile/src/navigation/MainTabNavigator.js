@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -15,6 +15,7 @@ import PlaceDetailsScreen from '../screens/places/PlaceDetailsScreen';
 
 import HotelListScreen from '../screens/hotels/HotelListScreen';
 import HotelDetailsScreen from '../screens/hotels/HotelDetailsScreen';
+import HotelDistrictListScreen from '../screens/hotels/HotelDistrictListScreen';
 
 import TransportListScreen from '../screens/transport/TransportListScreen';
 import AddTransportScreen from '../screens/transport/AddTransportScreen';
@@ -26,6 +27,9 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 import ExpenseStackNavigator from './ExpenseStackNavigator';
 import colors from '../constants/colors';
+import AppLoader from '../components/common/AppLoader';
+import { useAuth } from '../context/AuthContext';
+import { getLastMainTab, saveLastMainTab } from '../utils/storage';
 
 const Tab = createBottomTabNavigator();
 const TripStack = createNativeStackNavigator();
@@ -33,6 +37,12 @@ const ProfileStack = createNativeStackNavigator();
 const PlaceStack = createNativeStackNavigator();
 const HotelStack = createNativeStackNavigator();
 const TransportStack = createNativeStackNavigator();
+
+const DEFAULT_MAIN_TAB = 'Trips';
+const MAIN_TABS = ['Places', 'Hotels', 'Transport', 'Trips', 'Expenses', 'Alerts', 'Profile'];
+
+const getUserStorageKey = (user) =>
+  String(user?._id || user?.id || user?.userId || user?.email || 'default');
 
 
 
@@ -54,6 +64,7 @@ const PlaceStackNavigator = () => (
 
 const HotelStackNavigator = () => (
   <HotelStack.Navigator screenOptions={{ headerShown: false }}>
+    <HotelStack.Screen name="HotelDistrictList" component={HotelDistrictListScreen} />
     <HotelStack.Screen name="HotelList" component={HotelListScreen} />
     <HotelStack.Screen name="HotelDetails" component={HotelDetailsScreen} />
   </HotelStack.Navigator>
@@ -161,11 +172,47 @@ const CustomAnimatedTabBar = ({ state, descriptors, navigation, insets }) => {
 
 const MainTabNavigator = () => {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const userStorageKey = useMemo(() => getUserStorageKey(user), [user]);
+  const [initialRouteName, setInitialRouteName] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialTab = async () => {
+      try {
+        const savedTab = await getLastMainTab(userStorageKey);
+        const nextTab = MAIN_TABS.includes(savedTab) ? savedTab : DEFAULT_MAIN_TAB;
+        if (isMounted) setInitialRouteName(nextTab);
+      } catch {
+        if (isMounted) setInitialRouteName(DEFAULT_MAIN_TAB);
+      }
+    };
+
+    loadInitialTab();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userStorageKey]);
+
+  if (!initialRouteName) {
+    return <AppLoader />;
+  }
 
   return (
     <Tab.Navigator
+      initialRouteName={initialRouteName}
       tabBar={(props) => <CustomAnimatedTabBar {...props} insets={insets} />}
       screenOptions={{ headerShown: false }}
+      screenListeners={{
+        state: (event) => {
+          const routeName = event.data.state.routes[event.data.state.index]?.name;
+          if (MAIN_TABS.includes(routeName)) {
+            saveLastMainTab(userStorageKey, routeName).catch(() => {});
+          }
+        }
+      }}
     >
       <Tab.Screen name="Places"    component={PlaceStackNavigator} />
       <Tab.Screen name="Hotels"    component={HotelStackNavigator} />
