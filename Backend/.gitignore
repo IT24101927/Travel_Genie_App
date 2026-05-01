@@ -96,9 +96,6 @@ dist
 uploads/
 public/uploads/
 
-# Scripts (local dev/seed scripts — not for repo)
-src/scripts/
-
 # OS
 .DS_Store
 Thumbs.db

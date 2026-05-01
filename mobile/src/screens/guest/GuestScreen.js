@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Dimensions, FlatList, Image, Pressable,
+  ActivityIndicator, Dimensions, FlatList, Pressable,
   RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import colors from '../../constants/colors';
 import FallbackImage from '../../components/common/FallbackImage';
@@ -14,6 +15,8 @@ import { getPlacesApi } from '../../api/placeApi';
 import { getHotelsApi } from '../../api/hotelApi';
 import api from '../../api/client';
 import { getPlaceImageCandidates } from '../../utils/placeImages';
+import { getHotelImageCandidates } from '../../utils/hotelImages';
+import { formatHotelPrice, getHotelNightlyPriceLkr } from '../../utils/currencyFormat';
 
 const { width } = Dimensions.get('window');
 
@@ -58,6 +61,22 @@ const PROVINCE_COLORS = {
   'North Central': '#8B4513', 'Uva': '#2E7D32', 'Sabaragamuwa': '#6A1B9A',
 };
 
+const TYPE_META = {
+  hotel:      { emoji: '🏨', color: '#3498DB', label: 'Hotel' },
+  resort:     { emoji: '🌴', color: '#4CAF50', label: 'Resort' },
+  guesthouse: { emoji: '🏡', color: '#FF9800', label: 'Guesthouse' },
+  hostel:     { emoji: '🛏️', color: '#9C27B0', label: 'Hostel' },
+  villa:      { emoji: '🏘️', color: '#E91E63', label: 'Villa' },
+  boutique:   { emoji: '✨', color: '#F57C00', label: 'Boutique' },
+  apartment:  { emoji: '🏢', color: '#607D8B', label: 'Apartment' },
+  lodge:      { emoji: '🛖', color: '#795548', label: 'Lodge' },
+  camp:       { emoji: '⛺', color: '#8BC34A', label: 'Camp' },
+};
+
+const getHotelMeta = (hotel) =>
+  TYPE_META[String(hotel?.hotel_type || '').toLowerCase()] ||
+  { emoji: '🏩', color: colors.primary, label: 'Hotel' };
+
 const FEATURES = [
   { icon: 'map-outline', label: 'Plan Trips' },
   { icon: 'bed-outline', label: 'Find Hotels' },
@@ -99,15 +118,28 @@ const DistrictMiniCard = ({ item, isHighlighted, onPress }) => {
   );
 };
 
-/* ── Place Card ── */
+/* ── Place Card (Premium) ── */
 const PlaceCard = ({ item, onPress, isHighlighted }) => (
   <Pressable style={[styles.placeCard, isHighlighted && styles.placeCardHighlight]} onPress={onPress}>
-    <FallbackImage
-      uri={getPlaceImageCandidates(item)}
-      style={styles.placeCardImage}
-      iconName="image-outline"
-      iconSize={28}
-    />
+    <View style={styles.placeCardImageWrap}>
+      <FallbackImage
+        uri={getPlaceImageCandidates(item)}
+        style={styles.placeCardImage}
+        iconName="image-outline"
+        iconSize={28}
+      >
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.5)']}
+          style={styles.placeCardGradient}
+        />
+      </FallbackImage>
+      {item.type && (
+        <View style={styles.placeTypeBadge}>
+          <Ionicons name="bookmark" size={9} color={colors.white} />
+          <Text style={styles.placeTypeBadgeText}>{item.type}</Text>
+        </View>
+      )}
+    </View>
     <View style={styles.placeCardBody}>
       <Text style={styles.placeCardTitle} numberOfLines={1}>{item.name || 'Place'}</Text>
       {(item.location || item.city || item.type) ? (
@@ -122,30 +154,76 @@ const PlaceCard = ({ item, onPress, isHighlighted }) => (
   </Pressable>
 );
 
-/* ── Hotel Card ── */
-const HotelCard = ({ item, onPress }) => (
-  <Pressable style={styles.hotelCard} onPress={onPress}>
-    {item.image ? (
-      <Image source={{ uri: item.image }} style={styles.hotelCardImage} />
-    ) : (
-      <View style={[styles.hotelCardImage, styles.hotelCardImagePlaceholder]}>
-        <Ionicons name="bed-outline" size={28} color={colors.textMuted} />
-      </View>
-    )}
-    <View style={styles.hotelCardBody}>
-      <Text style={styles.hotelCardTitle} numberOfLines={1}>{item.name || 'Hotel'}</Text>
-      {(item.location || item.city) ? (
-        <View style={styles.placeCardRow}>
-          <Ionicons name="location-outline" size={11} color={colors.textMuted} />
-          <Text style={styles.placeCardSub} numberOfLines={1}>{item.location || item.city}</Text>
+/* ── Hotel Card (Premium) ── */
+const HotelCard = ({ item, onPress, isHighlighted }) => {
+  const nightlyPrice = getHotelNightlyPriceLkr(item);
+  const meta = getHotelMeta(item);
+  const starClass = Number(item.star_class || 0);
+  const location = item.address_text || item.location || item.city || '';
+
+  return (
+    <Pressable style={[styles.hotelCard, isHighlighted && styles.hotelCardHighlight]} onPress={onPress}>
+      {/* Image with gradient overlay */}
+      <View style={styles.hotelCardImageWrap}>
+        <FallbackImage
+          uri={getHotelImageCandidates(item)}
+          style={styles.hotelCardImage}
+          iconName="bed-outline"
+          iconSize={32}
+          placeholderColor={meta.color + '22'}
+          placeholderIconColor={meta.color}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.65)']}
+            style={styles.hotelCardGradient}
+          />
+        </FallbackImage>
+
+        {/* Type badge */}
+        <View style={[styles.hotelTypeBadge, { backgroundColor: meta.color }]}>
+          <Text style={styles.hotelTypeBadgeEmoji}>{meta.emoji}</Text>
+          <Text style={styles.hotelTypeBadgeLabel}>{meta.label}</Text>
         </View>
-      ) : null}
-      {item.pricePerNight ? (
-        <Text style={styles.hotelCardPrice}>LKR {item.pricePerNight?.toLocaleString()}/night</Text>
-      ) : null}
-    </View>
-  </Pressable>
-);
+
+        {/* Rating badge */}
+        {Number(item.rating) > 0 && (
+          <View style={styles.hotelRatingBadge}>
+            <Ionicons name="star" size={10} color={colors.warning} />
+            <Text style={styles.hotelRatingText}>{Number(item.rating).toFixed(1)}</Text>
+          </View>
+        )}
+
+        {/* Price tag on image */}
+        {nightlyPrice ? (
+          <View style={styles.hotelPriceTag}>
+            <Text style={styles.hotelPriceTagText}>{formatHotelPrice(nightlyPrice, 'LKR')}</Text>
+            <Text style={styles.hotelPriceTagSub}>/night</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Body */}
+      <View style={styles.hotelCardBody}>
+        {/* Star row */}
+        {starClass > 0 && (
+          <View style={styles.hotelStarRow}>
+            {Array.from({ length: Math.min(5, starClass) }).map((_, i) => (
+              <Ionicons key={i} name="star" size={9} color={colors.warning} />
+            ))}
+            <Text style={styles.hotelStarLabel}>{starClass}-Star</Text>
+          </View>
+        )}
+        <Text style={styles.hotelCardTitle} numberOfLines={1}>{item.name || 'Hotel'}</Text>
+        {location ? (
+          <View style={styles.hotelLocRow}>
+            <Ionicons name="location-outline" size={11} color={colors.textMuted} />
+            <Text style={styles.hotelLocText} numberOfLines={1}>{location}</Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+};
 
 /* ── Section Header ── */
 const SectionHeader = ({ title, icon, onSeeMore }) => (
@@ -178,9 +256,11 @@ const GuestScreen = ({ navigation }) => {
   const [highlightedId, setHighlightedId] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [selectedPlace, setSelectedPlace] = useState(null);
+  const [selectedHotel, setSelectedHotel] = useState(null);
   const mapRef = useRef(null);
   const districtListRef = useRef(null);
   const placesListRef = useRef(null);
+  const hotelsListRef = useRef(null);
   const regionRef = useRef(SRI_LANKA_REGION);
 
   const zoomIn = useCallback(() => {
@@ -203,6 +283,7 @@ const GuestScreen = ({ navigation }) => {
     setHighlightedId(null);
     setSelectedDistrict(null);
     setSelectedPlace(null);
+    setSelectedHotel(null);
   }, []);
 
   const loadData = async () => {
@@ -241,6 +322,7 @@ const GuestScreen = ({ navigation }) => {
     setHighlightedId(district.district_id);
     setSelectedDistrict(district);
     setSelectedPlace(null);
+    setSelectedHotel(null);
     // Zoom into the district to show place pins
     const coords = DISTRICT_COORDS[district.name];
     if (coords && mapRef.current) {
@@ -262,6 +344,7 @@ const GuestScreen = ({ navigation }) => {
       setHighlightedId(item.district_id);
       setSelectedDistrict(item);
       setSelectedPlace(null);
+      setSelectedHotel(null);
       mapRef.current.animateToRegion({
         ...coords,
         latitudeDelta: 0.3,
@@ -288,12 +371,27 @@ const GuestScreen = ({ navigation }) => {
 
   const visiblePlaces = filteredPlaces.slice(0, 10);
 
+  // Hotels filtered by selected district
+  const filteredHotels = selectedDistrict
+    ? hotels.filter((h) => {
+        if (h.district_id && selectedDistrict.district_id) {
+          return h.district_id === selectedDistrict.district_id;
+        }
+        const distName = selectedDistrict.name?.toLowerCase();
+        const hotelDist = h.district || h.location || '';
+        return hotelDist.toLowerCase() === distName ||
+          (h.address_text || '').toLowerCase().includes(distName);
+      })
+    : [];
+
+  const visibleHotels = filteredHotels.slice(0, 8);
+
   const handlePlaceMarkerPress = useCallback((place) => {
     setSelectedPlace(place);
-    // Scroll to the matching card in the places list
+    setSelectedHotel(null);
     const idx = visiblePlaces.findIndex((p) => p._id === place._id);
     if (idx !== -1 && placesListRef.current) {
-      const CARD_W = 180;
+      const CARD_W = 190;
       const GAP = 12;
       const offset = Math.max(0, idx * (CARD_W + GAP));
       setTimeout(() => {
@@ -301,6 +399,20 @@ const GuestScreen = ({ navigation }) => {
       }, 200);
     }
   }, [visiblePlaces]);
+
+  const handleHotelMarkerPress = useCallback((hotel) => {
+    setSelectedHotel(hotel);
+    setSelectedPlace(null);
+    const idx = visibleHotels.findIndex((h) => h._id === hotel._id);
+    if (idx !== -1 && hotelsListRef.current) {
+      const CARD_W = 200;
+      const GAP = 12;
+      const offset = Math.max(0, idx * (CARD_W + GAP));
+      setTimeout(() => {
+        hotelsListRef.current?.scrollToOffset({ offset, animated: true });
+      }, 200);
+    }
+  }, [visibleHotels]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -322,20 +434,43 @@ const GuestScreen = ({ navigation }) => {
         contentContainerStyle={styles.scroll}
       >
         {/* ── Hero Banner ── */}
-        <View style={styles.hero}>
+        <LinearGradient
+          colors={[colors.primaryDark, colors.primary, '#12A080']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
           <View style={styles.heroTextWrap}>
-            <Text style={styles.heroTitle}>Explore{'\n'}Sri Lanka</Text>
+            <Text style={styles.heroEyebrow}>✈️  TRAVEL GENIE</Text>
+            <Text style={styles.heroTitle}>Explore{`\n`}Sri Lanka</Text>
             <Text style={styles.heroSub}>Discover amazing places, find the best stays, and plan your perfect trip</Text>
           </View>
+
+          {/* Live stats */}
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatPill}>
+              <Text style={styles.heroStatNum}>{districts.length}</Text>
+              <Text style={styles.heroStatLbl}>Districts</Text>
+            </View>
+            <View style={styles.heroStatPill}>
+              <Text style={styles.heroStatNum}>{places.length}</Text>
+              <Text style={styles.heroStatLbl}>Places</Text>
+            </View>
+            <View style={styles.heroStatPill}>
+              <Text style={styles.heroStatNum}>{hotels.length}</Text>
+              <Text style={styles.heroStatLbl}>Hotels</Text>
+            </View>
+          </View>
+
           <Pressable onPress={onLoginPress} style={styles.heroBtn}>
             <Ionicons name="person-add-outline" size={16} color={colors.primary} />
             <Text style={styles.heroBtnText}>Sign up — it's free</Text>
           </Pressable>
-        </View>
+        </LinearGradient>
 
         {/* ── Map Section ── */}
         <View style={styles.mapSection}>
-          <SectionHeader title="Map" icon="navigate" onSeeMore={null} />
+          <SectionHeader title="Interactive Map" icon="map" onSeeMore={null} />
           <View style={styles.mapWrap}>
             <MapView
               ref={mapRef}
@@ -347,7 +482,7 @@ const GuestScreen = ({ navigation }) => {
               rotateEnabled={false}
               mapPadding={{ top: 0, right: 0, bottom: 10, left: 0 }}
               onRegionChangeComplete={(r) => { regionRef.current = r; }}
-              onPress={() => { setHighlightedId(null); setSelectedDistrict(null); setSelectedPlace(null); }}
+              onPress={() => { setHighlightedId(null); setSelectedDistrict(null); setSelectedPlace(null); setSelectedHotel(null); }}
             >
               {/* Show all district pins */}
               {districts.map((d) => {
@@ -390,12 +525,60 @@ const GuestScreen = ({ navigation }) => {
                   );
                 })
               }
+
+              {/* Show hotel pins when a district is selected */}
+              {selectedDistrict && hotels
+                .filter((h) => {
+                  if (h.district_id && selectedDistrict.district_id) {
+                    return h.district_id === selectedDistrict.district_id;
+                  }
+                  const distName = selectedDistrict.name?.toLowerCase();
+                  const hotelDist = h.district || h.location || '';
+                  return hotelDist.toLowerCase() === distName ||
+                    (h.address_text || '').toLowerCase().includes(distName);
+                })
+                .slice(0, 8)
+                .map((h) => {
+                  if (!h.lat || !h.lng) return null;
+                  const isHotelHL = selectedHotel?._id === h._id;
+                  return (
+                    <Marker
+                      key={`h_${h._id}_${isHotelHL}`}
+                      coordinate={{ latitude: Number(h.lat), longitude: Number(h.lng) }}
+                      pinColor={isHotelHL ? '#E74C3C' : '#FF9800'}
+                      onPress={(e) => { e.stopPropagation?.(); handleHotelMarkerPress(h); }}
+                    />
+                  );
+                })
+              }
             </MapView>
 
-            {/* Popup card — district or place */}
-            {(selectedDistrict || selectedPlace) && (
+            {/* Popup card — district, place, or hotel */}
+            {(selectedDistrict || selectedPlace || selectedHotel) && (
               <View style={styles.mapPopup} pointerEvents="box-none">
-                {selectedPlace ? (
+                {selectedHotel ? (
+                  <View style={styles.mapPopupCard}>
+                    <FallbackImage
+                      uri={getHotelImageCandidates(selectedHotel)}
+                      style={styles.mapPopupImg}
+                      iconName="bed-outline"
+                      iconSize={20}
+                    />
+                    <View style={styles.mapPopupBody}>
+                      <Text style={styles.mapPopupName} numberOfLines={1}>{selectedHotel.name}</Text>
+                      <Text style={styles.mapPopupProv}>
+                        {getHotelMeta(selectedHotel).emoji} {getHotelMeta(selectedHotel).label}
+                        {getHotelNightlyPriceLkr(selectedHotel) ? ` · ${formatHotelPrice(getHotelNightlyPriceLkr(selectedHotel), 'LKR')}` : ''}
+                      </Text>
+                    </View>
+                    <Pressable style={styles.mapPopupExplore} onPress={promptLogin}>
+                      <Text style={styles.mapPopupExploreText}>View</Text>
+                    </Pressable>
+                    <Pressable style={styles.mapPopupClose} onPress={() => setSelectedHotel(null)}>
+                      <Ionicons name="close" size={14} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+                ) : selectedPlace ? (
                   <View style={styles.mapPopupCard}>
                     <FallbackImage
                       uri={getPlaceImageCandidates(selectedPlace)}
@@ -429,7 +612,7 @@ const GuestScreen = ({ navigation }) => {
                     <Pressable style={styles.mapPopupExplore} onPress={promptLogin}>
                       <Text style={styles.mapPopupExploreText}>Explore</Text>
                     </Pressable>
-                    <Pressable style={styles.mapPopupClose} onPress={() => { setHighlightedId(null); setSelectedDistrict(null); setSelectedPlace(null); }}>
+                    <Pressable style={styles.mapPopupClose} onPress={() => { setHighlightedId(null); setSelectedDistrict(null); setSelectedPlace(null); setSelectedHotel(null); }}>
                       <Ionicons name="close" size={14} color={colors.textMuted} />
                     </Pressable>
                   </View>
@@ -438,20 +621,40 @@ const GuestScreen = ({ navigation }) => {
             )}
 
             {/* Zoom + / - controls */}
-            <View style={styles.zoomControls} pointerEvents="box-none">
-              <Pressable style={styles.zoomBtn} onPress={zoomIn}>
+            <View style={styles.mapZoomControls} pointerEvents="box-none">
+              <Pressable style={styles.mapIconBtn} onPress={zoomIn}>
                 <Ionicons name="add" size={18} color={colors.textPrimary} />
               </Pressable>
-              <Pressable style={styles.zoomBtn} onPress={zoomOut}>
+              <Pressable style={styles.mapIconBtn} onPress={zoomOut}>
                 <Ionicons name="remove" size={18} color={colors.textPrimary} />
               </Pressable>
             </View>
 
             {/* Reset button */}
-            <Pressable style={styles.resetViewBtn} onPress={resetMap}>
-              <Ionicons name="scan-outline" size={15} color={colors.textPrimary} />
-              <Text style={styles.resetViewText}>Reset</Text>
+            <Pressable style={styles.mapResetBtn} onPress={resetMap}>
+              <Ionicons name="scan-outline" size={14} color={colors.textPrimary} />
+              <Text style={styles.mapResetText}>Reset</Text>
             </Pressable>
+          </View>
+
+          {/* Map Legend */}
+          <View style={styles.mapLegend}>
+            <Text style={styles.mapLegendTitle}>Map Legend</Text>
+            <View style={styles.mapLegendRow}>
+              <View style={styles.mapLegendItem}>
+                <View style={[styles.mapLegendDot, { backgroundColor: '#17A34A' }]} />
+                <Text style={styles.mapLegendText}>Districts</Text>
+              </View>
+              <View style={styles.mapLegendItem}>
+                <View style={[styles.mapLegendDot, { backgroundColor: '#3498DB' }]} />
+                <Text style={styles.mapLegendText}>Places</Text>
+              </View>
+              <View style={styles.mapLegendItem}>
+                <View style={[styles.mapLegendDot, { backgroundColor: '#FF9800' }]} />
+                <Text style={styles.mapLegendText}>Hotels</Text>
+              </View>
+            </View>
+            <Text style={styles.mapLegendHint}>Tap a district pin to see places & hotels nearby</Text>
           </View>
 
           {/* Sign up CTA */}
@@ -502,6 +705,7 @@ const GuestScreen = ({ navigation }) => {
             <FlatList
               ref={placesListRef}
               data={visiblePlaces}
+              extraData={selectedPlace}
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => item._id}
@@ -531,20 +735,44 @@ const GuestScreen = ({ navigation }) => {
           )}
         </View>
 
+        {/* ── Inline Promo Card ── */}
+        <View style={styles.promoCard}>
+          <View style={styles.promoIconWrap}>
+            <Ionicons name="diamond-outline" size={20} color={colors.primary} />
+          </View>
+          <View style={styles.promoBody}>
+            <Text style={styles.promoTitle}>Want the full experience?</Text>
+            <Text style={styles.promoSub}>Sign up to save trips, write reviews, track expenses & more</Text>
+          </View>
+          <Pressable style={styles.promoBtn} onPress={onLoginPress}>
+            <Text style={styles.promoBtnText}>Join Free</Text>
+            <Ionicons name="arrow-forward" size={12} color={colors.white} />
+          </Pressable>
+        </View>
+
         {/* ── Featured Hotels ── */}
         <View style={styles.section}>
           <SectionHeader title="Featured Hotels" icon="bed" onSeeMore={promptLogin} />
+
           {loadingHotels ? (
             <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
           ) : hotels.length === 0 ? (
             <Text style={styles.emptyText}>No hotels yet.</Text>
           ) : (
             <FlatList
-              data={hotels.slice(0, 8)}
+              ref={hotelsListRef}
+              data={visibleHotels}
+              extraData={selectedHotel}
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => item._id}
-              renderItem={({ item }) => <HotelCard item={item} onPress={promptLogin} />}
+              renderItem={({ item }) => (
+                <HotelCard
+                  item={item}
+                  isHighlighted={selectedHotel?._id === item._id}
+                  onPress={promptLogin}
+                />
+              )}
               ListFooterComponent={
                 <Pressable style={styles.seeMoreCardTall} onPress={onLoginPress}>
                   <View style={styles.seeMoreCardIcon}>
@@ -559,7 +787,12 @@ const GuestScreen = ({ navigation }) => {
         </View>
 
         {/* ── Unlock Full Access CTA ── */}
-        <View style={styles.unlockCard}>
+        <LinearGradient
+          colors={[colors.primaryDark, colors.primary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.unlockCard}
+        >
           <View style={styles.unlockIconRow}>
             <View style={styles.unlockIconCircle}>
               <Ionicons name="sparkles" size={24} color={colors.primary} />
@@ -572,7 +805,7 @@ const GuestScreen = ({ navigation }) => {
             {FEATURES.map((f) => (
               <View key={f.label} style={styles.featureItem}>
                 <View style={styles.featureIcon}>
-                  <Ionicons name={f.icon} size={18} color={colors.primary} />
+                  <Ionicons name={f.icon} size={18} color={colors.white} />
                 </View>
                 <Text style={styles.featureLabel}>{f.label}</Text>
               </View>
@@ -583,7 +816,7 @@ const GuestScreen = ({ navigation }) => {
             style={({ pressed }) => [styles.ctaBtn, pressed && { opacity: 0.85 }]}
             onPress={onLoginPress}
           >
-            <Ionicons name="person-add-outline" size={16} color={colors.white} />
+            <Ionicons name="person-add-outline" size={16} color={colors.primary} />
             <Text style={styles.ctaBtnText}>Create Free Account</Text>
           </Pressable>
           <Pressable style={styles.ctaSecondary} onPress={onLoginPress}>
@@ -591,6 +824,17 @@ const GuestScreen = ({ navigation }) => {
               Already have an account? <Text style={styles.ctaSecondaryLink}>Sign In</Text>
             </Text>
           </Pressable>
+        </LinearGradient>
+
+        {/* ── Footer ── */}
+        <View style={styles.footer}>
+          <View style={styles.footerLogoRow}>
+            <Ionicons name="airplane" size={16} color={colors.primary} />
+            <Text style={styles.footerLogoText}>TravelGenie</Text>
+          </View>
+          <Text style={styles.footerTagline}>Your Smart Sri Lanka Travel Companion</Text>
+          <View style={styles.footerDivider} />
+          <Text style={styles.footerCopy}>© 2026 TravelGenie · Made with ❤️ in Sri Lanka</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -618,12 +862,24 @@ const styles = StyleSheet.create({
 
   /* Hero */
   hero: {
-    backgroundColor: colors.primaryDark,
-    paddingHorizontal: 24, paddingTop: 28, paddingBottom: 24, gap: 8,
+    paddingHorizontal: 24, paddingTop: 28, paddingBottom: 24, gap: 10,
   },
-  heroTextWrap: { marginBottom: 8 },
+  heroTextWrap: { marginBottom: 4 },
+  heroEyebrow: {
+    color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '900',
+    textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6,
+  },
   heroTitle: { fontSize: 32, fontWeight: '900', color: colors.white, letterSpacing: -0.5, lineHeight: 38 },
   heroSub: { fontSize: 14, color: '#A8E6D0', lineHeight: 21, marginTop: 6 },
+  heroStatsRow: {
+    flexDirection: 'row', gap: 8, marginBottom: 4,
+  },
+  heroStatPill: {
+    flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  heroStatNum: { fontSize: 18, fontWeight: '900', color: colors.white },
+  heroStatLbl: { fontSize: 9, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.5 },
   heroBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     alignSelf: 'flex-start',
@@ -647,27 +903,54 @@ const styles = StyleSheet.create({
 
   /* Map */
   mapSection: { paddingTop: 24 },
-  mapWrap: { width: '100%', height: 300, marginBottom: 12 },
+  mapWrap: {
+    height: 320, marginHorizontal: 20, marginBottom: 12,
+    borderRadius: 20, overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
   map: { width: '100%', height: '100%' },
-  zoomControls: {
-    position: 'absolute', left: 8, top: '35%', gap: 6,
+  mapZoomControls: {
+    position: 'absolute',
+    top: 48,
+    right: 10,
+    gap: 7,
   },
-  zoomBtn: {
-    width: 34, height: 34, borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center', justifyContent: 'center',
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3,
+  mapIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
-  resetViewBtn: {
-    position: 'absolute', top: '35%', right: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10,
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3,
+  mapResetBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
-  resetViewText: { fontSize: 11, fontWeight: '700', color: colors.textPrimary },
+  mapResetText: { fontSize: 11, fontWeight: '800', color: colors.textPrimary },
   exploreMoreBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginHorizontal: 20, marginBottom: 8, marginTop: 4,
@@ -681,7 +964,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 6, marginLeft: 4,
   },
   seeMoreCardTall: {
-    width: 120, height: 160, borderRadius: 14,
+    width: 120, height: 185, borderRadius: 16,
     backgroundColor: '#EAF4F1', borderWidth: 1.5, borderColor: '#DCEBE4',
     alignItems: 'center', justifyContent: 'center', gap: 6, marginLeft: 4,
   },
@@ -694,7 +977,7 @@ const styles = StyleSheet.create({
   },
   mapPopup: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-start', paddingHorizontal: 10, paddingTop: 10,
+    justifyContent: 'flex-end', paddingHorizontal: 10, paddingBottom: 10,
   },
   mapPopupCard: {
     flexDirection: 'row', alignItems: 'center',
@@ -736,59 +1019,162 @@ const styles = StyleSheet.create({
     backgroundColor: '#EAF4F1', alignItems: 'center', justifyContent: 'center', marginRight: 10,
   },
 
-  /* Place cards */
+  /* Place cards (Premium) */
   placeCard: {
-    width: 180, backgroundColor: colors.surface,
-    borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    width: 190, backgroundColor: colors.surface,
+    borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    elevation: 3, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5,
   },
   placeCardHighlight: { borderColor: colors.primary, borderWidth: 2 },
-  placeCardImage: { width: '100%', height: 115 },
+  placeCardImageWrap: { width: '100%', height: 125, position: 'relative' },
+  placeCardImage: { width: '100%', height: '100%' },
+  placeCardGradient: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, height: '50%',
+  },
+  placeTypeBadge: {
+    position: 'absolute', top: 8, left: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
+  },
+  placeTypeBadgeText: { color: colors.white, fontSize: 9, fontWeight: '800', textTransform: 'capitalize' },
   placeCardBody: { padding: 10 },
-  placeCardTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  placeCardTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
   placeCardRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  placeCardSub: { fontSize: 12, color: colors.textMuted, flex: 1 },
+  placeCardSub: { fontSize: 11, color: colors.textMuted, flex: 1 },
 
-  /* Hotel cards */
+  /* Hotel cards (Premium) */
   hotelCard: {
-    width: 180, backgroundColor: colors.surface,
-    borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    width: 200, backgroundColor: colors.surface,
+    borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    elevation: 4, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 6,
   },
-  hotelCardImage: { width: '100%', height: 115 },
-  hotelCardImagePlaceholder: {
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+  hotelCardHighlight: { borderColor: colors.primary, borderWidth: 2 },
+  hotelCardImageWrap: { width: '100%', height: 135, position: 'relative' },
+  hotelCardImage: { width: '100%', height: '100%' },
+  hotelCardGradient: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%',
   },
+  hotelTypeBadge: {
+    position: 'absolute', top: 8, left: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
+  },
+  hotelTypeBadgeEmoji: { fontSize: 10 },
+  hotelTypeBadgeLabel: { color: colors.white, fontSize: 9, fontWeight: '800' },
+  hotelRatingBadge: {
+    position: 'absolute', top: 8, right: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
+  },
+  hotelRatingText: { fontSize: 11, fontWeight: '900', color: colors.textPrimary },
+  hotelPriceTag: {
+    position: 'absolute', bottom: 8, right: 8,
+    flexDirection: 'row', alignItems: 'baseline', gap: 1,
+    backgroundColor: 'rgba(14,124,95,0.92)',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  hotelPriceTagText: { color: colors.white, fontSize: 11, fontWeight: '900' },
+  hotelPriceTagSub: { color: 'rgba(255,255,255,0.7)', fontSize: 8, fontWeight: '700' },
   hotelCardBody: { padding: 10 },
-  hotelCardTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  hotelCardPrice: { fontSize: 12, fontWeight: '700', color: colors.primary, marginTop: 4 },
+  hotelStarRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 3,
+  },
+  hotelStarLabel: {
+    fontSize: 9, fontWeight: '700', color: colors.textMuted, marginLeft: 2,
+  },
+  hotelCardTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
+  hotelLocRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  hotelLocText: { fontSize: 11, color: colors.textMuted, flex: 1 },
 
-  /* Unlock card */
+  /* Unlock card (dark themed) */
   unlockCard: {
-    margin: 20, backgroundColor: colors.surface, borderRadius: 20,
-    padding: 24, borderWidth: 1, borderColor: colors.border,
+    margin: 20, borderRadius: 20,
+    padding: 24, overflow: 'hidden',
   },
   unlockIconRow: { alignItems: 'center', marginBottom: 16 },
   unlockIconCircle: {
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#EAF4F1', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#DCEBE4',
+    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
   },
-  unlockTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary, textAlign: 'center', marginBottom: 4 },
-  unlockSub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: 20 },
+  unlockTitle: { fontSize: 20, fontWeight: '900', color: colors.white, textAlign: 'center', marginBottom: 4 },
+  unlockSub: { fontSize: 14, color: 'rgba(255,255,255,0.75)', textAlign: 'center', marginBottom: 20 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   featureItem: { width: '30%', alignItems: 'center', gap: 6 },
   featureIcon: {
     width: 44, height: 44, borderRadius: 12,
-    backgroundColor: '#EAF4F1', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center',
   },
-  featureLabel: { fontSize: 11, fontWeight: '600', color: colors.textSecondary, textAlign: 'center' },
+  featureLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)', textAlign: 'center' },
   ctaBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 12, marginBottom: 12,
+    backgroundColor: colors.white, paddingVertical: 14, borderRadius: 12, marginBottom: 12,
   },
-  ctaBtnText: { color: colors.white, fontWeight: '800', fontSize: 15 },
+  ctaBtnText: { color: colors.primary, fontWeight: '800', fontSize: 15 },
   ctaSecondary: { alignItems: 'center' },
-  ctaSecondaryText: { color: colors.textSecondary, fontSize: 14 },
-  ctaSecondaryLink: { color: colors.primary, fontWeight: '700' },
+  ctaSecondaryText: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
+  ctaSecondaryLink: { color: colors.white, fontWeight: '700' },
+
+  /* Map Legend */
+  mapLegend: {
+    marginHorizontal: 20, marginTop: 10, marginBottom: 6,
+    backgroundColor: colors.surface, borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  mapLegendTitle: {
+    fontSize: 11, fontWeight: '800', color: colors.textPrimary,
+    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
+  },
+  mapLegendRow: { flexDirection: 'row', gap: 16 },
+  mapLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  mapLegendDot: { width: 10, height: 10, borderRadius: 5 },
+  mapLegendText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  mapLegendHint: {
+    fontSize: 10, color: colors.textMuted, marginTop: 6, fontStyle: 'italic',
+  },
+
+  /* Promo Card */
+  promoCard: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: 20, marginTop: 8, marginBottom: 4,
+    backgroundColor: colors.surface, borderRadius: 14,
+    paddingVertical: 14, paddingHorizontal: 14, gap: 12,
+    borderWidth: 1, borderColor: colors.primary + '25',
+    borderLeftWidth: 4, borderLeftColor: colors.primary,
+  },
+  promoIconWrap: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: colors.primary + '14',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  promoBody: { flex: 1 },
+  promoTitle: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, marginBottom: 2 },
+  promoSub: { fontSize: 11, color: colors.textMuted, lineHeight: 15 },
+  promoBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+  },
+  promoBtnText: { color: colors.white, fontSize: 11, fontWeight: '800' },
+
+  /* Footer */
+  footer: {
+    alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  footerLogoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  footerLogoText: { fontSize: 16, fontWeight: '900', color: colors.textPrimary },
+  footerTagline: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginBottom: 12 },
+  footerDivider: {
+    width: 40, height: 2, backgroundColor: colors.primary + '30',
+    borderRadius: 1, marginBottom: 12,
+  },
+  footerCopy: { fontSize: 11, color: colors.textMuted },
 });
 
 export default GuestScreen;
