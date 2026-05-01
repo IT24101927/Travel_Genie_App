@@ -17,7 +17,7 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import EmptyState from '../../components/common/EmptyState';
@@ -586,6 +586,7 @@ const MapSection = memo(({
 
 // ─── Main Screen ────────────────────────────────────────────────────────────
 const HotelListScreen = ({ route, navigation }) => {
+  const insets = useSafeAreaInsets();
   const { districtId: paramDistrictId, districtName: paramDistrictName } = route?.params || {};
   const routeDistrict = useMemo(
     () => makeDistrictSelection(paramDistrictId, paramDistrictName),
@@ -603,6 +604,7 @@ const HotelListScreen = ({ route, navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
+  const [showToTop, setShowToTop] = useState(false);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -726,6 +728,10 @@ const HotelListScreen = ({ route, navigation }) => {
     setTimeout(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }, 100);
+  }, []);
+  const handleListScroll = useCallback((e) => {
+    const next = e.nativeEvent.contentOffset.y > 350;
+    setShowToTop((prev) => (prev === next ? prev : next));
   }, []);
 
   const handleMapMarkerPress = useCallback((hotel) => {
@@ -1063,6 +1069,8 @@ const HotelListScreen = ({ route, navigation }) => {
           updateCellsBatchingPeriod={60}
           windowSize={5}
           removeClippedSubviews={Platform.OS === 'android'}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -1073,6 +1081,15 @@ const HotelListScreen = ({ route, navigation }) => {
           }
           showsVerticalScrollIndicator={false}
         />
+
+        {showToTop ? (
+          <Pressable
+            style={[ls.toTopBtn, { bottom: insets.bottom + 88 }]}
+            onPress={handleScrollToTop}
+          >
+            <Ionicons name="arrow-up" size={22} color={colors.white} />
+          </Pressable>
+        ) : null}
 
         {filterModal}
       </SafeAreaView>
@@ -1125,6 +1142,8 @@ const HotelListScreen = ({ route, navigation }) => {
         updateCellsBatchingPeriod={60}
         windowSize={5}
         removeClippedSubviews={Platform.OS === 'android'}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1135,6 +1154,15 @@ const HotelListScreen = ({ route, navigation }) => {
         }
         showsVerticalScrollIndicator={false}
       />
+
+      {showToTop ? (
+        <Pressable
+          style={[ls.toTopBtn, { bottom: insets.bottom + 88 }]}
+          onPress={handleScrollToTop}
+        >
+          <Ionicons name="arrow-up" size={22} color={colors.white} />
+        </Pressable>
+      ) : null}
 
       {/* ── Filter / Sort Modal ── */}
       <Modal
@@ -1868,6 +1896,22 @@ const ls = StyleSheet.create({
     alignItems: 'center',
   },
   filterApplyText: { color: colors.white, fontSize: 15, fontWeight: '900' },
+  toTopBtn: {
+    position: 'absolute',
+    right: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 8,
+    zIndex: 999,
+  },
 });
 
 export default HotelListScreen;

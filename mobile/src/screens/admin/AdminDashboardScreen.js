@@ -23,11 +23,11 @@ const STAT_CARDS = [
   { key: 'places',        label: 'Places',    icon: 'location-outline',         color: colors.info,
     subKey: 'districts',  subLabel: 'districts' },
   { key: 'hotels',        label: 'Hotels',    icon: 'bed-outline',              color: colors.primaryDark },
+  { key: 'transports',    label: 'Transport', icon: 'bus-outline',              color: colors.accentDark },
   { key: 'trips',         label: 'Trips',     icon: 'map-outline',              color: colors.statusOngoing },
   { key: 'expenses',      label: 'Expenses',  icon: 'wallet-outline',           color: colors.warning },
   { key: 'reviews',       label: 'Reviews',   icon: 'star-outline',             color: colors.success },
-  { key: 'notifications', label: 'Alerts',    icon: 'notifications-outline',    color: colors.statusPlanned },
-  { key: 'transports',    label: 'Transport', icon: 'bus-outline',              color: colors.accentDark }
+  { key: 'notifications', label: 'Alerts',    icon: 'notifications-outline',    color: colors.statusPlanned }
 ];
 
 const QUICK_ACTIONS = [
@@ -35,7 +35,9 @@ const QUICK_ACTIONS = [
   { label: 'Manage Places', icon: 'location', color: colors.statusOngoing, screen: 'AdminDistricts',
     hint: 'Districts → Places' },
   { label: 'Manage Hotels', icon: 'bed',      color: colors.primaryDark,   screen: 'AdminHotels',
-    hint: 'Manage accommodations' }
+    hint: 'Manage accommodations' },
+  { label: 'Manage Transport', icon: 'bus',   color: colors.accentDark,    screen: 'AdminTransports',
+    hint: 'Manage SL Transit' }
 ];
 
 const AdminDashboardScreen = ({ navigation }) => {
@@ -64,6 +66,7 @@ const AdminDashboardScreen = ({ navigation }) => {
     if (key === 'users')  { navigation.navigate('AdminUsers');     return; }
     if (key === 'places') { navigation.navigate('AdminDistricts'); return; }
     if (key === 'hotels') { navigation.navigate('AdminHotels'); return; }
+    if (key === 'transports') { navigation.navigate('AdminTransports'); return; }
     if (key === 'admins') { return; }
     navigation.navigate('AdminResource', {
       resource: key,

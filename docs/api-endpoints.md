@@ -77,11 +77,21 @@ Base URL: `https://<your-backend-domain>/api/v1`
 
 ## 🚌 Transport
 
+- `GET /transport/schedule-districts?limit=10` - Popular active transport districts grouped from schedules (protected)
+- `GET /transport/schedules` - Active public schedules with `search`, `type`, `districtId`, `district`, `province`, `from`, `to`, `page`, and `limit` filters (protected)
 - `POST /transport` - Create transport booking (protected)
 - `GET /transport` - List own transport bookings (protected)
 - `GET /transport/:id` - Get booking by id (protected)
 - `PUT /transport/:id` - Update booking (protected)
 - `DELETE /transport/:id` - Delete booking (protected)
+
+## 🚌 Admin Transport Schedules
+
+- `POST /admin/transports` - Create transport schedule (admin)
+- `GET /admin/transports` - List/search schedules with pagination (admin)
+- `GET /admin/transports/:id` - Get schedule by id (admin)
+- `PUT /admin/transports/:id` - Update schedule, active state, booking channel, and popularity score (admin)
+- `DELETE /admin/transports/:id` - Delete schedule (admin)
 
 ## 👑 Admin
 

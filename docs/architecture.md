@@ -6,6 +6,10 @@
 - Backend API: Node.js + Express + Mongoose (`Backend/src/`)
 - Database: MongoDB Atlas
 
+## Feature Ownership Highlight
+
+- Transportation & Transit Management (`IT24100853`) includes the admin transport schedule CRUD flow, user route discovery board, popular transport cards, district schedule browsing, and personal transport logs.
+
 ## Request Flow
 
 1. User action in mobile app

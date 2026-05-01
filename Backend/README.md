@@ -270,11 +270,23 @@ All endpoints are prefixed with `/api/v1`.
 
 | Method | Path | Access | Description |
 |---|---|---|---|
+| `GET` | `/schedule-districts` | 🔐 | Popular active transport districts, grouped from schedules |
+| `GET` | `/schedules` | 🔐 | Active public schedules with search, type, district, province, from/to, and pagination filters |
 | `POST` | `/` | 🔐 | Create transport booking |
 | `GET` | `/` | 🔐 | List own transport bookings |
 | `GET` | `/:id` | 🔐 | Get transport booking |
 | `PUT` | `/:id` | 🔐 | Update transport booking |
 | `DELETE` | `/:id` | 🔐 | Delete transport booking |
+
+### 🚌 Admin Transport Schedules — `/api/v1/admin/transports`
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `POST` | `/` | 🛡️ | Create a transport schedule |
+| `GET` | `/` | 🛡️ | List schedules with search, type, district, province, from/to, and pagination filters |
+| `GET` | `/:id` | 🛡️ | Get one schedule |
+| `PUT` | `/:id` | 🛡️ | Update schedule details, active state, booking channel, and popularity score |
+| `DELETE` | `/:id` | 🛡️ | Delete a schedule |
 
 ---
 
