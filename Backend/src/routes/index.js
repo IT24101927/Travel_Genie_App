@@ -10,6 +10,7 @@ const expenseRoutes = require('../modules/expenses/expense.routes');
 const reviewRoutes = require('../modules/reviews/review.routes');
 const notificationRoutes = require('../modules/notifications/notification.routes');
 const transportRoutes = require('../modules/transport/routes/transportRoutes');
+const transportAdminRoutes = require('../modules/transport/routes/transportAdmin.routes');
 const adminRoutes = require('../modules/admin/admin.routes');
 
 const router = express.Router();
@@ -44,6 +45,7 @@ router.use('/expenses', expenseRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/transport', transportRoutes);
+router.use('/admin/transports', transportAdminRoutes);
 router.use('/admin', adminRoutes);
 
 module.exports = router;

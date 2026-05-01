@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,68 +12,91 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import AppButton from '../../components/common/AppButton';
 import AppInput from '../../components/common/AppInput';
+import AppSelect from '../../components/common/AppSelect';
 import ErrorText from '../../components/common/ErrorText';
 import colors from '../../constants/colors';
 import { createTransportApi } from '../../api/transportApi';
 import { getTripsApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
+import {
+  bookingMethodOptions,
+  formatLkr,
+  getTransportTypeMeta,
+  scheduleToTransportDraft,
+  statusOptions,
+  transportTypeOptions
+} from '../../utils/transportOptions';
 
-const TYPES = ['flight', 'bus', 'train', 'car', 'ferry', 'other'];
-const STATUSES = ['upcoming', 'completed', 'cancelled'];
-
-const ChipRow = ({ options, selected, onSelect, colorMap }) => (
-  <View style={styles.chipRow}>
-    {options.map((opt) => {
-      const isSelected = selected === opt;
-      const chipColor = colorMap?.[opt] || colors.primary;
-      return (
-        <View
-          key={opt}
-          style={[
-            styles.chip,
-            isSelected && { backgroundColor: chipColor, borderColor: chipColor }
-          ]}
-        >
-          <Text
-            style={[styles.chipText, isSelected && styles.chipTextSelected]}
-            onPress={() => onSelect(opt)}
-          >
-            {opt.charAt(0).toUpperCase() + opt.slice(1)}
-          </Text>
-        </View>
-      );
-    })}
-  </View>
-);
-
-const STATUS_COLORS = {
-  upcoming: colors.info,
-  completed: colors.success,
-  cancelled: colors.danger
+const dateWithTime = (baseDate, time) => {
+  const next = new Date(baseDate);
+  const match = String(time || '').match(/^(\d{2}):(\d{2})$/);
+  if (!match) return next;
+  next.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  return next;
 };
 
-const AddTransportScreen = ({ navigation }) => {
-  const [form, setForm] = useState({
-    type: 'flight',
-    fromLocation: '',
-    toLocation: '',
-    departureDate: new Date(),
-    arrivalDate: null,
-    provider: '',
+const addMinutes = (date, minutes) => new Date(new Date(date).getTime() + Number(minutes || 0) * 60000);
+
+const buildInitialForm = (schedule) => {
+  const draft = schedule ? scheduleToTransportDraft(schedule) : {};
+  const departureDate = schedule?.departureTime
+    ? dateWithTime(new Date(), schedule.departureTime)
+    : new Date();
+  const arrivalDate = schedule?.arrivalTime
+    ? addMinutes(departureDate, schedule.duration || 0)
+    : null;
+
+  return {
+    type: draft.type || 'public-bus',
+    fromLocation: draft.fromLocation || '',
+    toLocation: draft.toLocation || '',
+    departureDate,
+    arrivalDate,
+    provider: draft.provider || '',
     bookingRef: '',
-    seatInfo: '',
-    cost: '',
-    notes: '',
+    seatInfo: draft.seatInfo || '',
+    bookingMethod: draft.bookingMethod || 'direct',
+    estimatedCost: draft.estimatedCost || '',
+    actualCost: '',
+    currency: 'LKR',
+    notes: draft.notes || '',
     status: 'upcoming',
     tripId: ''
+  };
+};
+
+const formatDateTime = (value) => {
+  if (!value) return '';
+  return new Date(value).toLocaleString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
+};
+
+const TripChip = ({ title, active, onPress }) => (
+  <Pressable style={[styles.tripChip, active && styles.tripChipActive]} onPress={onPress}>
+    <Text style={[styles.tripChipText, active && styles.tripChipTextActive]} numberOfLines={1}>
+      {title}
+    </Text>
+  </Pressable>
+);
+
+const AddTransportScreen = ({ navigation, route }) => {
+  const schedule = route.params?.schedule;
+  const [form, setForm] = useState(() => buildInitialForm(schedule));
   const [trips, setTrips] = useState([]);
   const [pickerTarget, setPickerTarget] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const typeMeta = useMemo(() => getTransportTypeMeta(form.type), [form.type]);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,14 +106,7 @@ const AddTransportScreen = ({ navigation }) => {
     }, [])
   );
 
-  const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
-
-  const formatDate = (d) => {
-    if (!d) return '';
-    return new Date(d).toLocaleDateString('en-US', {
-      weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-    });
-  };
+  const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const handleDateConfirm = (date) => {
     if (pickerTarget === 'departure') set('departureDate', date);
@@ -101,17 +117,17 @@ const AddTransportScreen = ({ navigation }) => {
   const handleSubmit = async () => {
     if (!form.fromLocation.trim()) return setError('Departure location is required.');
     if (!form.toLocation.trim()) return setError('Arrival location is required.');
-    if (!form.departureDate) return setError('Departure date is required.');
+    if (!form.departureDate) return setError('Departure date and time are required.');
 
     try {
       setLoading(true);
       setError('');
-      const payload = {
+      await createTransportApi({
         ...form,
-        cost: form.cost ? Number(form.cost) : 0,
+        estimatedCost: form.estimatedCost ? Number(form.estimatedCost) : 0,
+        actualCost: form.actualCost ? Number(form.actualCost) : 0,
         tripId: form.tripId || undefined
-      };
-      await createTransportApi(payload);
+      });
       navigation.goBack();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save transport'));
@@ -122,233 +138,279 @@ const AddTransportScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Header & Back Button */}
-        <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={20} color={colors.primary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Add Transport</Text>
-          <View style={{ width: 36 }} />
-        </View>
-        <Text style={styles.sectionLabel}>Transport Type</Text>
-        <ChipRow options={TYPES} selected={form.type} onSelect={(v) => set('type', v)} />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            </Pressable>
+            <Text style={styles.headerTitle}>Add Transport</Text>
+            <View style={styles.headerSpacer} />
+          </View>
 
-        <AppInput
-          label="From"
-          value={form.fromLocation}
-          onChangeText={(v) => set('fromLocation', v)}
-          placeholder="Departure city or airport"
-          leftIcon="location-outline"
-        />
-        <AppInput
-          label="To"
-          value={form.toLocation}
-          onChangeText={(v) => set('toLocation', v)}
-          placeholder="Arrival city or airport"
-          leftIcon="location"
-        />
-
-        <AppInput
-          label="Departure Date"
-          value={formatDate(form.departureDate)}
-          editable={false}
-          onContainerPress={() => setPickerTarget('departure')}
-          leftIcon="calendar-outline"
-          rightIcon="chevron-down-outline"
-        />
-        <AppInput
-          label="Arrival Date (optional)"
-          value={formatDate(form.arrivalDate)}
-          editable={false}
-          onContainerPress={() => setPickerTarget('arrival')}
-          leftIcon="calendar"
-          rightIcon="chevron-down-outline"
-        />
-
-        <AppInput
-          label="Provider / Operator (optional)"
-          value={form.provider}
-          onChangeText={(v) => set('provider', v)}
-          placeholder="e.g. Emirates, FlixBus"
-          leftIcon="business-outline"
-        />
-        <AppInput
-          label="Booking Reference (optional)"
-          value={form.bookingRef}
-          onChangeText={(v) => set('bookingRef', v)}
-          placeholder="e.g. ABC123"
-          leftIcon="barcode-outline"
-        />
-        <AppInput
-          label="Seat / Berth Info (optional)"
-          value={form.seatInfo}
-          onChangeText={(v) => set('seatInfo', v)}
-          placeholder="e.g. 14A, Sleeper Coach"
-          leftIcon="person-outline"
-        />
-        <AppInput
-          label="Cost (optional)"
-          value={form.cost}
-          onChangeText={(v) => set('cost', v)}
-          placeholder="0.00"
-          keyboardType="numeric"
-          leftIcon="cash-outline"
-        />
-
-        <Text style={styles.sectionLabel}>Status</Text>
-        <ChipRow
-          options={STATUSES}
-          selected={form.status}
-          onSelect={(v) => set('status', v)}
-          colorMap={STATUS_COLORS}
-        />
-
-        {trips.length > 0 && (
-          <>
-            <Text style={styles.sectionLabel}>Link to Trip (optional)</Text>
-            <View style={styles.tripList}>
-              {[{ _id: '', title: 'None' }, ...trips].map((t) => (
-                <View
-                  key={t._id}
-                  style={[
-                    styles.tripChip,
-                    form.tripId === t._id && styles.tripChipSelected
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.tripChipText,
-                      form.tripId === t._id && styles.tripChipTextSelected
-                    ]}
-                    onPress={() => set('tripId', t._id)}
-                    numberOfLines={1}
-                  >
-                    {t.title}
-                  </Text>
-                </View>
-              ))}
+          <LinearGradient
+            colors={[typeMeta.color, colors.primaryDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.hero}
+          >
+            <View style={styles.heroIcon}>
+              <Ionicons name={typeMeta.icon} size={24} color={colors.white} />
             </View>
-          </>
-        )}
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroEyebrow}>{schedule ? 'From route board' : 'Trip leg'}</Text>
+              <Text style={styles.heroTitle}>{typeMeta.label}</Text>
+              <Text style={styles.heroSub} numberOfLines={2}>
+                {form.fromLocation && form.toLocation
+                  ? `${form.fromLocation} to ${form.toLocation}`
+                  : 'Save buses, trains, tuk tuks, taxis and transfers in one place.'}
+              </Text>
+            </View>
+          </LinearGradient>
 
-        <AppInput
-          label="Notes (optional)"
-          value={form.notes}
-          onChangeText={(v) => set('notes', v)}
-          placeholder="Terminal info, gate, etc."
-          multiline
-          style={{ height: 80 }}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Route Details</Text>
+            <AppSelect
+              label="Transport Type"
+              value={form.type}
+              options={transportTypeOptions}
+              onChange={(value) => set('type', value)}
+              leftIcon={typeMeta.icon}
+            />
+            <AppInput
+              label="From"
+              value={form.fromLocation}
+              onChangeText={(v) => set('fromLocation', v)}
+              placeholder="Colombo Fort, BIA, Makumbura..."
+              leftIcon="location-outline"
+            />
+            <AppInput
+              label="To"
+              value={form.toLocation}
+              onChangeText={(v) => set('toLocation', v)}
+              placeholder="Kandy, Ella, Galle Fort..."
+              leftIcon="flag-outline"
+            />
+            <AppInput
+              label="Departure Date and Time"
+              value={formatDateTime(form.departureDate)}
+              editable={false}
+              onContainerPress={() => setPickerTarget('departure')}
+              leftIcon="calendar-outline"
+              rightIcon="chevron-down-outline"
+            />
+            <AppInput
+              label="Arrival Date and Time"
+              value={formatDateTime(form.arrivalDate)}
+              editable={false}
+              onContainerPress={() => setPickerTarget('arrival')}
+              leftIcon="time-outline"
+              rightIcon="chevron-down-outline"
+              placeholder="Optional"
+            />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Booking</Text>
+            <AppInput
+              label="Provider / Operator"
+              value={form.provider}
+              onChangeText={(v) => set('provider', v)}
+              placeholder="Sri Lanka Railways, SLTB, PickMe, Uber..."
+              leftIcon="business-outline"
+            />
+            <AppInput
+              label="Booking Reference"
+              value={form.bookingRef}
+              onChangeText={(v) => set('bookingRef', v)}
+              placeholder="Ticket ID, app ride ID or counter slip"
+              leftIcon="barcode-outline"
+            />
+            <AppInput
+              label="Seat / Class"
+              value={form.seatInfo}
+              onChangeText={(v) => set('seatInfo', v)}
+              placeholder="1st Class AC, Luxury, Seat 14A..."
+              leftIcon="ticket-outline"
+            />
+            <AppSelect
+              label="Booking Method"
+              value={form.bookingMethod}
+              options={bookingMethodOptions}
+              onChange={(value) => set('bookingMethod', value)}
+              leftIcon="receipt-outline"
+            />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Cost and Status</Text>
+            {form.estimatedCost ? (
+              <View style={styles.farePreview}>
+                <Ionicons name="cash-outline" size={18} color={colors.success} />
+                <Text style={styles.farePreviewText}>Estimated fare {formatLkr(form.estimatedCost)}</Text>
+              </View>
+            ) : null}
+            <AppInput
+              label="Estimated Cost (LKR)"
+              value={form.estimatedCost}
+              onChangeText={(v) => set('estimatedCost', v)}
+              placeholder="0"
+              keyboardType="numeric"
+              leftIcon="cash-outline"
+            />
+            <AppInput
+              label="Actual Cost (LKR)"
+              value={form.actualCost}
+              onChangeText={(v) => set('actualCost', v)}
+              placeholder="0"
+              keyboardType="numeric"
+              leftIcon="wallet-outline"
+            />
+            <AppSelect
+              label="Status"
+              value={form.status}
+              options={statusOptions}
+              onChange={(value) => set('status', value)}
+              leftIcon="checkmark-circle-outline"
+            />
+          </View>
+
+          {trips.length > 0 ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Link to Trip</Text>
+              <View style={styles.tripList}>
+                <TripChip title="None" active={form.tripId === ''} onPress={() => set('tripId', '')} />
+                {trips.map((trip) => (
+                  <TripChip
+                    key={trip._id}
+                    title={trip.title}
+                    active={form.tripId === trip._id}
+                    onPress={() => set('tripId', trip._id)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <AppInput
+              value={form.notes}
+              onChangeText={(v) => set('notes', v)}
+              placeholder="Platform, pickup point, conductor note, tolls..."
+              multiline
+              style={styles.notesInput}
+            />
+          </View>
+
+          <ErrorText message={error} />
+          <AppButton title="Save Transport" onPress={handleSubmit} loading={loading} />
+          <View style={styles.buttonGap} />
+          <AppButton title="Cancel" variant="secondary" onPress={() => navigation.goBack()} />
+        </ScrollView>
+
+        <DateTimePickerModal
+          isVisible={!!pickerTarget}
+          mode="datetime"
+          date={
+            pickerTarget === 'arrival' && form.arrivalDate
+              ? new Date(form.arrivalDate)
+              : new Date(form.departureDate)
+          }
+          onConfirm={handleDateConfirm}
+          onCancel={() => setPickerTarget(null)}
         />
-
-        <ErrorText message={error} />
-        <AppButton title="Save Transport" onPress={handleSubmit} loading={loading} />
-        <AppButton title="Cancel" variant="secondary" onPress={() => navigation.goBack()} />
-      </ScrollView>
-
-      <DateTimePickerModal
-        isVisible={!!pickerTarget}
-        mode="date"
-        date={pickerTarget === 'arrival' && form.arrivalDate ? new Date(form.arrivalDate) : new Date(form.departureDate)}
-        onConfirm={handleDateConfirm}
-        onCancel={() => setPickerTarget(null)}
-      />
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background
-  },
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: 16, paddingBottom: 120 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
-    elevation: 2,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  content: {
-    padding: 18,
-    paddingBottom: 120
-  },
-  sectionLabel: {
-    color: colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 13,
-    marginBottom: 10,
-    marginTop: 4
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 18
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  chipTextSelected: {
-    color: colors.white
-  },
-  tripList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 18
-  },
-  tripChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    width: 42,
+    height: 42,
+    borderRadius: 15,
     backgroundColor: colors.surface,
-    maxWidth: 160
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border
   },
-  tripChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary
+  headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '900' },
+  headerSpacer: { width: 42 },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 20,
+    padding: 15,
+    marginBottom: 14
   },
-  tripChipText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600'
+  heroIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  tripChipTextSelected: {
-    color: colors.white
-  }
+  heroCopy: { flex: 1 },
+  heroEyebrow: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1
+  },
+  heroTitle: { color: colors.white, fontSize: 20, fontWeight: '900', marginTop: 2 },
+  heroSub: { color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: '700', marginTop: 3, lineHeight: 17 },
+  card: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12
+  },
+  sectionTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '900', marginBottom: 12 },
+  farePreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.success + '12',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12
+  },
+  farePreviewText: { color: colors.success, fontSize: 13, fontWeight: '900' },
+  tripList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tripChip: {
+    maxWidth: 160,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  tripChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tripChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: '800' },
+  tripChipTextActive: { color: colors.white },
+  notesInput: { minHeight: 98, alignItems: 'flex-start' },
+  buttonGap: { height: 10 }
 });
 
 export default AddTransportScreen;

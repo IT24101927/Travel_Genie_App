@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Dimensions, FlatList, Pressable,
+  ActivityIndicator, FlatList, Pressable,
   RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,12 +13,17 @@ import FallbackImage from '../../components/common/FallbackImage';
 import { useAuth } from '../../context/AuthContext';
 import { getPlacesApi } from '../../api/placeApi';
 import { getHotelsApi } from '../../api/hotelApi';
+import { getTransportSchedulesApi } from '../../api/transportApi';
 import api from '../../api/client';
 import { getPlaceImageCandidates } from '../../utils/placeImages';
 import { getHotelImageCandidates } from '../../utils/hotelImages';
 import { formatHotelPrice, getHotelNightlyPriceLkr } from '../../utils/currencyFormat';
-
-const { width } = Dimensions.get('window');
+import {
+  formatDuration,
+  formatLkr,
+  getBookingChannelMeta,
+  getTransportTypeMeta
+} from '../../utils/transportOptions';
 
 const DISTRICT_COORDS = {
   'Colombo':      { latitude: 6.9271, longitude: 79.8612 },
@@ -225,6 +230,59 @@ const HotelCard = ({ item, onPress, isHighlighted }) => {
   );
 };
 
+/* ── Transport Route Card ── */
+const TransportRouteCard = ({ item, onPress }) => {
+  const meta = getTransportTypeMeta(item.type);
+  const bookingMeta = getBookingChannelMeta(item.bookingChannel);
+  const routeTitle = item.routeName || item.routeNo || `${item.departureStation} to ${item.arrivalStation}`;
+
+  return (
+    <Pressable style={[styles.routeCard, { borderLeftColor: meta.color }]} onPress={onPress}>
+      <View style={styles.routeCardTop}>
+        <View style={[styles.routeTypeBadge, { backgroundColor: `${meta.color}12` }]}>
+          <Ionicons name={meta.icon} size={13} color={meta.color} />
+          <Text style={[styles.routeTypeText, { color: meta.color }]}>{meta.shortLabel || meta.label}</Text>
+        </View>
+        <View style={styles.routePricePill}>
+          <Text style={styles.routePrice}>{formatLkr(item.ticketPriceLKR)}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.routeProvider} numberOfLines={1}>{item.provider || routeTitle}</Text>
+      <Text style={styles.routeName} numberOfLines={1}>{routeTitle}</Text>
+
+      <View style={styles.routeTicket}>
+        <View style={styles.routeTicketSide}>
+          <Text style={styles.routeTime}>{item.departureTime || '--:--'}</Text>
+          <Text style={styles.routeStation} numberOfLines={2}>{item.departureStation}</Text>
+        </View>
+        <View style={styles.routeTicketMid}>
+          <View style={styles.routeDot} />
+          <View style={[styles.routeLine, { backgroundColor: meta.color }]} />
+          <Ionicons name={meta.icon} size={18} color={meta.color} />
+          <View style={[styles.routeLine, { backgroundColor: meta.color }]} />
+          <Text style={[styles.routeDuration, { color: meta.color }]}>{formatDuration(item.duration)}</Text>
+        </View>
+        <View style={[styles.routeTicketSide, { alignItems: 'flex-end' }]}>
+          <Text style={styles.routeTime}>{item.arrivalTime || '--:--'}</Text>
+          <Text style={[styles.routeStation, { textAlign: 'right' }]} numberOfLines={2}>{item.arrivalStation}</Text>
+        </View>
+      </View>
+
+      <View style={styles.routeMetaRow}>
+        <View style={styles.routeMetaPill}>
+          <Ionicons name="calendar-outline" size={11} color={colors.textMuted} />
+          <Text style={styles.routeMetaText} numberOfLines={1}>{(item.operatingDays || ['Daily']).slice(0, 2).join(', ')}</Text>
+        </View>
+        <View style={styles.routeMetaPill}>
+          <Ionicons name={bookingMeta.icon} size={11} color={bookingMeta.color} />
+          <Text style={[styles.routeMetaText, { color: bookingMeta.color }]} numberOfLines={1}>{bookingMeta.shortLabel}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+};
+
 /* ── Section Header ── */
 const SectionHeader = ({ title, icon, onSeeMore }) => (
   <View style={styles.sectionHeader}>
@@ -249,9 +307,11 @@ const GuestScreen = ({ navigation }) => {
   const [districts, setDistricts] = useState([]);
   const [places, setPlaces] = useState([]);
   const [hotels, setHotels] = useState([]);
+  const [transportRoutes, setTransportRoutes] = useState([]);
   const [loadingDistricts, setLoadingDistricts] = useState(true);
   const [loadingPlaces, setLoadingPlaces] = useState(true);
   const [loadingHotels, setLoadingHotels] = useState(true);
+  const [loadingTransport, setLoadingTransport] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [highlightedId, setHighlightedId] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
@@ -288,18 +348,21 @@ const GuestScreen = ({ navigation }) => {
 
   const loadData = async () => {
     try {
-      const [dRes, pRes, hRes] = await Promise.allSettled([
+      const [dRes, pRes, hRes, tRes] = await Promise.allSettled([
         api.get('/districts'),
         getPlacesApi({}),
         getHotelsApi({}),
+        getTransportSchedulesApi({ page: 1, limit: 10 }),
       ]);
       if (dRes.status === 'fulfilled') setDistricts(dRes.value?.data?.data || []);
-      if (pRes.status === 'fulfilled') setPlaces(pRes.value?.data?.places || []);
-      if (hRes.status === 'fulfilled') setHotels(hRes.value?.data?.hotels || []);
+      if (pRes.status === 'fulfilled') setPlaces(pRes.value?.data?.places || pRes.value?.data || []);
+      if (hRes.status === 'fulfilled') setHotels(hRes.value?.data?.hotels || hRes.value?.data || []);
+      if (tRes.status === 'fulfilled') setTransportRoutes(tRes.value?.data?.schedules || []);
     } finally {
       setLoadingDistricts(false);
       setLoadingPlaces(false);
       setLoadingHotels(false);
+      setLoadingTransport(false);
       setRefreshing(false);
     }
   };
@@ -315,8 +378,8 @@ const GuestScreen = ({ navigation }) => {
   }, []);
 
   const onRefresh = () => { setRefreshing(true); loadData(); };
-  const onLoginPress = () => exitGuest();
-  const promptLogin = () => navigation.navigate('GuestSignInPrompt');
+  const onLoginPress = useCallback(() => exitGuest(), [exitGuest]);
+  const promptLogin = useCallback(() => navigation.navigate('GuestSignInPrompt'), [navigation]);
 
   const handleMarkerPress = useCallback((district) => {
     setHighlightedId(district.district_id);
@@ -353,7 +416,7 @@ const GuestScreen = ({ navigation }) => {
     } else {
       promptLogin();
     }
-  }, []);
+  }, [promptLogin]);
 
   // Places filtered by selected district — keeps list in sync with map pins
   const filteredPlaces = selectedDistrict
@@ -382,9 +445,23 @@ const GuestScreen = ({ navigation }) => {
         return hotelDist.toLowerCase() === distName ||
           (h.address_text || '').toLowerCase().includes(distName);
       })
-    : [];
+    : hotels;
 
   const visibleHotels = filteredHotels.slice(0, 8);
+
+  const filteredTransportRoutes = selectedDistrict
+    ? transportRoutes.filter((route) => {
+        const distName = selectedDistrict.name?.toLowerCase();
+        return (
+          Number(route.district_id) === Number(selectedDistrict.district_id) ||
+          (route.district || '').toLowerCase() === distName ||
+          (route.departureStation || '').toLowerCase().includes(distName) ||
+          (route.arrivalStation || '').toLowerCase().includes(distName)
+        );
+      })
+    : transportRoutes;
+
+  const visibleTransportRoutes = filteredTransportRoutes.slice(0, 8);
 
   const handlePlaceMarkerPress = useCallback((place) => {
     setSelectedPlace(place);
@@ -735,6 +812,41 @@ const GuestScreen = ({ navigation }) => {
           )}
         </View>
 
+        {/* ── Transport Routes ── */}
+        <View style={styles.section}>
+          <SectionHeader
+            title={selectedDistrict ? `Transit from ${selectedDistrict.name}` : 'Popular Transit Routes'}
+            icon="bus"
+            onSeeMore={promptLogin}
+          />
+          {loadingTransport ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
+          ) : visibleTransportRoutes.length === 0 ? (
+            <Text style={styles.emptyText}>
+              {selectedDistrict ? `No transport routes found for ${selectedDistrict.name}.` : 'No transport routes yet.'}
+            </Text>
+          ) : (
+            <FlatList
+              data={visibleTransportRoutes}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item._id}
+              renderItem={({ item }) => (
+                <TransportRouteCard item={item} onPress={promptLogin} />
+              )}
+              ListFooterComponent={
+                <Pressable style={styles.seeMoreCardTall} onPress={onLoginPress}>
+                  <View style={styles.seeMoreCardIcon}>
+                    <Ionicons name="add-circle" size={28} color={colors.primary} />
+                  </View>
+                  <Text style={styles.seeMoreCardText}>See All{"\n"}Routes</Text>
+                </Pressable>
+              }
+              contentContainerStyle={styles.hList}
+            />
+          )}
+        </View>
+
         {/* ── Inline Promo Card ── */}
         <View style={styles.promoCard}>
           <View style={styles.promoIconWrap}>
@@ -752,12 +864,16 @@ const GuestScreen = ({ navigation }) => {
 
         {/* ── Featured Hotels ── */}
         <View style={styles.section}>
-          <SectionHeader title="Featured Hotels" icon="bed" onSeeMore={promptLogin} />
+          <SectionHeader
+            title={selectedDistrict ? `Hotels in ${selectedDistrict.name}` : 'Featured Hotels'}
+            icon="bed"
+            onSeeMore={promptLogin}
+          />
 
           {loadingHotels ? (
             <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
-          ) : hotels.length === 0 ? (
-            <Text style={styles.emptyText}>No hotels yet.</Text>
+          ) : visibleHotels.length === 0 ? (
+            <Text style={styles.emptyText}>{selectedDistrict ? `No hotels found in ${selectedDistrict.name}.` : 'No hotels yet.'}</Text>
           ) : (
             <FlatList
               ref={hotelsListRef}
@@ -1089,6 +1205,81 @@ const styles = StyleSheet.create({
   hotelCardTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
   hotelLocRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   hotelLocText: { fontSize: 11, color: colors.textMuted, flex: 1 },
+
+  /* Transport route cards */
+  routeCard: {
+    width: 310,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderColor: colors.border,
+    padding: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+  },
+  routeCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  routeTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 9,
+  },
+  routeTypeText: { fontSize: 11, fontWeight: '900' },
+  routePricePill: {
+    backgroundColor: '#E9F8F2',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  routePrice: { fontSize: 12, fontWeight: '900', color: colors.success },
+  routeProvider: { fontSize: 15, fontWeight: '900', color: colors.textPrimary },
+  routeName: { fontSize: 11, color: colors.textMuted, fontWeight: '700', marginTop: 2 },
+  routeTicket: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 14,
+    backgroundColor: '#F8F7F3',
+  },
+  routeTicketSide: { flex: 1 },
+  routeTime: { fontSize: 20, fontWeight: '900', color: colors.textPrimary },
+  routeStation: { fontSize: 10, color: colors.textSecondary, fontWeight: '700', lineHeight: 14, marginTop: 2 },
+  routeTicketMid: { width: 64, alignItems: 'center' },
+  routeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    marginBottom: 3,
+  },
+  routeLine: { width: 2, height: 14, borderRadius: 1 },
+  routeDuration: { fontSize: 10, fontWeight: '900', marginTop: 4 },
+  routeMetaRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  routeMetaPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  routeMetaText: { flex: 1, fontSize: 10, fontWeight: '800', color: colors.textMuted },
 
   /* Unlock card (dark themed) */
   unlockCard: {

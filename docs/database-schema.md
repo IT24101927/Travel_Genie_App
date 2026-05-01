@@ -53,6 +53,51 @@
 - `tags` ([String])
 - `notes` (String)
 
+## Transport
+
+- `userId` (ObjectId -> User)
+- `tripId` (ObjectId -> Trip, optional)
+- `type` (tuk-tuk|pickme|uber|public-bus|express-bus|intercity-train|private-van|scooter-rent|domestic-flight|ferry|taxi|other)
+- `fromLocation` (String)
+- `toLocation` (String)
+- `departureDate` (Date)
+- `arrivalDate` (Date, optional)
+- `provider` (String)
+- `bookingRef` (String)
+- `seatInfo` (String)
+- `bookingMethod` (app|counter|direct|website|negotiated)
+- `estimatedCost` (Number)
+- `actualCost` (Number)
+- `currency` (String, default LKR)
+- `status` (upcoming|completed|cancelled)
+- `notes` (String)
+
+## TransportSchedule
+
+- `district_id` (Number)
+- `district` (String)
+- `province` (String)
+- `type` (public-bus|express-bus|intercity-train|domestic-flight|ferry|taxi|private-van|other)
+- `routeName` (String)
+- `routeNo` (String)
+- `provider` (String)
+- `serviceClass` (String)
+- `departureStation` (String)
+- `arrivalStation` (String)
+- `departureTime` (String, HH:mm)
+- `arrivalTime` (String, HH:mm)
+- `duration` (Number)
+- `ticketPriceLKR` (Number)
+- `operatingDays` ([String])
+- `bookingChannel` (official-online|authorized-online|mobile-app|counter|onboard-cash|hotline|airport-counter|local-check)
+- `contactNumber` (String)
+- `bookingUrl` (String)
+- `paymentNotes` (String)
+- `bookingTips` (String)
+- `tags` ([String])
+- `popularityScore` (Number)
+- `isActive` (Boolean)
+
 ## Review
 
 - `userId` (ObjectId -> User)

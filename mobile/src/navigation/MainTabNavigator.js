@@ -20,6 +20,7 @@ import HotelDistrictListScreen from '../screens/hotels/HotelDistrictListScreen';
 import TransportListScreen from '../screens/transport/TransportListScreen';
 import AddTransportScreen from '../screens/transport/AddTransportScreen';
 import EditTransportScreen from '../screens/transport/EditTransportScreen';
+import TransportSchedulesScreen from '../screens/transport/TransportSchedulesScreen';
 
 import NotificationListScreen from '../screens/notifications/NotificationListScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
@@ -75,6 +76,7 @@ const TransportStackNavigator = () => (
     <TransportStack.Screen name="TransportList" component={TransportListScreen} />
     <TransportStack.Screen name="AddTransport" component={AddTransportScreen} />
     <TransportStack.Screen name="EditTransport" component={EditTransportScreen} />
+    <TransportStack.Screen name="TransportSchedules" component={TransportSchedulesScreen} />
   </TransportStack.Navigator>
 );
 
