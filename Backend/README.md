@@ -212,7 +212,7 @@ All endpoints are prefixed with `/api/v1`.
 
 ---
 
-### 🧳 Trips — `/api/v1/trips`
+### 🧳 Trips & Itinerary Management (IT23361690) — `/api/v1/trips`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
