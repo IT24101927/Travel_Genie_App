@@ -24,14 +24,29 @@ const expenseSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+    currency: {
+      type: String,
+      enum: ['LKR', 'USD', 'EUR'],
+      default: 'LKR'
+    },
     date: {
       type: Date,
       required: true
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true
     },
     paymentMethod: {
       type: String,
       enum: ['cash', 'card', 'wallet', 'bank_transfer', 'other'],
       default: 'cash'
+    },
+    status: {
+      type: String,
+      enum: ['planned', 'paid'],
+      default: 'paid'
     },
     tags: [{ type: String, trim: true }],
     notes: {

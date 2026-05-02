@@ -10,7 +10,6 @@ const normalizePlacePayload = (payload) => {
   const normalizedType = normalizePlaceType(requestedType);
   if (normalizedType) {
     payload.type = normalizedType;
-    payload.category = normalizedType;
   }
   return payload;
 };
@@ -22,7 +21,7 @@ const createPlaceHandler = asyncHandler(async (req, res) => {
   });
 
   if (req.file) {
-    payload.image = `/uploads/places/${req.file.filename}`;
+    payload.image_url = `/uploads/places/${req.file.filename}`;
   }
 
   const place = await createPlace(req.user.userId, payload);
@@ -49,7 +48,7 @@ const updatePlaceHandler = asyncHandler(async (req, res) => {
   }
 
   if (req.file) {
-    payload.image = `/uploads/places/${req.file.filename}`;
+    payload.image_url = `/uploads/places/${req.file.filename}`;
   }
 
   const place = await updatePlace(req.params.id, payload);

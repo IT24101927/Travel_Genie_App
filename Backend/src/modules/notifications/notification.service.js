@@ -2,11 +2,20 @@ const Notification = require('./notification.model');
 const AppError = require('../../utils/appError');
 
 const createNotification = async (payload) => {
+  const titles = {
+    'BUDGET_100': 'Budget Exceeded 🚨',
+    'BUDGET_80': 'Budget Warning ⚠️',
+    'PRICE_UPDATE': 'Price Trend Update 📈',
+  };
+  if (!payload.title && payload.type) {
+    payload.title = titles[payload.type] || 'New Notification';
+  }
   return Notification.create(payload);
 };
 
 const getUserNotifications = async (user) => {
-  const filter = user.role === 'admin' ? {} : { userId: user.userId };
+  // Admins see everything. Users only see non-deleted notifications assigned to them.
+  const filter = user.role === 'admin' ? {} : { userId: user.userId, deletedByUser: false };
   return Notification.find(filter).sort({ createdAt: -1 });
 };
 
@@ -32,7 +41,14 @@ const deleteNotification = async (id, user) => {
     throw new AppError('Notification not found', 404);
   }
 
-  await notification.deleteOne();
+  if (user.role === 'admin') {
+    // Admin performs a hard delete from the platform
+    await notification.deleteOne();
+  } else {
+    // Regular user performs a soft delete (hides it from their view)
+    notification.deletedByUser = true;
+    await notification.save();
+  }
 };
 
 module.exports = {

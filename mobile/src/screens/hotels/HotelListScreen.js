@@ -101,12 +101,12 @@ const TYPE_FILTERS = [
 
 // ── Planner-mode filter chips (match TripPreferences hotel types & the web reference) ──
 const PREF_FILTERS = [
-  { key: 'any',      emoji: '🌍', label: 'All',       color: colors.primary,   sub: 'Show all hotels' },
-  { key: 'budget',   emoji: '🏚️', label: 'Budget',    color: '#FF9800',         sub: 'Guesthouses & hostels' },
-  { key: 'midrange', emoji: '🏨', label: 'Mid-range', color: '#3498DB',         sub: '3–4 star hotels' },
-  { key: 'luxury',   emoji: '🌴', label: 'Luxury',    color: '#4CAF50',         sub: '5 star & resorts' },
-  { key: 'boutique', emoji: '✨', label: 'Boutique',  color: '#F57C00',         sub: 'Small unique stays' },
-  { key: 'villa',    emoji: '🏛️', label: 'Villa',     color: '#E91E63',         sub: 'Private villa rental' },
+  { key: 'any', emoji: '🌍', label: 'All', color: colors.primary, sub: 'Show all hotels' },
+  { key: 'budget', emoji: '🏚️', label: 'Budget', color: '#FF9800', sub: 'Guesthouses & hostels' },
+  { key: 'midrange', emoji: '🏨', label: 'Mid-range', color: '#3498DB', sub: '3–4 star hotels' },
+  { key: 'luxury', emoji: '🌴', label: 'Luxury', color: '#4CAF50', sub: '5 star & resorts' },
+  { key: 'boutique', emoji: '✨', label: 'Boutique', color: '#F57C00', sub: 'Small unique stays' },
+  { key: 'villa', emoji: '🏛️', label: 'Villa', color: '#E91E63', sub: 'Private villa rental' },
 ];
 
 // Returns the key for the initial planner filter chip (matches the stored pref, defaults to 'any')
@@ -800,7 +800,7 @@ const HotelListScreen = ({ route, navigation }) => {
       setTypeFilter('all');
       setIsPrefFilter(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeDistrict]);
 
   // Sync filter chip when planner preference changes (e.g. user goes back and picks different type)
@@ -809,7 +809,7 @@ const HotelListScreen = ({ route, navigation }) => {
     const nextKey = getPrefFilterKey(planner?.preferences?.hotelType);
     setTypeFilter(nextKey);
     setIsPrefFilter(nextKey !== 'any');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlannerMode, planner?.preferences?.hotelType]);
 
   const fetchHotels = useCallback(async ({ silent = false } = {}) => {
@@ -846,12 +846,12 @@ const HotelListScreen = ({ route, navigation }) => {
         if (getHotelId(h) === getHotelId(hotel)) return sum;
         return sum + (h.nights || 1);
       }, 0) || 0;
-      
+
       if (!isExisting && tripNightsCap && usedOthers >= tripNightsCap) {
         Alert.alert('Nights Limit Reached', `You have already allocated all ${tripNightsCap} nights to other hotels. Remove or reduce nights from other hotels first.`);
         return;
       }
-      
+
       setNightsModalHotel(hotel);
     },
     [planner]
@@ -911,7 +911,7 @@ const HotelListScreen = ({ route, navigation }) => {
         entry.name = name;
         entry.province = DISTRICT_TO_PROVINCE[name] || 'Sri Lanka';
       }
-      if (!entry.cover && (h.coverImage || h.image_url || h.image)) entry.cover = h;
+      if (!entry.cover && (h.coverImage || h.image_url)) entry.cover = h;
       if (!entry.cover) entry.cover = h;
     });
     return Array.from(map.values()).sort((a, b) => {
@@ -1643,26 +1643,26 @@ const HotelListScreen = ({ route, navigation }) => {
                   if (getHotelId(h) === getHotelId(nightsModalHotel)) return sum;
                   return sum + (h.nights || 1);
                 }, 0) || 0;
-                
+
                 const maxNightsAllowed = tripNightsCap ? Math.max(1, tripNightsCap - usedOthers) : null;
-                
+
                 let currentNights = Math.max(1, Math.ceil((checkOutDate - checkInDate) / 86400000));
                 // Automatically adjust if it exceeds cap
                 if (maxNightsAllowed && currentNights > maxNightsAllowed) {
                   currentNights = maxNightsAllowed;
                 }
-                
+
                 const totalUsed = usedOthers + currentNights;
                 const nightlyPrice = nightsModalHotel ? getHotelNightlyPriceLkr(nightsModalHotel) : 0;
                 const totalEstimatedCost = nightlyPrice * currentNights;
-                
+
                 const handleIncrement = () => {
                   if (maxNightsAllowed && currentNights >= maxNightsAllowed) return;
                   const newOut = new Date(checkInDate);
                   newOut.setDate(newOut.getDate() + currentNights + 1);
                   setCheckOutDate(newOut);
                 };
-                
+
                 const handleDecrement = () => {
                   if (currentNights <= 1) return;
                   const newOut = new Date(checkInDate);
@@ -1708,7 +1708,7 @@ const HotelListScreen = ({ route, navigation }) => {
                             {mapPoints.map(pt => {
                               const isHotel = pt.type === 'hotel';
                               const bgColor = isHotel ? colors.warning : colors.primary;
-                              
+
                               if (Platform.OS === 'ios') {
                                 return (
                                   <Marker
@@ -1727,7 +1727,7 @@ const HotelListScreen = ({ route, navigation }) => {
                                   </Marker>
                                 );
                               }
-                              
+
                               return (
                                 <Marker
                                   key={pt.key}
@@ -1753,7 +1753,7 @@ const HotelListScreen = ({ route, navigation }) => {
                           {nightsModalHotel?.name}
                         </Text>
                       </View>
-                      
+
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                         <Pressable style={ls.filterOption} onPress={() => setDatePickerMode('checkIn')}>
                           <Ionicons name="calendar-outline" size={16} color={colors.primary} />
@@ -1789,9 +1789,9 @@ const HotelListScreen = ({ route, navigation }) => {
                             </Text>
                           </View>
                         )}
-                        
+
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-                          <Pressable 
+                          <Pressable
                             onPress={handleDecrement}
                             style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', opacity: currentNights <= 1 ? 0.4 : 1 }}
                           >
@@ -1801,7 +1801,7 @@ const HotelListScreen = ({ route, navigation }) => {
                             <Text style={{ fontSize: 24, fontWeight: '900', color: colors.textPrimary }}>{currentNights}</Text>
                             <Text style={{ fontSize: 10, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase' }}>Night{currentNights !== 1 ? 's' : ''}</Text>
                           </View>
-                          <Pressable 
+                          <Pressable
                             onPress={handleIncrement}
                             style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary + '14', alignItems: 'center', justifyContent: 'center', opacity: (maxNightsAllowed && currentNights >= maxNightsAllowed) ? 0.4 : 1 }}
                           >
@@ -1843,10 +1843,10 @@ const HotelListScreen = ({ route, navigation }) => {
                       <Pressable
                         style={[ls.filterApplyBtn, { flex: 2, marginBottom: 0 }]}
                         onPress={() => {
-                          planner?.addOrUpdateSelectedHotel?.(nightsModalHotel, { 
-                            checkIn: checkInDate.toISOString().slice(0, 10), 
-                            checkOut: checkOutDate.toISOString().slice(0, 10), 
-                            nights: currentNights 
+                          planner?.addOrUpdateSelectedHotel?.(nightsModalHotel, {
+                            checkIn: checkInDate.toISOString().slice(0, 10),
+                            checkOut: checkOutDate.toISOString().slice(0, 10),
+                            nights: currentNights
                           });
                           // Removed setSelectedHotelId(...) so the map no longer zooms/focuses automatically when added to the trip.
                           setNightsModalHotel(null);
@@ -2192,20 +2192,20 @@ const ls = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
-    heroCountPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 18,
-    },
-    heroCountText: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: colors.primary,
-    },
+  heroCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+  },
+  heroCountText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.primary,
+  },
   typeFilterRow: {
     paddingHorizontal: 12,
     paddingVertical: 8,

@@ -24,9 +24,9 @@
 
 - `name` (String)
 - `district` (String)
-- `category` (String)
+- `type` (String)
 - `description` (String)
-- `image` (String)
+- `image_url` (String)
 - `tags` ([String])
 - `estimatedCost` (Number)
 - `createdBy` (ObjectId -> User)
@@ -35,10 +35,10 @@
 
 - `name` (String)
 - `location` (String)
-- `priceRange` (Number)
+- `price_per_night` (Number)
 - `rating` (Number)
 - `description` (String)
-- `image` (String)
+- `image_url` (String)
 - `amenities` ([String])
 - `createdBy` (ObjectId -> User)
 

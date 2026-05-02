@@ -665,7 +665,7 @@ const GuestScreen = ({ navigation }) => {
                     />
                     <View style={styles.mapPopupBody}>
                       <Text style={styles.mapPopupName} numberOfLines={1}>{selectedPlace.name}</Text>
-                      <Text style={styles.mapPopupProv}>{selectedPlace.type || selectedPlace.category || selectedPlace.district || ''}</Text>
+                      <Text style={styles.mapPopupProv}>{selectedPlace.type || selectedPlace.district || ''}</Text>
                     </View>
                     <Pressable style={styles.mapPopupExplore} onPress={promptLogin}>
                       <Text style={styles.mapPopupExploreText}>View</Text>
