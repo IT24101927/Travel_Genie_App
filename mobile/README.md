@@ -15,6 +15,13 @@ An integrated multi-role mobile application supporting User, Guest, and Admin wo
 - Personal transport logs support add, edit, delete, trip linking, booking references, costs, and status tracking.
 - Admin transport screens support schedule CRUD, filters, active/inactive state, `popularityScore`, booking channels, operating days, and route metadata.
 
+## 🧳 Trip Itinerary Management (IT23361690)
+
+- Linear Trip Planner orchestrating a smooth 5-step flow: District → Places → Preferences → Hotels → Budget.
+- Persistent `TripPlannerContext` managing complex itinerary states during creation.
+- Comprehensive Admin Trip Management with dedicated View and Edit screens matching the platform's design system.
+- Smart itinerary editor for admins featuring date-linking, auto hotel budget calculation, and quick budget presets.
+
 ---
 
 ## 🚀 Run locally

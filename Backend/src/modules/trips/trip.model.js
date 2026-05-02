@@ -39,6 +39,57 @@ const tripSchema = new mongoose.Schema(
       type: String,
       enum: ['planned', 'ongoing', 'completed', 'cancelled'],
       default: 'planned'
+    },
+    districtId: {
+      type: Number,
+      index: true
+    },
+    districtName: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    province: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    selectedPlaces: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: []
+    },
+    selectedHotel: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    tripType: {
+      type: String,
+      enum: ['solo', 'couple', 'family', 'group'],
+      default: 'couple'
+    },
+    travelers: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    nights: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    hotelType: {
+      type: String,
+      trim: true,
+      default: 'any'
+    },
+    currency: {
+      type: String,
+      trim: true,
+      default: 'LKR'
+    },
+    budgetBreakdown: {
+      type: mongoose.Schema.Types.Mixed,
+      default: undefined
     }
   },
   {

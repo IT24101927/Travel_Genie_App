@@ -23,20 +23,22 @@ const STAT_CARDS = [
   { key: 'places',        label: 'Places',    icon: 'location-outline',         color: colors.info,
     subKey: 'districts',  subLabel: 'districts' },
   { key: 'hotels',        label: 'Hotels',    icon: 'bed-outline',              color: colors.primaryDark },
-  { key: 'transports',    label: 'Transport', icon: 'bus-outline',              color: colors.accentDark },
   { key: 'trips',         label: 'Trips',     icon: 'map-outline',              color: colors.statusOngoing },
+  { key: 'transports',    label: 'Transport', icon: 'bus-outline',              color: colors.accentDark },
   { key: 'expenses',      label: 'Expenses',  icon: 'wallet-outline',           color: colors.warning },
   { key: 'reviews',       label: 'Reviews',   icon: 'star-outline',             color: colors.success },
   { key: 'notifications', label: 'Alerts',    icon: 'notifications-outline',    color: colors.statusPlanned }
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'Manage Users',  icon: 'people',   color: colors.primary,       screen: 'AdminUsers' },
-  { label: 'Manage Places', icon: 'location', color: colors.statusOngoing, screen: 'AdminDistricts',
+  { label: 'Manage Users',  icon: 'people',   color: colors.primary,         screen: 'AdminUsers' },
+  { label: 'Manage Places', icon: 'location', color: colors.statusOngoing,   screen: 'AdminDistricts',
     hint: 'Districts → Places' },
-  { label: 'Manage Hotels', icon: 'bed',      color: colors.primaryDark,   screen: 'AdminHotels',
+  { label: 'Manage Hotels', icon: 'bed',      color: colors.primaryDark,     screen: 'AdminHotels',
     hint: 'Manage accommodations' },
-  { label: 'Manage Transport', icon: 'bus',   color: colors.accentDark,    screen: 'AdminTransports',
+  { label: 'Manage Trips',  icon: 'map',      color: colors.statusOngoing,   screen: 'AdminTrips',
+    hint: 'View & manage all trips' },
+  { label: 'Manage Transport', icon: 'bus',   color: colors.accentDark,      screen: 'AdminTransports',
     hint: 'Manage SL Transit' }
 ];
 
@@ -67,6 +69,7 @@ const AdminDashboardScreen = ({ navigation }) => {
     if (key === 'places') { navigation.navigate('AdminDistricts'); return; }
     if (key === 'hotels') { navigation.navigate('AdminHotels'); return; }
     if (key === 'transports') { navigation.navigate('AdminTransports'); return; }
+    if (key === 'trips')  { navigation.navigate('AdminTrips'); return; }
     if (key === 'admins') { return; }
     navigation.navigate('AdminResource', {
       resource: key,

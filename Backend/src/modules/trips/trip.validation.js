@@ -9,7 +9,21 @@ const createTripValidation = [
   body('status')
     .optional()
     .isIn(['planned', 'ongoing', 'completed', 'cancelled'])
-    .withMessage('Invalid status')
+    .withMessage('Invalid status'),
+  body('districtId').optional().isInt({ min: 1 }).withMessage('districtId must be a positive integer'),
+  body('districtName').optional().trim().isString(),
+  body('province').optional().trim().isString(),
+  body('selectedPlaces').optional().isArray().withMessage('selectedPlaces must be an array'),
+  body('selectedHotel')
+    .optional({ nullable: true })
+    .custom((value) => value === null || (typeof value === 'object' && !Array.isArray(value)))
+    .withMessage('selectedHotel must be an object'),
+  body('tripType').optional().isIn(['solo', 'couple', 'family', 'group']).withMessage('Invalid tripType'),
+  body('travelers').optional().isInt({ min: 1, max: 50 }).withMessage('travelers must be between 1 and 50'),
+  body('nights').optional().isInt({ min: 1, max: 365 }).withMessage('nights must be between 1 and 365'),
+  body('hotelType').optional().trim().isString(),
+  body('currency').optional().trim().isString(),
+  body('budgetBreakdown').optional().isObject().withMessage('budgetBreakdown must be an object')
 ];
 
 const updateTripValidation = [
@@ -21,7 +35,21 @@ const updateTripValidation = [
   body('status')
     .optional()
     .isIn(['planned', 'ongoing', 'completed', 'cancelled'])
-    .withMessage('Invalid status')
+    .withMessage('Invalid status'),
+  body('districtId').optional().isInt({ min: 1 }).withMessage('districtId must be a positive integer'),
+  body('districtName').optional().trim().isString(),
+  body('province').optional().trim().isString(),
+  body('selectedPlaces').optional().isArray().withMessage('selectedPlaces must be an array'),
+  body('selectedHotel')
+    .optional({ nullable: true })
+    .custom((value) => value === null || (typeof value === 'object' && !Array.isArray(value)))
+    .withMessage('selectedHotel must be an object'),
+  body('tripType').optional().isIn(['solo', 'couple', 'family', 'group']).withMessage('Invalid tripType'),
+  body('travelers').optional().isInt({ min: 1, max: 50 }).withMessage('travelers must be between 1 and 50'),
+  body('nights').optional().isInt({ min: 1, max: 365 }).withMessage('nights must be between 1 and 365'),
+  body('hotelType').optional().trim().isString(),
+  body('currency').optional().trim().isString(),
+  body('budgetBreakdown').optional().isObject().withMessage('budgetBreakdown must be an object')
 ];
 
 module.exports = {

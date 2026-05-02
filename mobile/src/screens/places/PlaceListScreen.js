@@ -24,6 +24,12 @@ import { getPlacesApi } from '../../api/placeApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getPlaceImageCandidates } from '../../utils/placeImages';
 import { getPlaceType, getPlaceTypeMeta } from '../../utils/placeTypes';
+import { useTripPlanner } from '../../context/TripPlannerContext';
+import {
+  navigateToPlannerDistrictPicker,
+  navigateToPlannerPreferences,
+  navigateToTripList,
+} from '../../navigation/tripPlannerFlow';
 
 const { width } = Dimensions.get('window');
 const CARD_W = Math.floor((width - 48) / 2);
@@ -98,13 +104,19 @@ const getMapRegion = (places, districtName) => {
 };
 
 /* ─── Place card ─── */
-const PlaceCard = memo(({ item, isSelected, onPress }) => {
+const PlaceCard = memo(({ item, isSelected, plannerSelected, onPress, onToggleTrip }) => {
   const cat = getPlaceType(item);
   const meta = getPlaceTypeMeta(item);
+  const hasPlannerAction = plannerSelected !== undefined;
 
   return (
     <TouchableOpacity
-      style={[styles.card, { width: CARD_W, height: CARD_H }, isSelected && styles.cardSelected]}
+      style={[
+        styles.card,
+        { width: CARD_W, height: CARD_H },
+        isSelected && styles.cardSelected,
+        plannerSelected && styles.cardPlannerSelected,
+      ]}
       onPress={() => onPress(item)}
       activeOpacity={0.85}
     >
@@ -142,15 +154,39 @@ const PlaceCard = memo(({ item, isSelected, onPress }) => {
       ) : null}
 
       {/* Bottom info — always visible */}
-      <View style={styles.cardContent}>
+      <View style={[styles.cardContent, hasPlannerAction && styles.cardContentPlanner]}>
         <View style={styles.nameRow}>
           <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-          <View style={styles.arrowBubble}>
-            <Ionicons name="arrow-forward" size={10} color={colors.white} />
-          </View>
+          {!hasPlannerAction ? (
+            <View style={styles.arrowBubble}>
+              <Ionicons name="arrow-forward" size={10} color={colors.white} />
+            </View>
+          ) : null}
         </View>
         {item.description ? (
           <Text style={styles.cardSub} numberOfLines={1}>{item.description}</Text>
+        ) : null}
+        {hasPlannerAction ? (
+          <View style={styles.cardActionRow}>
+            <View style={styles.detailsHint}>
+              <Ionicons name="information-circle-outline" size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.detailsHintText}>Details</Text>
+            </View>
+            <Pressable
+              style={[styles.plannerCheck, plannerSelected && styles.plannerCheckActive]}
+              onPress={(event) => {
+                event?.stopPropagation?.();
+                onToggleTrip(item);
+              }}
+            >
+              <Ionicons
+                name={plannerSelected ? 'checkmark' : 'add'}
+                size={14}
+                color={colors.white}
+              />
+              <Text style={styles.plannerCheckText}>{plannerSelected ? 'Added' : 'Add'}</Text>
+            </Pressable>
+          </View>
         ) : null}
       </View>
     </TouchableOpacity>
@@ -158,7 +194,7 @@ const PlaceCard = memo(({ item, isSelected, onPress }) => {
 });
 
 /* ─── Places map — pins come from Mongo lat/lng ─── */
-const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, onMarkerPress, onClose, onViewDetails, onScrollToTop }) => {
+const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, onMarkerPress, onClose, onViewDetails, onScrollToTop, compact = false }) => {
   const mapRef = useRef(null);
   const regionRef = useRef(null);
   const [mapReady, setMapReady] = useState(false);
@@ -234,7 +270,7 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
   const selectedMeta = selectedPlace ? getPlaceTypeMeta(selectedPlace) : null;
 
   return (
-    <View style={styles.mapWrap} onLayout={() => setMapLaidOut(true)}>
+    <View style={[styles.mapWrap, compact && styles.mapWrapCompact]} onLayout={() => setMapLaidOut(true)}>
       {mappedPlaces.length > 0 ? (
         <MapView
           ref={mapRef}
@@ -402,7 +438,8 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
 /* ─── Memoised list header ─── */
 const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
                            categories, selectedCat, onCatChange, count,
-                           places, selectedPlaceId, selectedPlace, onMarkerPress, onClearSelection, onViewDetails, onScrollToTop }) => (
+                           places, selectedPlaceId, selectedPlace, onMarkerPress, onClearSelection, onViewDetails, onScrollToTop,
+                           compact = false }) => (
   <>
     <PlacesMap
       districtName={districtName}
@@ -413,6 +450,7 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
       onClose={onClearSelection}
       onViewDetails={onViewDetails}
       onScrollToTop={onScrollToTop}
+      compact={compact}
     />
 
     {/* Search bar */}
@@ -472,8 +510,16 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
 
 /* ─── Main screen ─── */
 export default function PlaceListScreen({ navigation, route }) {
-  const { districtId, districtName } = route?.params || {};
+  const { districtId: routeDistrictId, districtName: routeDistrictName, plannerMode } = route?.params || {};
   const insets = useSafeAreaInsets();
+  const planner = useTripPlanner();
+  const isPlannerMode = !!planner?.isPlanning && (!!plannerMode || !!planner?.selectedDistrict);
+  const districtId = isPlannerMode
+    ? planner?.selectedDistrict?.district_id || routeDistrictId
+    : routeDistrictId;
+  const districtName = isPlannerMode
+    ? planner?.selectedDistrict?.name || routeDistrictName
+    : routeDistrictName;
 
   const [allPlaces, setAllPlaces]     = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -521,6 +567,25 @@ export default function PlaceListScreen({ navigation, route }) {
     [filtered, selectedPlaceId]
   );
 
+  const plannerSelectedIds = useMemo(() => {
+    if (!isPlannerMode) return null;
+    const ids = new Set();
+    (planner.selectedPlaces || []).forEach((p) => {
+      ids.add(String(p?._id || p?.place_id || p?.id || ''));
+    });
+    return ids;
+  }, [isPlannerMode, planner?.selectedPlaces]);
+
+  const displayPlaces = useMemo(() => {
+    if (!isPlannerMode || !plannerSelectedIds?.size) return filtered;
+    return filtered.slice().sort((a, b) => {
+      const aSelected = plannerSelectedIds.has(getPlaceId(a));
+      const bSelected = plannerSelectedIds.has(getPlaceId(b));
+      if (aSelected !== bSelected) return aSelected ? -1 : 1;
+      return 0;
+    });
+  }, [filtered, isPlannerMode, plannerSelectedIds]);
+
   useEffect(() => {
     if (selectedPlaceId && !selectedPlace) {
       setSelectedPlaceId(null);
@@ -541,7 +606,15 @@ export default function PlaceListScreen({ navigation, route }) {
     setSelectedPlaceId(null);
     load(search);
   }, [load, search]);
-  const handleCardPress    = useCallback((p) => navigation.navigate('PlaceDetails', { place: p }), [navigation]);
+  const handleCardPress = useCallback((p) => {
+    navigation.navigate('PlaceDetails', {
+      place: p,
+      plannerMode: isPlannerMode,
+    });
+  }, [navigation, isPlannerMode]);
+  const handleToggleTripPlace = useCallback((p) => {
+    planner?.togglePlace?.(p);
+  }, [planner]);
   const handleClearSelection = useCallback(() => setSelectedPlaceId(null), []);
   const handleScrollToTop = useCallback(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -559,24 +632,73 @@ export default function PlaceListScreen({ navigation, route }) {
 
     setSelectedPlaceId(placeId);
 
-    const index = filtered.findIndex((item) => getPlaceId(item) === placeId);
+    const index = displayPlaces.findIndex((item) => getPlaceId(item) === placeId);
     if (index >= 0) {
       const rowIndex = Math.floor(index / NUM_COLUMNS);
       setTimeout(() => {
-        listRef.current?.scrollToIndex({ index: rowIndex, animated: true, viewPosition: 0.15 });
+        listRef.current?.scrollToIndex({ index: rowIndex, animated: true, viewPosition: 0.1 });
       }, 120);
     }
-  }, [filtered, selectedPlaceId]);
+  }, [displayPlaces, selectedPlaceId]);
 
   const renderItem = useCallback(({ item }) => (
     <PlaceCard
       item={item}
       isSelected={getPlaceId(item) === selectedPlaceId}
+      plannerSelected={isPlannerMode ? plannerSelectedIds.has(getPlaceId(item)) : undefined}
       onPress={handleCardPress}
+      onToggleTrip={handleToggleTripPlace}
     />
-  ), [handleCardPress, selectedPlaceId]);
+  ), [handleCardPress, handleToggleTripPlace, selectedPlaceId, isPlannerMode, plannerSelectedIds]);
 
   const keyExtractor = useCallback((item) => String(item._id || item.place_id || item.id), []);
+
+  const plannerSelectionHeader = isPlannerMode ? (
+    <View style={plannerStyles.selectionBar}>
+      <View style={plannerStyles.selectionHeader}>
+        <View style={plannerStyles.selectionTitleRow}>
+          <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
+          <Text style={plannerStyles.selectionTitle}>
+            {planner.selectedPlaces.length} selected
+          </Text>
+        </View>
+        {planner.selectedPlaces.length > 0 ? (
+          <Pressable onPress={() => planner.setSelectedPlaces([])}>
+            <Text style={plannerStyles.clearText}>Clear</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {planner.selectedPlaces.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={plannerStyles.selectedChipRow}
+        >
+          {planner.selectedPlaces.map((place) => (
+            <View key={getPlaceId(place)} style={plannerStyles.selectedChip}>
+              <FallbackImage
+                uri={getPlaceImageCandidates(place)}
+                style={plannerStyles.selectedChipImage}
+                iconSize={12}
+              />
+              <Text style={plannerStyles.selectedChipText} numberOfLines={1}>
+                {place.name}
+              </Text>
+              <Pressable
+                hitSlop={8}
+                onPress={() => handleToggleTripPlace(place)}
+                style={plannerStyles.selectedChipClose}
+              >
+                <Ionicons name="close" size={11} color={colors.white} />
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <Text style={plannerStyles.selectionHint}>Use Add on cards, or tap a card to read details first.</Text>
+      )}
+    </View>
+  ) : null;
 
   /* Stable header memo */
   const listHeader = useMemo(() => (
@@ -596,10 +718,11 @@ export default function PlaceListScreen({ navigation, route }) {
       onClearSelection={handleClearSelection}
       onViewDetails={handleCardPress}
       onScrollToTop={handleScrollToTop}
+      compact={isPlannerMode}
     />
   ), [districtName, search, handleSearchChange, handleSearchSubmit,
       categories, selectedCat, handleCatChange, filtered, selectedPlaceId,
-      selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop]);
+      selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop, isPlannerMode]);
 
   /* ─── Loading state ─── */
   if (loading) {
@@ -619,49 +742,99 @@ export default function PlaceListScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" />
 
-      {/* ─── Top header ─── */}
-      <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color={colors.primary} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.screenTitle} numberOfLines={1}>
-            {districtName || 'Discover Places'}
-          </Text>
-          <Text style={styles.screenSub}>Explore places in this district</Text>
-        </View>
-        <View style={styles.countPill}>
-          <Ionicons name="compass" size={13} color={colors.primary} />
-          <Text style={styles.countText}>{filtered.length}</Text>
-        </View>
-      </View>
+      {!isPlannerMode && (
+        <>
+          <View style={styles.header}>
+            <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.screenTitle} numberOfLines={1}>
+                {districtName || 'Discover Places'}
+              </Text>
+              <Text style={styles.screenSub}>Explore places in this district</Text>
+            </View>
+            <View style={styles.countPill}>
+              <Ionicons name="compass" size={13} color={colors.primary} />
+              <Text style={styles.countText}>{filtered.length}</Text>
+            </View>
+          </View>
 
-      <View style={styles.topSection}>
-        {listHeader}
-      </View>
+          <View style={styles.topSection}>
+            {listHeader}
+          </View>
+        </>
+      )}
 
       <FlatList
         ref={listRef}
         style={styles.cardList}
-        data={filtered}
-        extraData={selectedPlaceId}
+        data={displayPlaces}
+        extraData={`${selectedPlaceId || ''}_${planner?.selectedPlaces?.length || 0}`}
         keyExtractor={keyExtractor}
         numColumns={NUM_COLUMNS}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.grid}
         renderItem={renderItem}
-        getItemLayout={(data, index) => ({
-          length: ROW_H,
-          offset: ROW_H * index,
-          index,
-        })}
+        ListHeaderComponent={isPlannerMode ? (
+          <View>
+            <View style={plannerStyles.banner}>
+              <Pressable
+                style={plannerStyles.bannerBack}
+                onPress={() => navigateToPlannerDistrictPicker(navigation)}
+              >
+                <Ionicons name="arrow-back" size={18} color={colors.white} />
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <Text style={plannerStyles.bannerEyebrow}>Trip planner · Step 2</Text>
+                <Text style={plannerStyles.bannerTitle} numberOfLines={1}>
+                  Pick places in {districtName || 'your district'}
+                </Text>
+              </View>
+              <Pressable
+                style={plannerStyles.cancelBtn}
+                onPress={() => {
+                  planner?.cancelPlanning?.();
+                  navigateToTripList(navigation);
+                }}
+              >
+                <Text style={plannerStyles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+            </View>
+            <View style={styles.header}>
+              <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+                <Ionicons name="arrow-back" size={20} color={colors.primary} />
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.screenTitle} numberOfLines={1}>
+                  {districtName || 'Discover Places'}
+                </Text>
+                <Text style={styles.screenSub}>Explore places in this district</Text>
+              </View>
+              <View style={styles.countPill}>
+                <Ionicons name="compass" size={13} color={colors.primary} />
+                <Text style={styles.countText}>{filtered.length}</Text>
+              </View>
+            </View>
+            {listHeader}
+          </View>
+        ) : null}
+        getItemLayout={(_, index) => {
+          const headerHeight = isPlannerMode ? 550 : 0;
+          return {
+            length: ROW_H,
+            offset: headerHeight + ROW_H * index,
+            index,
+          };
+        }}
         onScrollToIndexFailed={(info) => {
+          const headerHeight = isPlannerMode ? 550 : 0;
           listRef.current?.scrollToOffset({
-            offset: Math.max(info.index * ROW_H, 0),
+            offset: Math.max(headerHeight + info.index * ROW_H, 0),
             animated: true,
           });
           setTimeout(() => {
-            listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.15 });
+            listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.1 });
           }, 350);
         }}
         removeClippedSubviews={false}
@@ -685,11 +858,84 @@ export default function PlaceListScreen({ navigation, route }) {
 
       {showToTop ? (
         <Pressable
-          style={[styles.toTopBtn, { bottom: insets.bottom + 88 }]}
+          style={[
+            styles.toTopBtn,
+            isPlannerMode
+              ? { bottom: insets.bottom + 210, right: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }
+              : { bottom: insets.bottom + 88 },
+          ]}
           onPress={handleScrollToTop}
         >
-          <Ionicons name="arrow-up" size={22} color={colors.white} />
+          <Ionicons name="arrow-up" size={22} color={isPlannerMode ? colors.primary : colors.white} />
         </Pressable>
+      ) : null}
+
+      {isPlannerMode ? (
+        <View style={[plannerStyles.bottomBar, { bottom: Math.max(insets.bottom, 15) + 75 }]}>
+          <View style={plannerStyles.bottomTopRow}>
+            <View style={plannerStyles.countPill}>
+              <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
+              <Text style={plannerStyles.countPillText}>
+                {planner.selectedPlaces.length} selected
+              </Text>
+            </View>
+
+            {planner.selectedPlaces.length > 0 ? (
+              <Pressable
+                hitSlop={8}
+                onPress={() => planner.setSelectedPlaces([])}
+                style={plannerStyles.clearLink}
+              >
+                <Ionicons name="close-circle" size={14} color={colors.textMuted} />
+                <Text style={plannerStyles.clearLinkText}>Clear all</Text>
+              </Pressable>
+            ) : null}
+
+            <View style={{ flex: 1 }} />
+
+            <Pressable
+              style={[plannerStyles.nextBtn, planner.selectedPlaces.length === 0 && plannerStyles.nextBtnDisabled]}
+              disabled={planner.selectedPlaces.length === 0}
+              onPress={() => navigateToPlannerPreferences(navigation)}
+            >
+              <Text style={plannerStyles.nextBtnText}>Next</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.white} />
+            </Pressable>
+          </View>
+
+          {planner.selectedPlaces.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={plannerStyles.selectedChipRow}
+              style={plannerStyles.bottomChipScroll}
+            >
+              {planner.selectedPlaces.map((place) => (
+                <View key={getPlaceId(place)} style={plannerStyles.selectedChip}>
+                  <FallbackImage
+                    uri={getPlaceImageCandidates(place)}
+                    style={plannerStyles.selectedChipImage}
+                    iconSize={12}
+                  />
+                  <Text style={plannerStyles.selectedChipText} numberOfLines={1}>
+                    {place.name}
+                  </Text>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => handleToggleTripPlace(place)}
+                    style={plannerStyles.selectedChipClose}
+                  >
+                    <Ionicons name="close" size={11} color={colors.white} />
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={plannerStyles.bottomHint}>
+              Use Add on cards, or tap a card to read details first.
+            </Text>
+          )}
+        </View>
       ) : null}
     </SafeAreaView>
   );
@@ -725,6 +971,12 @@ const styles = StyleSheet.create({
   mapWrap: {
     height: MAP_H, marginHorizontal: 16, marginBottom: 14,
     borderRadius: 20, overflow: 'hidden', backgroundColor: colors.surface2,
+  },
+  mapWrapCompact: {
+    height: 155,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 18,
   },
   mapOverlay: {
     position: 'absolute', top: 10, left: 12,
@@ -950,7 +1202,7 @@ const styles = StyleSheet.create({
 
   /* Grid */
   cardList: { flex: 1 },
-  grid: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 120 },
+  grid: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 170 },
   row:  { justifyContent: 'space-between', marginBottom: 14 },
 
   /* Card */
@@ -964,6 +1216,33 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     elevation: 7,
     shadowOpacity: 0.28,
+  },
+  cardPlannerSelected: {
+    borderColor: colors.primary,
+    elevation: 7,
+    shadowOpacity: 0.28,
+  },
+  plannerCheck: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minWidth: 62,
+    height: 32,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  plannerCheckActive: {
+    backgroundColor: colors.success,
+    borderColor: colors.white,
+  },
+  plannerCheckText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '900',
   },
   gradBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '70%' },
 
@@ -989,6 +1268,10 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 11, paddingBottom: 11, paddingTop: 6,
   },
+  cardContentPlanner: {
+    gap: 7,
+    paddingBottom: 10,
+  },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 },
   cardName: { fontSize: 14, fontWeight: '900', color: colors.white, flex: 1, letterSpacing: -0.2 },
   arrowBubble: {
@@ -997,6 +1280,25 @@ const styles = StyleSheet.create({
     marginLeft: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   cardSub: { fontSize: 9, color: 'rgba(255,255,255,0.65)', fontWeight: '500' },
+  cardActionRow: {
+    height: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  detailsHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 0,
+    flex: 1,
+  },
+  detailsHintText: {
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 11,
+    fontWeight: '800',
+  },
 
   /* Empty */
   empty:       { alignItems: 'center', paddingTop: 50, gap: 10, paddingHorizontal: 32 },
@@ -1017,5 +1319,184 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
     zIndex: 999,
+  },
+});
+
+const plannerStyles = StyleSheet.create({
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  bannerBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerEyebrow: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  bannerTitle: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  cancelBtn: {
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  cancelBtnText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  selectionBar: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 11,
+  },
+  selectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  selectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  selectionTitle: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  clearText: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  selectedChipRow: {
+    gap: 8,
+    paddingRight: 8,
+  },
+  selectedChip: {
+    maxWidth: 190,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary + '12',
+    borderWidth: 1,
+    borderColor: colors.primary + '35',
+    borderRadius: 16,
+    paddingLeft: 4,
+    paddingRight: 6,
+    paddingVertical: 4,
+  },
+  selectedChipClose: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
+  selectedChipImage: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.surface2,
+    overflow: 'hidden',
+  },
+  selectedChipText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+    maxWidth: 132,
+  },
+  selectionHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  bottomBar: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    elevation: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  bottomTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  countPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primary + '14',
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  countPillText: { color: colors.primary, fontSize: 12, fontWeight: '900' },
+  clearLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  clearLinkText: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
+  nextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  nextBtnDisabled: { backgroundColor: colors.primary + '55' },
+  nextBtnText: { color: colors.white, fontSize: 13, fontWeight: '900' },
+  bottomChipScroll: { maxHeight: 44 },
+  bottomHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    paddingHorizontal: 4,
   },
 });
