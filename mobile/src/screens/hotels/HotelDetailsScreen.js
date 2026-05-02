@@ -10,14 +10,17 @@ import {
   StyleSheet,
   Text,
   View,
+  Modal,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 import AppButton from '../../components/common/AppButton';
+import { useTripPlanner } from '../../context/TripPlannerContext';
 import AppInput from '../../components/common/AppInput';
 import ErrorText from '../../components/common/ErrorText';
 import EmptyState from '../../components/common/EmptyState';
@@ -227,6 +230,31 @@ const HotelDetailsScreen = ({ route, navigation }) => {
   const { hotel: initial } = route.params;
   const [hotel, setHotel] = useState(initial);
   const [displayCurrency, setDisplayCurrency] = useState('LKR');
+
+  const planner = useTripPlanner();
+  const isPlannerMode = !!planner?.isPlanning;
+  const getHotelId = (h) => String(h?._id || h?.hotel_id || h?.id || '');
+  const plannerSelectedHotel = isPlannerMode ? planner?.selectedHotels?.find(h => getHotelId(h) === getHotelId(hotel)) : null;
+
+  const [showPlannerModal, setShowPlannerModal] = useState(false);
+  const [checkInDate, setCheckInDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d;
+  });
+  const [checkOutDate, setCheckOutDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    return d;
+  });
+  const [datePickerMode, setDatePickerMode] = useState(null);
+
+  useEffect(() => {
+    if (showPlannerModal && plannerSelectedHotel) {
+      if (plannerSelectedHotel.checkIn) setCheckInDate(new Date(plannerSelectedHotel.checkIn));
+      if (plannerSelectedHotel.checkOut) setCheckOutDate(new Date(plannerSelectedHotel.checkOut));
+    }
+  }, [showPlannerModal, plannerSelectedHotel]);
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -420,6 +448,33 @@ const HotelDetailsScreen = ({ route, navigation }) => {
               sub={avgRating ? `Avg ${avgRating}` : null}
             />
           </View>
+
+          {/* ── Trip Action Card ── */}
+          {isPlannerMode ? (
+            <View style={ds.tripActionCard}>
+              <View style={ds.tripActionCopy}>
+                <Text style={ds.tripActionTitle}>
+                  {plannerSelectedHotel ? 'Added to this trip' : 'Add this hotel to your trip'}
+                </Text>
+                <Text style={ds.tripActionSub}>
+                  {plannerSelectedHotel
+                    ? 'You can edit stay dates here or continue planning.'
+                    : 'This will appear in your selected hotels.'}
+                </Text>
+              </View>
+              <Pressable
+                style={[ds.tripAddBtn, plannerSelectedHotel && ds.tripAddBtnActive]}
+                onPress={() => setShowPlannerModal(true)}
+              >
+                <Ionicons
+                  name={plannerSelectedHotel ? 'checkmark' : 'add'}
+                  size={18}
+                  color={colors.white}
+                />
+                <Text style={ds.tripAddBtnText}>{plannerSelectedHotel ? 'Added' : 'Add'}</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* ── Currency toggle ── */}
           {nightlyPrice ? (
@@ -653,6 +708,172 @@ const HotelDetailsScreen = ({ route, navigation }) => {
             <Text style={ds.bookBtnText}>Contact Hotel</Text>
           </Pressable>
         </View>
+        <Modal
+          visible={showPlannerModal}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          navigationBarTranslucent
+          onRequestClose={() => setShowPlannerModal(false)}
+        >
+          <View style={ds.modalOverlay}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowPlannerModal(false)} />
+            <View style={[ds.filterSheet, { maxHeight: '85%', paddingBottom: Math.max(34, 24) }]}>
+              <View style={ds.filterSheetHandle} />
+              {(() => {
+                const tripNightsCap = planner?.preferences?.nights ? Math.max(1, Number(planner?.preferences?.nights)) : null;
+                let currentNights = Math.max(1, Math.ceil((checkOutDate - checkInDate) / 86400000));
+                if (tripNightsCap && currentNights > tripNightsCap) {
+                  currentNights = tripNightsCap;
+                }
+                
+                const nightlyPriceValue = getHotelNightlyPriceLkr(hotel);
+                const totalEstimatedCost = nightlyPriceValue * currentNights;
+                
+                const handleIncrement = () => {
+                  if (tripNightsCap && currentNights >= tripNightsCap) return;
+                  const newOut = new Date(checkInDate);
+                  newOut.setDate(newOut.getDate() + currentNights + 1);
+                  setCheckOutDate(newOut);
+                };
+                
+                const handleDecrement = () => {
+                  if (currentNights <= 1) return;
+                  const newOut = new Date(checkInDate);
+                  newOut.setDate(newOut.getDate() + currentNights - 1);
+                  setCheckOutDate(newOut);
+                };
+
+                return (
+                  <>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+                      <View style={{ marginBottom: 20 }}>
+                        <Text style={ds.filterSheetTitle}>📅 Select Your Stay Dates</Text>
+                        <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4, fontWeight: '600' }} numberOfLines={1}>
+                          {hotel.name}
+                        </Text>
+                      </View>
+                      
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <Pressable style={ds.filterOption} onPress={() => setDatePickerMode('checkIn')}>
+                          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                          <View style={{ marginLeft: 6 }}>
+                            <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '700' }}>Check-in</Text>
+                            <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: '800' }}>{checkInDate.toLocaleDateString()}</Text>
+                          </View>
+                        </Pressable>
+                        <Ionicons name="arrow-forward" size={16} color={colors.textMuted} />
+                        <Pressable style={ds.filterOption} onPress={() => setDatePickerMode('checkOut')}>
+                          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                          <View style={{ marginLeft: 6 }}>
+                            <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '700' }}>Check-out</Text>
+                            <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: '800' }}>{checkOutDate.toLocaleDateString()}</Text>
+                          </View>
+                        </Pressable>
+                      </View>
+
+                      <View style={{ backgroundColor: colors.surface2, padding: 12, borderRadius: 12, marginBottom: 20 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 12 }}>
+                          <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '800' }}>
+                            🌙 {currentNights} night{currentNights !== 1 ? 's' : ''} · {checkInDate.toLocaleDateString()} – {checkOutDate.toLocaleDateString()}
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }}>
+                          <Pressable 
+                            onPress={handleDecrement}
+                            style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary + '14', alignItems: 'center', justifyContent: 'center', opacity: currentNights <= 1 ? 0.4 : 1 }}
+                          >
+                            <Ionicons name="remove" size={20} color={colors.primary} />
+                          </Pressable>
+                          <View style={{ alignItems: 'center' }}>
+                            <Text style={{ fontSize: 22, fontWeight: '900', color: colors.textPrimary }}>{currentNights}</Text>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase' }}>Night{currentNights !== 1 ? 's' : ''}</Text>
+                          </View>
+                          <Pressable 
+                            onPress={handleIncrement}
+                            style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary + '14', alignItems: 'center', justifyContent: 'center', opacity: (tripNightsCap && currentNights >= tripNightsCap) ? 0.4 : 1 }}
+                          >
+                            <Ionicons name="add" size={20} color={colors.primary} />
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      {nightlyPriceValue > 0 && (
+                        <View style={{ backgroundColor: colors.success + '14', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 20 }}>
+                          <Text style={{ fontSize: 12, color: colors.success, fontWeight: '800' }}>
+                            Estimated cost: {formatHotelPrice(totalEstimatedCost, displayCurrency)}
+                          </Text>
+                          <Text style={{ fontSize: 10, color: colors.textSecondary, marginTop: 2 }}>
+                            ({currentNights} × {formatHotelPrice(nightlyPriceValue, displayCurrency)}/night)
+                          </Text>
+                        </View>
+                      )}
+                    </ScrollView>
+
+                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                      <Pressable
+                        style={[ds.heroCancelBtn, { flex: 1, backgroundColor: colors.surface2, borderColor: colors.border, alignItems: 'center', paddingVertical: 14 }]}
+                        onPress={() => {
+                          if (plannerSelectedHotel) {
+                            planner?.removeSelectedHotel?.(getHotelId(hotel));
+                          }
+                          setShowPlannerModal(false);
+                        }}
+                      >
+                        <Text style={[ds.heroCancelText, { color: colors.textPrimary, fontSize: 14 }]}>
+                          {plannerSelectedHotel ? 'Remove' : 'Cancel'}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[ds.filterApplyBtn, { flex: 2, marginBottom: 0 }]}
+                        onPress={() => {
+                          planner?.addOrUpdateSelectedHotel?.(hotel, { 
+                            checkIn: checkInDate.toISOString().slice(0, 10), 
+                            checkOut: checkOutDate.toISOString().slice(0, 10), 
+                            nights: currentNights 
+                          });
+                          setShowPlannerModal(false);
+                        }}
+                      >
+                        <Text style={ds.filterApplyText}>
+                          {plannerSelectedHotel ? 'Update Selection' : 'Confirm Selection'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </>
+                );
+              })()}
+            </View>
+          </View>
+        </Modal>
+
+        <DateTimePickerModal
+          isVisible={!!datePickerMode}
+          mode="date"
+          date={datePickerMode === 'checkIn' ? checkInDate : checkOutDate}
+          minimumDate={datePickerMode === 'checkOut' ? new Date(checkInDate.getTime() + 86400000) : new Date()}
+          onConfirm={(date) => {
+            const tripNightsCap = planner?.preferences?.nights ? Math.max(1, Number(planner?.preferences?.nights)) : null;
+            if (datePickerMode === 'checkIn') {
+              setCheckInDate(date);
+              let newDiff = Math.ceil((checkOutDate - date) / 86400000);
+              if (newDiff < 1) newDiff = 1;
+              if (tripNightsCap && newDiff > tripNightsCap) newDiff = tripNightsCap;
+              const nextOut = new Date(date);
+              nextOut.setDate(nextOut.getDate() + newDiff);
+              setCheckOutDate(nextOut);
+            } else {
+              let diff = Math.ceil((date - checkInDate) / 86400000);
+              if (diff < 1) diff = 1;
+              if (tripNightsCap && diff > tripNightsCap) diff = tripNightsCap;
+              const nextOut = new Date(checkInDate);
+              nextOut.setDate(nextOut.getDate() + diff);
+              setCheckOutDate(nextOut);
+            }
+            setDatePickerMode(null);
+          }}
+          onCancel={() => setDatePickerMode(null)}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -1072,6 +1293,108 @@ const ds = StyleSheet.create({
   },
   bookBtnDisabled: { backgroundColor: colors.textMuted },
   bookBtnText: { color: colors.white, fontSize: 14, fontWeight: '900' },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  filterSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    maxHeight: '85%',
+  },
+  filterSheetHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  filterSheetTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  heroCancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+  },
+  heroCancelText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  filterApplyBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  filterApplyText: { color: colors.white, fontSize: 15, fontWeight: '900' },
+
+  // Trip action card styles
+  tripActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
+  tripActionCopy: {
+    flex: 1,
+  },
+  tripActionTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  tripActionSub: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+    lineHeight: 17,
+  },
+  tripAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  tripAddBtnActive: {
+    backgroundColor: colors.success,
+  },
+  tripAddBtnText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '900',
+  },
 });
 
 export default HotelDetailsScreen;

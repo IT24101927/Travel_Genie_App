@@ -26,6 +26,8 @@ import { getReviewsApi, createReviewApi } from '../../api/reviewApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getPlaceImageCandidates } from '../../utils/placeImages';
 import { getPlaceType, getPlaceTypeMeta } from '../../utils/placeTypes';
+import { useTripPlanner } from '../../context/TripPlannerContext';
+import { navigateToPlannerPreferences } from '../../navigation/tripPlannerFlow';
 
 const StarRow = ({ rating, size = 16 }) => {
   const num = Number(rating) || 0;
@@ -141,7 +143,9 @@ const PlaceLocationMap = ({ place, coords, onOpenInMaps }) => {
 };
 
 const PlaceDetailsScreen = ({ route, navigation }) => {
-  const { place: initial } = route.params;
+  const { place: initial, plannerMode } = route.params;
+  const planner = useTripPlanner();
+  const isPlannerMode = !!planner?.isPlanning && !!plannerMode;
   const [place, setPlace] = useState(initial);
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -211,6 +215,10 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
   const typeMeta = getPlaceTypeMeta(place);
   const typeLabel = typeMeta.label || getPlaceType(place);
   const coords = getPlaceCoordinate(place);
+  const placeKey = String(place?._id || place?.place_id || place?.id || '');
+  const selectedForTrip = !!planner?.selectedPlaces?.some((p) =>
+    String(p?._id || p?.place_id || p?.id || '') === placeKey
+  );
 
   const handleOpenInMaps = () => {
     if (!coords) return;
@@ -276,6 +284,32 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
         </View>
 
         {/* Info Row */}
+        {isPlannerMode ? (
+          <View style={styles.tripActionCard}>
+            <View style={styles.tripActionCopy}>
+              <Text style={styles.tripActionTitle}>
+                {selectedForTrip ? 'Added to this trip' : 'Add this place to your trip'}
+              </Text>
+              <Text style={styles.tripActionSub}>
+                {selectedForTrip
+                  ? 'You can remove it here or continue picking more places.'
+                  : 'This will appear in your selected places bar.'}
+              </Text>
+            </View>
+            <Pressable
+              style={[styles.tripAddBtn, selectedForTrip && styles.tripAddBtnActive]}
+              onPress={() => planner.togglePlace(place)}
+            >
+              <Ionicons
+                name={selectedForTrip ? 'checkmark' : 'add'}
+                size={18}
+                color={colors.white}
+              />
+              <Text style={styles.tripAddBtnText}>{selectedForTrip ? 'Added' : 'Add'}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.infoRow}>
           <DetailPill emoji={typeMeta.emoji} label="Type" value={typeLabel} color={typeMeta.color} />
           {place.district ? (
@@ -386,6 +420,28 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
           )}
         </View>
       </ScrollView>
+
+      {isPlannerMode ? (
+        <View style={styles.tripBottomBar}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tripBottomTitle}>
+              {planner.selectedPlaces.length} place{planner.selectedPlaces.length === 1 ? '' : 's'} selected
+            </Text>
+            <Text style={styles.tripBottomHint}>Back to keep choosing or continue to preferences.</Text>
+          </View>
+          <Pressable
+            style={[
+              styles.tripNextBtn,
+              planner.selectedPlaces.length === 0 && styles.tripNextBtnDisabled,
+            ]}
+            disabled={planner.selectedPlaces.length === 0}
+            onPress={() => navigateToPlannerPreferences(navigation)}
+          >
+            <Text style={styles.tripNextBtnText}>Next</Text>
+            <Ionicons name="arrow-forward" size={17} color={colors.white} />
+          </Pressable>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -521,6 +577,49 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     marginBottom: 16
+  },
+  tripActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 16,
+  },
+  tripActionCopy: {
+    flex: 1,
+  },
+  tripActionTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  tripActionSub: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+    lineHeight: 17,
+  },
+  tripAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  tripAddBtnActive: {
+    backgroundColor: colors.success,
+  },
+  tripAddBtnText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '900',
   },
   detailPill: {
     width: '47.8%',
@@ -716,7 +815,56 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20
-  }
+  },
+  tripBottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  tripBottomTitle: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  tripBottomHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  tripNextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  tripNextBtnDisabled: {
+    backgroundColor: colors.textMuted,
+    opacity: 0.6,
+  },
+  tripNextBtnText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '900',
+  },
 });
 
 export default PlaceDetailsScreen;
