@@ -1,141 +1,284 @@
-import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import AppButton from '../../components/common/AppButton';
 import ErrorText from '../../components/common/ErrorText';
+import CategoryBreakdown from '../../components/expenses/CategoryBreakdown';
 import colors from '../../constants/colors';
-import { getBudgetUsageApi } from '../../api/expenseApi';
+import { getBudgetUsageApi, getExpensesApi } from '../../api/expenseApi';
 import { getTripsApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCurrency } from '../../utils/currencyFormat';
+
+const getProgressColor = (percent) => {
+  if (percent < 50) return colors.success;
+  if (percent < 85) return '#F59E0B';
+  return colors.danger;
+};
+
+const getStatusConfig = (percent) => {
+  if (percent < 50) return { icon: 'checkmark-circle', label: 'On Track', color: colors.success, bg: colors.success + '12' };
+  if (percent < 85) return { icon: 'alert-circle', label: 'Watch Out', color: '#F59E0B', bg: '#F59E0B12' };
+  if (percent <= 100) return { icon: 'warning', label: 'Critical', color: colors.danger, bg: colors.danger + '12' };
+  return { icon: 'close-circle', label: 'Over Budget', color: colors.danger, bg: colors.danger + '15' };
+};
 
 const BudgetUsageScreen = ({ navigation }) => {
   const [tripId, setTripId] = useState('');
   const [trips, setTrips] = useState([]);
   const [result, setResult] = useState(null);
+  const [tripExpenses, setTripExpenses] = useState([]);
   const [error, setError] = useState('');
-  const [checking, setChecking] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
+  const loadTrips = useCallback(async () => {
+    try {
+      const response = await getTripsApi();
+      const list = response?.data?.trips || [];
+      setTrips(list);
+      if (!tripId && list[0]?._id) {
+        setTripId(list[0]._id);
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to load trips'));
+    }
+  }, [tripId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTrips();
+    }, [loadTrips])
+  );
+
+  // Auto-fetch budget usage when tripId changes
   useEffect(() => {
-    const loadTrips = async () => {
+    if (!tripId) return;
+
+    const fetchBudget = async () => {
       try {
-        const response = await getTripsApi();
-        const list = response?.data?.trips || [];
-        setTrips(list);
-        if (list[0]?._id) {
-          setTripId(list[0]._id);
-        }
+        setLoading(true);
+        setError('');
+        const [budgetResponse, expensesResponse] = await Promise.all([
+          getBudgetUsageApi(tripId),
+          getExpensesApi({ tripId }),
+        ]);
+        setResult(budgetResponse?.data || null);
+        setTripExpenses(expensesResponse?.data?.expenses || []);
       } catch (err) {
-        setError(getApiErrorMessage(err, 'Failed to load trips'));
+        setError(getApiErrorMessage(err, 'Failed to fetch budget usage'));
+        setResult(null);
+        setTripExpenses([]);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadTrips();
-  }, []);
+    fetchBudget();
+  }, [tripId]);
 
-  const onCheck = async () => {
-    if (!tripId) {
-      setError('Please select a trip.');
-      return;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadTrips();
+    if (tripId) {
+      try {
+        const [budgetResponse, expensesResponse] = await Promise.all([
+          getBudgetUsageApi(tripId),
+          getExpensesApi({ tripId }),
+        ]);
+        setResult(budgetResponse?.data || null);
+        setTripExpenses(expensesResponse?.data?.expenses || []);
+      } catch (err) {
+        setError(getApiErrorMessage(err, 'Failed to refresh'));
+      }
     }
-
-    try {
-      setChecking(true);
-      setError('');
-      const response = await getBudgetUsageApi(tripId);
-      setResult(response?.data || null);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to fetch budget usage'));
-    } finally {
-      setChecking(false);
-    }
+    setRefreshing(false);
   };
 
-  const getProgressColor = (percent) => {
-    if (percent < 50) return colors.success;
-    if (percent < 85) return colors.warning;
-    return colors.danger;
-  };
+  const usagePct = result?.usagePercentage || 0;
+  const barColor = getProgressColor(usagePct);
+  const status = getStatusConfig(usagePct);
+  const selectedTrip = trips.find((t) => t._id === tripId);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header & Back Button */}
-      <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color={colors.primary} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Budget Usage</Text>
-        <View style={{ width: 36 }} />
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select a Trip</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-          {trips.length === 0 ? <Text style={styles.emptyText}>No trips available</Text> : trips.map((trip) => (
-            <TouchableOpacity
-              key={trip._id}
-              style={[styles.tripChip, trip._id === tripId && styles.tripChipActive]}
-              onPress={() => setTripId(trip._id)}
-            >
-              <Text style={[styles.tripChoiceText, trip._id === tripId && styles.tripChoiceTextActive]}>
-                {trip.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <AppButton title={checking ? 'Analyzing...' : 'Analyze Budget'} onPress={onCheck} disabled={checking || !tripId} />
-      <ErrorText message={error} />
-
-      {result ? (
-        <View style={styles.resultCard}>
-          <Text style={styles.cardTitle}>Budget Analysis</Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Available</Text>
-              <Text style={styles.statValue}>{formatCurrency(result.tripBudget)}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Remaining</Text>
-              <Text style={[styles.statValue, { color: result.remainingBudget < 0 ? colors.danger : colors.success }]}>
-                {formatCurrency(result.remainingBudget)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.progressSection}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Total Spent</Text>
-              <Text style={styles.progressAmount}>{formatCurrency(result.totalSpent)}</Text>
-            </View>
-
-            <View style={styles.track}>
-              <View 
-                style={[
-                  styles.fill, 
-                  { 
-                    width: `${Math.min(100, result.usagePercentage || 0)}%`,
-                    backgroundColor: getProgressColor(result.usagePercentage || 0)
-                  }
-                ]} 
-              />
-            </View>
-            <Text style={styles.percentageText}>{Number(result.usagePercentage || 0).toFixed(1)}% Used</Text>
-          </View>
-
-          {result.usagePercentage > 100 && (
-            <View style={styles.warningBox}>
-              <Ionicons name="warning" size={20} color={colors.white} />
-              <Text style={styles.warningText}>You have exceeded your planned budget for this trip.</Text>
-            </View>
-          )}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Budget Analysis</Text>
+          <View style={{ width: 36 }} />
         </View>
-      ) : null}
-    </ScrollView>
+
+        {/* Trip Selector */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Select Trip</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
+            {trips.length === 0 ? (
+              <Text style={styles.emptyText}>No trips available</Text>
+            ) : (
+              trips.map((trip) => (
+                <TouchableOpacity
+                  key={trip._id}
+                  style={[styles.tripChip, trip._id === tripId && styles.tripChipActive]}
+                  onPress={() => setTripId(trip._id)}
+                >
+                  <Ionicons
+                    name="airplane"
+                    size={13}
+                    color={trip._id === tripId ? colors.white : colors.textMuted}
+                  />
+                  <Text
+                    style={[styles.tripText, trip._id === tripId && styles.tripTextActive]}
+                    numberOfLines={1}
+                  >
+                    {trip.title}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </View>
+
+        <ErrorText message={error} />
+
+        {/* Loading skeleton */}
+        {loading && !result && (
+          <View style={styles.loadingCard}>
+            <View style={styles.loadingBar} />
+            <View style={[styles.loadingBar, { width: '60%' }]} />
+            <View style={[styles.loadingBar, { width: '40%' }]} />
+          </View>
+        )}
+
+        {/* Budget Result */}
+        {result && (
+          <>
+            {/* Main Budget Card */}
+            <View style={styles.budgetCard}>
+              {/* Status Badge */}
+              <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+                <Ionicons name={status.icon} size={16} color={status.color} />
+                <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+              </View>
+
+              {/* Trip Title */}
+              {selectedTrip && (
+                <Text style={styles.tripTitle} numberOfLines={1}>
+                  {selectedTrip.title}
+                </Text>
+              )}
+
+              {/* Progress Bar */}
+              <View style={styles.progressSection}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressLabel}>Budget Used</Text>
+                  <Text style={[styles.progressPct, { color: barColor }]}>
+                    {usagePct.toFixed(1)}%
+                  </Text>
+                </View>
+                <View style={styles.track}>
+                  <LinearGradient
+                    colors={[barColor, barColor + 'CC']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[
+                      styles.fill,
+                      { width: `${Math.min(100, usagePct)}%` },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              {/* Stats Row */}
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconBox, { backgroundColor: colors.primary + '15' }]}>
+                    <Ionicons name="wallet-outline" size={18} color={colors.primary} />
+                  </View>
+                  <Text style={styles.statLabel}>Budget</Text>
+                  <Text style={styles.statValue}>{formatCurrency(result.budget || result.tripBudget || 0)}</Text>
+                </View>
+
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconBox, { backgroundColor: colors.accent + '15' }]}>
+                    <Ionicons name="trending-down-outline" size={18} color={colors.accent} />
+                  </View>
+                  <Text style={styles.statLabel}>Spent</Text>
+                  <Text style={[styles.statValue, { color: colors.accent }]}>
+                    {formatCurrency(result.totalSpent || 0)}
+                  </Text>
+                </View>
+
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconBox, { backgroundColor: (result.remainingBudget < 0 ? colors.danger : colors.success) + '15' }]}>
+                    <Ionicons
+                      name={result.remainingBudget < 0 ? 'alert-circle-outline' : 'checkmark-circle-outline'}
+                      size={18}
+                      color={result.remainingBudget < 0 ? colors.danger : colors.success}
+                    />
+                  </View>
+                  <Text style={styles.statLabel}>Remaining</Text>
+                  <Text
+                    style={[
+                      styles.statValue,
+                      { color: result.remainingBudget < 0 ? colors.danger : colors.success },
+                    ]}
+                  >
+                    {formatCurrency(result.remainingBudget || 0)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Over-budget Warning */}
+            {usagePct > 100 && (
+              <View style={styles.warningBox}>
+                <LinearGradient
+                  colors={[colors.danger, '#C0392B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.warningGrad}
+                >
+                  <Ionicons name="warning" size={22} color={colors.white} />
+                  <View style={styles.warningContent}>
+                    <Text style={styles.warningTitle}>Budget Exceeded</Text>
+                    <Text style={styles.warningText}>
+                      You're {formatCurrency(Math.abs(result.remainingBudget || 0))} over your planned budget.
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
+            )}
+
+            {/* Category Breakdown for this trip */}
+            {tripExpenses.length > 0 && (
+              <CategoryBreakdown expenses={tripExpenses} />
+            )}
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -147,157 +290,213 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
     elevation: 2,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '900',
     color: colors.textPrimary,
   },
   content: {
     padding: 16,
-    paddingBottom: 120
+    paddingBottom: 120,
   },
   section: {
-    marginBottom: 20
+    marginBottom: 16,
   },
   sectionTitle: {
     color: colors.textPrimary,
     fontWeight: '800',
-    fontSize: 18,
-    marginBottom: 12
+    fontSize: 16,
+    marginBottom: 10,
   },
   emptyText: {
     color: colors.textMuted,
-    fontStyle: 'italic'
+    fontStyle: 'italic',
   },
   chipRow: {
-    gap: 10,
-    paddingBottom: 8
+    gap: 8,
+    paddingBottom: 4,
   },
   tripChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: colors.border,
+    gap: 6,
   },
   tripChipActive: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  tripChoiceText: {
+  tripText: {
     color: colors.textSecondary,
-    fontWeight: '600'
+    fontWeight: '600',
+    fontSize: 13,
+    maxWidth: 120,
   },
-  tripChoiceTextActive: {
-    color: colors.primary,
-    fontWeight: '700'
+  tripTextActive: {
+    color: colors.white,
+    fontWeight: '700',
   },
-  resultCard: {
-    marginTop: 24,
+  loadingCard: {
     backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: 20,
-    elevation: 4
-  },
-  cardTitle: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 20,
-    textAlign: 'center'
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: 24,
     gap: 12,
-    marginBottom: 24
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  statBox: {
-    flex: 1,
+  loadingBar: {
+    height: 14,
     backgroundColor: colors.surface2,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: 'center'
+    borderRadius: 7,
+    width: '80%',
   },
-  statLabel: {
-    color: colors.textSecondary,
+  budgetCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  statusText: {
+    fontWeight: '700',
     fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 6
   },
-  statValue: {
+  tripTitle: {
     color: colors.textPrimary,
-    fontWeight: '800',
-    fontSize: 18
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 18,
   },
   progressSection: {
-    marginBottom: 16
+    marginBottom: 20,
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 10
+    alignItems: 'center',
+    marginBottom: 8,
   },
   progressLabel: {
     color: colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '600'
+    fontSize: 13,
+    fontWeight: '600',
   },
-  progressAmount: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '800'
+  progressPct: {
+    fontSize: 16,
+    fontWeight: '900',
   },
   track: {
-    height: 12,
+    height: 14,
     backgroundColor: colors.surface2,
-    borderRadius: 6,
+    borderRadius: 7,
     overflow: 'hidden',
-    marginBottom: 8
   },
   fill: {
     height: '100%',
-    borderRadius: 6
+    borderRadius: 7,
   },
-  percentageText: {
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: colors.surface2,
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    gap: 5,
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statLabel: {
     color: colors.textMuted,
-    textAlign: 'right',
-    fontSize: 12,
-    fontWeight: '600'
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    color: colors.textPrimary,
+    fontWeight: '900',
+    fontSize: 13,
   },
   warningBox: {
-    marginTop: 16,
-    backgroundColor: colors.danger,
-    borderRadius: 12,
-    padding: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 3,
+  },
+  warningGrad: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    padding: 16,
+    gap: 14,
+  },
+  warningContent: {
+    flex: 1,
+  },
+  warningTitle: {
+    color: colors.white,
+    fontWeight: '800',
+    fontSize: 14,
+    marginBottom: 2,
   },
   warningText: {
-    color: colors.white,
-    flex: 1,
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '600',
-    lineHeight: 20
-  }
+    fontSize: 12,
+    lineHeight: 18,
+  },
 });
 
 export default BudgetUsageScreen;

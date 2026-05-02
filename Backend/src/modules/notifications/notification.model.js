@@ -8,6 +8,11 @@ const notificationSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    tripId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Trip',
+      required: false
+    },
     title: {
       type: String,
       required: true,
@@ -19,10 +24,14 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['reminder', 'system', 'trip', 'expense', 'other'],
+      enum: ['reminder', 'system', 'trip', 'expense', 'other', 'BUDGET_100', 'BUDGET_80'],
       default: 'system'
     },
     isRead: {
+      type: Boolean,
+      default: false
+    },
+    deletedByUser: {
       type: Boolean,
       default: false
     }

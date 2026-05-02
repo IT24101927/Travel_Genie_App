@@ -32,10 +32,10 @@ const AdminDistrictFormScreen = ({ route, navigation }) => {
   const district = route.params?.district;
 
   const [form, setForm] = useState({
-    description:   district?.description || '',
-    image_url:     district?.image_url || '',
+    description: district?.description || '',
+    image_url: district?.image_url || '',
     highlightsRaw: Array.isArray(district?.highlights) ? district.highlights.join(', ') : '',
-    best_for:      Array.isArray(district?.best_for) ? district.best_for : []
+    best_for: Array.isArray(district?.best_for) ? district.best_for : []
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,12 +94,12 @@ const AdminDistrictFormScreen = ({ route, navigation }) => {
         .filter(Boolean);
 
       const payload = {
-        name:        district.name,
-        province:    district.province,
+        name: district.name,
+        province: district.province,
         description: form.description.trim(),
-        image_url:   form.image_url.trim(),
+        image_url: form.image_url.trim(),
         highlights,
-        best_for:    form.best_for
+        best_for: form.best_for
       };
 
       await updateDistrictApi(district.district_id, payload);
