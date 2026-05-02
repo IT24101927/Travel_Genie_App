@@ -36,15 +36,15 @@ const { width } = Dimensions.get('window');
 const HERO_H = Math.floor(width * 0.85);
 
 const TYPE_META = {
-  hotel:      { emoji: '🏨', color: '#3498DB', label: 'Hotel' },
-  resort:     { emoji: '🌴', color: '#4CAF50', label: 'Resort' },
+  hotel: { emoji: '🏨', color: '#3498DB', label: 'Hotel' },
+  resort: { emoji: '🌴', color: '#4CAF50', label: 'Resort' },
   guesthouse: { emoji: '🏡', color: '#FF9800', label: 'Guesthouse' },
-  hostel:     { emoji: '🛏️', color: '#9C27B0', label: 'Hostel' },
-  villa:      { emoji: '🏘️', color: '#E91E63', label: 'Villa' },
-  boutique:   { emoji: '✨', color: '#F57C00', label: 'Boutique' },
-  apartment:  { emoji: '🏢', color: '#607D8B', label: 'Apartment' },
-  lodge:      { emoji: '🛖', color: '#795548', label: 'Lodge' },
-  camp:       { emoji: '⛺', color: '#8BC34A', label: 'Camp' },
+  hostel: { emoji: '🛏️', color: '#9C27B0', label: 'Hostel' },
+  villa: { emoji: '🏘️', color: '#E91E63', label: 'Villa' },
+  boutique: { emoji: '✨', color: '#F57C00', label: 'Boutique' },
+  apartment: { emoji: '🏢', color: '#607D8B', label: 'Apartment' },
+  lodge: { emoji: '🛖', color: '#795548', label: 'Lodge' },
+  camp: { emoji: '⛺', color: '#8BC34A', label: 'Camp' },
 };
 
 const AMENITY_EMOJI = {
@@ -726,17 +726,17 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                 if (tripNightsCap && currentNights > tripNightsCap) {
                   currentNights = tripNightsCap;
                 }
-                
+
                 const nightlyPriceValue = getHotelNightlyPriceLkr(hotel);
                 const totalEstimatedCost = nightlyPriceValue * currentNights;
-                
+
                 const handleIncrement = () => {
                   if (tripNightsCap && currentNights >= tripNightsCap) return;
                   const newOut = new Date(checkInDate);
                   newOut.setDate(newOut.getDate() + currentNights + 1);
                   setCheckOutDate(newOut);
                 };
-                
+
                 const handleDecrement = () => {
                   if (currentNights <= 1) return;
                   const newOut = new Date(checkInDate);
@@ -753,7 +753,7 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                           {hotel.name}
                         </Text>
                       </View>
-                      
+
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                         <Pressable style={ds.filterOption} onPress={() => setDatePickerMode('checkIn')}>
                           <Ionicons name="calendar-outline" size={16} color={colors.primary} />
@@ -779,7 +779,7 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                           </Text>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }}>
-                          <Pressable 
+                          <Pressable
                             onPress={handleDecrement}
                             style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary + '14', alignItems: 'center', justifyContent: 'center', opacity: currentNights <= 1 ? 0.4 : 1 }}
                           >
@@ -789,7 +789,7 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                             <Text style={{ fontSize: 22, fontWeight: '900', color: colors.textPrimary }}>{currentNights}</Text>
                             <Text style={{ fontSize: 10, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase' }}>Night{currentNights !== 1 ? 's' : ''}</Text>
                           </View>
-                          <Pressable 
+                          <Pressable
                             onPress={handleIncrement}
                             style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary + '14', alignItems: 'center', justifyContent: 'center', opacity: (tripNightsCap && currentNights >= tripNightsCap) ? 0.4 : 1 }}
                           >
@@ -827,10 +827,10 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                       <Pressable
                         style={[ds.filterApplyBtn, { flex: 2, marginBottom: 0 }]}
                         onPress={() => {
-                          planner?.addOrUpdateSelectedHotel?.(hotel, { 
-                            checkIn: checkInDate.toISOString().slice(0, 10), 
-                            checkOut: checkOutDate.toISOString().slice(0, 10), 
-                            nights: currentNights 
+                          planner?.addOrUpdateSelectedHotel?.(hotel, {
+                            checkIn: checkInDate.toISOString().slice(0, 10),
+                            checkOut: checkOutDate.toISOString().slice(0, 10),
+                            nights: currentNights
                           });
                           setShowPlannerModal(false);
                         }}

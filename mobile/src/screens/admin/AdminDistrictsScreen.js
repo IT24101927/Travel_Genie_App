@@ -25,15 +25,15 @@ const PROVINCES = [
 ];
 
 const PROVINCE_META = {
-  'Western':       { color: '#0E7C5F' },
-  'Central':       { color: '#3498DB' },
-  'Southern':      { color: '#27AE60' },
-  'Northern':      { color: '#D4532B' },
-  'Eastern':       { color: '#E8A830' },
+  'Western': { color: '#0E7C5F' },
+  'Central': { color: '#3498DB' },
+  'Southern': { color: '#27AE60' },
+  'Northern': { color: '#D4532B' },
+  'Eastern': { color: '#E8A830' },
   'North Western': { color: '#0A5E48' },
   'North Central': { color: '#3498DB' },
-  'Uva':           { color: '#BA4522' },
-  'Sabaragamuwa':  { color: '#12A080' }
+  'Uva': { color: '#BA4522' },
+  'Sabaragamuwa': { color: '#12A080' }
 };
 
 const DistrictCard = ({ item, onEdit, onViewPlaces }) => {
