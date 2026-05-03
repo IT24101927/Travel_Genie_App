@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 
@@ -23,6 +23,11 @@ import FallbackImage from '../../components/common/FallbackImage';
 import { getDistrictsApi } from '../../api/districtApi';
 import colors from '../../constants/colors';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { useTripPlanner } from '../../context/TripPlannerContext';
+import {
+  navigateToPlannerPlacePicker,
+  navigateToTripList,
+} from '../../navigation/tripPlannerFlow';
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COMPACT_LAYOUT = SCREEN_HEIGHT < 700;
@@ -212,6 +217,9 @@ const FeatureDistrict = ({ item, onPress }) => {
 
 export default function DistrictListScreen({ route, navigation }) {
   const nextScreen = route?.params?.nextScreen || 'PlaceList';
+  const insets = useSafeAreaInsets();
+  const planner = useTripPlanner();
+  const plannerMode = !!route?.params?.plannerMode && !!planner?.isPlanning;
   const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -221,6 +229,7 @@ export default function DistrictListScreen({ route, navigation }) {
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapLaidOut, setMapLaidOut] = useState(false);
+  const [showToTop, setShowToTop] = useState(false);
 
   const listRef = useRef(null);
   const mapRef = useRef(null);
@@ -353,11 +362,22 @@ export default function DistrictListScreen({ route, navigation }) {
   }, []);
 
   const openDistrict = useCallback((district) => {
+    if (plannerMode && planner) {
+      const previousId = planner.selectedDistrict?.district_id;
+      if (previousId && String(previousId) !== String(district.district_id)) {
+        planner.setSelectedPlaces([]);
+        planner.setSelectedHotel(null);
+      }
+      planner.setSelectedDistrict(district);
+      navigateToPlannerPlacePicker(navigation, district);
+      return;
+    }
     navigation.navigate(nextScreen, {
       districtId: district.district_id,
       districtName: district.name,
     });
-  }, [navigation, nextScreen]);
+  }, [navigation, nextScreen, plannerMode, planner]);
+
 
   const scrollToDistrictCard = useCallback((district) => {
     const itemIndex = filtered.findIndex((item) => item.district_id === district.district_id);
@@ -365,7 +385,7 @@ export default function DistrictListScreen({ route, navigation }) {
 
     const rowIndex = Math.floor(itemIndex / 2);
     setTimeout(() => {
-      listRef.current?.scrollToIndex({ index: rowIndex, animated: true, viewPosition: 0 });
+      listRef.current?.scrollToIndex({ index: rowIndex, animated: true, viewPosition: 0.1 });
     }, 150);
   }, [filtered]);
 
@@ -391,6 +411,15 @@ export default function DistrictListScreen({ route, navigation }) {
 
   const keyExtractor = useCallback((item) => String(item.district_id || item.name), []);
 
+  const handleScrollToTop = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
+  const handleListScroll = useCallback((e) => {
+    const next = e.nativeEvent.contentOffset.y > 350;
+    setShowToTop((prev) => (prev === next ? prev : next));
+  }, []);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -403,135 +432,153 @@ export default function DistrictListScreen({ route, navigation }) {
     );
   }
 
+  const renderFixedHeader = () => (
+    <View style={styles.fixedTop}>
+      {plannerMode ? (
+        <View style={plannerStyles.banner}>
+          <Pressable
+            style={plannerStyles.bannerBack}
+            onPress={() => {
+              planner?.cancelPlanning?.();
+              navigateToTripList(navigation);
+            }}
+          >
+            <Ionicons name="arrow-back" size={18} color={colors.white} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={plannerStyles.bannerEyebrow}>Trip planner · Step 1</Text>
+            <Text style={plannerStyles.bannerTitle}>Pick a district for your trip</Text>
+          </View>
+        </View>
+      ) : null}
+      <View style={styles.intro}>
+        <View style={styles.introCopy}>
+          <Text style={styles.eyebrow}>District Atlas</Text>
+          <Text style={styles.title}>Explore Sri Lanka</Text>
+          <Text style={styles.subtitle}>Use the map first, then jump into local places.</Text>
+        </View>
+        <View style={styles.countPill}>
+          <Ionicons name="map" size={14} color={colors.primary} />
+          <Text style={styles.countPillText}>{filtered.length}</Text>
+        </View>
+      </View>
+
+      <View style={styles.mapPanel} onLayout={() => setMapLaidOut(true)}>
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          initialRegion={SRI_LANKA_REGION}
+          onMapReady={() => setMapReady(true)}
+          onRegionChangeComplete={(region) => { regionRef.current = region; }}
+          onPress={() => {
+            setHighlightedId(null);
+            setSelectedDistrict(null);
+          }}
+          scrollEnabled
+          zoomEnabled
+          pitchEnabled={false}
+          rotateEnabled={false}
+        >
+          {filtered.map((district) => {
+            const coordinate = getDistrictCoords(district);
+            if (!coordinate) return null;
+            const highlighted = highlightedId === district.district_id;
+            return (
+              <Marker
+                key={`district_${district.district_id}_${highlighted}`}
+                coordinate={coordinate}
+                onPress={(event) => {
+                  event.stopPropagation?.();
+                  handleMarkerPress(district);
+                }}
+                pinColor={highlighted ? colors.accent : colors.success}
+              />
+            );
+          })}
+        </MapView>
+
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <View style={styles.mapBadge}>
+            <Ionicons name="navigate" size={13} color={colors.primary} />
+            <Text style={styles.mapBadgeText}>{districtCoordinates.length} mapped</Text>
+          </View>
+
+          <Pressable
+            style={styles.resetButton}
+            onPress={() => {
+              fitDistrictPins(true);
+              setHighlightedId(null);
+              setSelectedDistrict(null);
+              setTimeout(() => {
+                listRef.current?.scrollToOffset({ offset: 0, animated: true });
+              }, 150);
+            }}
+          >
+            <Ionicons name="scan-outline" size={15} color={colors.textPrimary} />
+            <Text style={styles.resetText}>Reset</Text>
+          </Pressable>
+
+          <View style={styles.zoomControls}>
+            <Pressable style={styles.zoomButton} onPress={zoomIn}>
+              <Ionicons name="add" size={18} color={colors.textPrimary} />
+            </Pressable>
+            <Pressable style={styles.zoomButton} onPress={zoomOut}>
+              <Ionicons name="remove" size={18} color={colors.textPrimary} />
+            </Pressable>
+          </View>
+
+          {selectedDistrict ? (
+            <View style={styles.mapPreview}>
+              <View style={[styles.mapPreviewThumb, { backgroundColor: getAccent(selectedDistrict.province) + '16' }]}>
+                <FallbackImage
+                  uri={selectedDistrict.image_url}
+                  style={StyleSheet.absoluteFill}
+                  iconName="map-outline"
+                  iconSize={24}
+                  placeholderColor={getAccent(selectedDistrict.province) + '16'}
+                  placeholderIconColor={getAccent(selectedDistrict.province)}
+                />
+                <View style={[styles.mapPreviewNumber, { backgroundColor: getAccent(selectedDistrict.province) }]}>
+                  <Text style={styles.mapPreviewNumberText}>{selectedDistrict.district_id || '-'}</Text>
+                </View>
+              </View>
+
+              <Pressable style={styles.mapPreviewBody} onPress={() => openDistrict(selectedDistrict)}>
+                <View style={[styles.mapPreviewProvincePill, { backgroundColor: getAccent(selectedDistrict.province) + '14' }]}>
+                  <Text style={[styles.mapPreviewProvinceText, { color: getAccent(selectedDistrict.province) }]} numberOfLines={1}>
+                    {selectedDistrict.province || 'Sri Lanka'}
+                  </Text>
+                </View>
+                <Text style={styles.mapPreviewTitle} numberOfLines={1}>{selectedDistrict.name}</Text>
+                <Text style={styles.mapPreviewSub} numberOfLines={1}>
+                  {getDistrictNote(selectedDistrict)}
+                </Text>
+              </Pressable>
+
+              <View style={styles.mapPreviewActions}>
+                <Pressable
+                  style={styles.mapPreviewClose}
+                  onPress={() => {
+                    setSelectedDistrict(null);
+                    setHighlightedId(null);
+                  }}
+                >
+                  <Ionicons name="close" size={16} color={colors.textMuted} />
+                </Pressable>
+                <Pressable style={styles.mapPreviewAction} onPress={() => openDistrict(selectedDistrict)}>
+                  <Ionicons name="arrow-forward" size={18} color={colors.white} />
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" />
-
-      {/* ── Fixed top: intro + map (never scrolls away) ── */}
-      <View style={styles.fixedTop}>
-        <View style={styles.intro}>
-          <View style={styles.introCopy}>
-            <Text style={styles.eyebrow}>District Atlas</Text>
-            <Text style={styles.title}>Explore Sri Lanka</Text>
-            <Text style={styles.subtitle}>Use the map first, then jump into local places.</Text>
-          </View>
-          <View style={styles.countPill}>
-            <Ionicons name="map" size={14} color={colors.primary} />
-            <Text style={styles.countPillText}>{filtered.length}</Text>
-          </View>
-        </View>
-
-        <View style={styles.mapPanel} onLayout={() => setMapLaidOut(true)}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            initialRegion={SRI_LANKA_REGION}
-            onMapReady={() => setMapReady(true)}
-            onRegionChangeComplete={(region) => { regionRef.current = region; }}
-            onPress={() => {
-              setHighlightedId(null);
-              setSelectedDistrict(null);
-            }}
-            scrollEnabled
-            zoomEnabled
-            pitchEnabled={false}
-            rotateEnabled={false}
-          >
-            {filtered.map((district) => {
-              const coordinate = getDistrictCoords(district);
-              if (!coordinate) return null;
-              const highlighted = highlightedId === district.district_id;
-              return (
-                <Marker
-                  key={`district_${district.district_id}_${highlighted}`}
-                  coordinate={coordinate}
-                  onPress={(event) => {
-                    event.stopPropagation?.();
-                    handleMarkerPress(district);
-                  }}
-                  pinColor={highlighted ? colors.accent : colors.success}
-                />
-              );
-            })}
-          </MapView>
-
-          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-            <View style={styles.mapBadge}>
-              <Ionicons name="navigate" size={13} color={colors.primary} />
-              <Text style={styles.mapBadgeText}>{districtCoordinates.length} mapped</Text>
-            </View>
-
-            <Pressable
-              style={styles.resetButton}
-              onPress={() => {
-                fitDistrictPins(true);
-                setHighlightedId(null);
-                setSelectedDistrict(null);
-                setTimeout(() => {
-                  listRef.current?.scrollToOffset({ offset: 0, animated: true });
-                }, 150);
-              }}
-            >
-              <Ionicons name="scan-outline" size={15} color={colors.textPrimary} />
-              <Text style={styles.resetText}>Reset</Text>
-            </Pressable>
-
-            <View style={styles.zoomControls}>
-              <Pressable style={styles.zoomButton} onPress={zoomIn}>
-                <Ionicons name="add" size={18} color={colors.textPrimary} />
-              </Pressable>
-              <Pressable style={styles.zoomButton} onPress={zoomOut}>
-                <Ionicons name="remove" size={18} color={colors.textPrimary} />
-              </Pressable>
-            </View>
-
-            {selectedDistrict ? (
-              <View style={styles.mapPreview}>
-                <View style={[styles.mapPreviewThumb, { backgroundColor: getAccent(selectedDistrict.province) + '16' }]}>
-                  <FallbackImage
-                    uri={selectedDistrict.image_url}
-                    style={StyleSheet.absoluteFill}
-                    iconName="map-outline"
-                    iconSize={24}
-                    placeholderColor={getAccent(selectedDistrict.province) + '16'}
-                    placeholderIconColor={getAccent(selectedDistrict.province)}
-                  />
-                  <View style={[styles.mapPreviewNumber, { backgroundColor: getAccent(selectedDistrict.province) }]}>
-                    <Text style={styles.mapPreviewNumberText}>{selectedDistrict.district_id || '-'}</Text>
-                  </View>
-                </View>
-
-                <Pressable style={styles.mapPreviewBody} onPress={() => openDistrict(selectedDistrict)}>
-                  <View style={[styles.mapPreviewProvincePill, { backgroundColor: getAccent(selectedDistrict.province) + '14' }]}>
-                    <Text style={[styles.mapPreviewProvinceText, { color: getAccent(selectedDistrict.province) }]} numberOfLines={1}>
-                      {selectedDistrict.province || 'Sri Lanka'}
-                    </Text>
-                  </View>
-                  <Text style={styles.mapPreviewTitle} numberOfLines={1}>{selectedDistrict.name}</Text>
-                  <Text style={styles.mapPreviewSub} numberOfLines={1}>
-                    {getDistrictNote(selectedDistrict)}
-                  </Text>
-                </Pressable>
-
-                <View style={styles.mapPreviewActions}>
-                  <Pressable
-                    style={styles.mapPreviewClose}
-                    onPress={() => {
-                      setSelectedDistrict(null);
-                      setHighlightedId(null);
-                    }}
-                  >
-                    <Ionicons name="close" size={16} color={colors.textMuted} />
-                  </Pressable>
-                  <Pressable style={styles.mapPreviewAction} onPress={() => openDistrict(selectedDistrict)}>
-                    <Ionicons name="arrow-forward" size={18} color={colors.white} />
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-          </View>
-        </View>
-      </View>
 
       {/* ── Scrollable: search + filters + quick picks + cards ── */}
       <FlatList
@@ -545,26 +592,33 @@ export default function DistrictListScreen({ route, navigation }) {
         columnWrapperStyle={styles.gridRow}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         windowSize={5}
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={40}
         removeClippedSubviews
-        getItemLayout={(_, index) => ({
-          length: CARD_H + GAP,
-          offset: (CARD_H + GAP) * index,
-          index,
-        })}
+        getItemLayout={(_, index) => {
+          const headerHeight = headerHeightRef.current || 550;
+          return {
+            length: CARD_H + GAP,
+            offset: headerHeight + (CARD_H + GAP) * index,
+            index,
+          };
+        }}
         onScrollToIndexFailed={(info) => {
+          const headerHeight = headerHeightRef.current || 550;
           listRef.current?.scrollToOffset({
-            offset: Math.max(info.index * (CARD_H + GAP), 0),
+            offset: Math.max(headerHeight + info.index * (CARD_H + GAP), 0),
             animated: true,
           });
           setTimeout(() => {
-            listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0 });
+            listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.1 });
           }, 350);
         }}
         ListHeaderComponent={
           <View onLayout={(e) => { headerHeightRef.current = e.nativeEvent.layout.height; }}>
+            {renderFixedHeader()}
             <View style={styles.searchWrap}>
               <View style={styles.searchBox}>
                 <Ionicons name="search-outline" size={18} color={colors.textMuted} />
@@ -651,6 +705,15 @@ export default function DistrictListScreen({ route, navigation }) {
           />
         }
       />
+
+      {showToTop ? (
+        <Pressable
+          style={[styles.toTopBtn, { bottom: insets.bottom + 88 }]}
+          onPress={handleScrollToTop}
+        >
+          <Ionicons name="arrow-up" size={22} color={colors.primary} />
+        </Pressable>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -666,6 +729,24 @@ const styles = StyleSheet.create({
   },
   fixedTop: { backgroundColor: colors.background },
   cardList: { flex: 1 },
+  toTopBtn: {
+    position: 'absolute',
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 8,
+    zIndex: 999,
+  },
   listContent: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 120 },
 
   intro: {
@@ -1005,4 +1086,31 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   cardHint: { fontSize: 9, color: 'rgba(255,255,255,0.65)', fontWeight: '500' },
+});
+
+const plannerStyles = StyleSheet.create({
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  bannerBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerEyebrow: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  bannerTitle: { color: colors.white, fontSize: 15, fontWeight: '900', marginTop: 2 },
 });
