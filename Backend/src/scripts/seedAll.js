@@ -40,7 +40,7 @@ const seedAll = async () => {
   try {
     await connectDatabase();
 
-    const downloadsDir = 'C:/Users/Kavisha Lakshan/Downloads';
+    const downloadsDir = path.join(__dirname, 'data');
     const districtsCsv = path.join(downloadsDir, 'districts.csv');
     const placesCsv = path.join(downloadsDir, 'places.csv');
     const tagsCsv = path.join(downloadsDir, 'tags.csv');
