@@ -233,9 +233,15 @@ const getResourceList = async (resource) => {
     hotels: Hotel,
     expenses: Expense,
     reviews: Review,
-    notifications: Notification,
-    transports: Transport
+    notifications: Notification
   };
+
+  if (resource === 'transports') {
+    throw new AppError(
+      'User transport bookings are private. Use the Transport Insights view for aggregates.',
+      403
+    );
+  }
 
   const Model = map[resource];
   if (Model === undefined) {
@@ -243,6 +249,98 @@ const getResourceList = async (resource) => {
   }
 
   return safeList(Model, { limit: 100 });
+};
+
+const getTransportInsights = async () => {
+  if (!Transport) {
+    return {
+      totalBookings: 0,
+      uniqueUsers: 0,
+      byType: [],
+      byStatus: [],
+      popularRoutes: [],
+      avgCostByType: [],
+      weeklyVolume: []
+    };
+  }
+
+  const since = new Date();
+  since.setDate(since.getDate() - 56); // last 8 weeks
+
+  const [totalBookings, uniqueUsersAgg, byType, byStatus, popularRoutes, avgCostByType, weeklyVolume] =
+    await Promise.all([
+      Transport.countDocuments(),
+      Transport.aggregate([{ $group: { _id: '$userId' } }, { $count: 'count' }]),
+      Transport.aggregate([
+        { $group: { _id: '$type', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $project: { _id: 0, type: '$_id', count: 1 } }
+      ]),
+      Transport.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+        { $project: { _id: 0, status: '$_id', count: 1 } }
+      ]),
+      Transport.aggregate([
+        {
+          $group: {
+            _id: { from: '$fromLocation', to: '$toLocation' },
+            count: { $sum: 1 }
+          }
+        },
+        { $match: { count: { $gte: 2 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+        { $project: { _id: 0, from: '$_id.from', to: '$_id.to', count: 1 } }
+      ]),
+      Transport.aggregate([
+        {
+          $group: {
+            _id: '$type',
+            avgEstimated: { $avg: '$estimatedCost' },
+            avgActual: { $avg: '$actualCost' }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            type: '$_id',
+            avgEstimated: { $round: ['$avgEstimated', 0] },
+            avgActual: { $round: ['$avgActual', 0] }
+          }
+        }
+      ]),
+      Transport.aggregate([
+        { $match: { departureDate: { $gte: since } } },
+        {
+          $group: {
+            _id: {
+              year: { $isoWeekYear: '$departureDate' },
+              week: { $isoWeek: '$departureDate' }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { '_id.year': 1, '_id.week': 1 } },
+        {
+          $project: {
+            _id: 0,
+            year: '$_id.year',
+            week: '$_id.week',
+            count: 1
+          }
+        }
+      ])
+    ]);
+
+  return {
+    totalBookings,
+    uniqueUsers: uniqueUsersAgg[0]?.count || 0,
+    byType,
+    byStatus,
+    popularRoutes,
+    avgCostByType,
+    weeklyVolume
+  };
 };
 
 module.exports = {
@@ -253,5 +351,6 @@ module.exports = {
   updateUserById,
   resetUserPassword,
   deleteUserById,
-  getResourceList
+  getResourceList,
+  getTransportInsights
 };

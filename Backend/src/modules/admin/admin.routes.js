@@ -12,7 +12,8 @@ const {
   editUser,
   resetPassword,
   removeUser,
-  listResource
+  listResource,
+  transportInsights
 } = require('./admin.controller');
 
 const router = express.Router();
@@ -33,5 +34,6 @@ router.put('/users/:id', editUser);
 router.post('/users/:id/reset-password', resetPassword);
 router.delete('/users/:id', removeUser);
 router.get('/resources/:resource', listResource);
+router.get('/insights/transports', transportInsights);
 
 module.exports = router;
