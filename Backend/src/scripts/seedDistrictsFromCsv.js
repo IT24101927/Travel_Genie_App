@@ -9,7 +9,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const District = require('../modules/places/district.model');
 const { connectDatabase } = require('../config/db');
 
-const CSV_FILE_PATH = "C:\\Users\\Kavisha Lakshan\\Downloads\\districts.csv";
+const CSV_FILE_PATH = path.join(__dirname, 'data', 'districts.csv');
 
 const seedDistricts = async () => {
   try {

@@ -11,7 +11,7 @@ import {
   View
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -28,41 +28,9 @@ import { getPlaceImageCandidates } from '../../utils/placeImages';
 import { getPlaceType, getPlaceTypeMeta } from '../../utils/placeTypes';
 import { useTripPlanner } from '../../context/TripPlannerContext';
 import { navigateToPlannerPreferences } from '../../navigation/tripPlannerFlow';
+import ReviewSection from '../../components/reviews/ReviewSection';
 
-const StarRow = ({ rating, size = 16 }) => {
-  const num = Number(rating) || 0;
-  return (
-    <View style={styles.starRow}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Ionicons
-          key={i}
-          name={i <= num ? 'star' : 'star-outline'}
-          size={size}
-          color={colors.warning}
-        />
-      ))}
-    </View>
-  );
-};
-
-const ReviewCard = ({ review }) => (
-  <View style={styles.reviewCard}>
-    <View style={styles.reviewHeader}>
-      <View style={styles.reviewAvatar}>
-        <Text style={styles.reviewAvatarText}>
-          {review.userId?.fullName ? review.userId.fullName.charAt(0).toUpperCase() : '?'}
-        </Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.reviewName}>{review.userId?.fullName || 'Traveler'}</Text>
-        <StarRow rating={review.rating} size={13} />
-      </View>
-    </View>
-    {review.comment ? (
-      <Text style={styles.reviewComment}>{review.comment}</Text>
-    ) : null}
-  </View>
-);
+// Removed old StarRow and ReviewCard components as they are now part of ReviewSection
 
 const getPlaceCoordinate = (place = {}) => {
   const latitude = Number(place.lat);
@@ -144,17 +112,11 @@ const PlaceLocationMap = ({ place, coords, onOpenInMaps }) => {
 
 const PlaceDetailsScreen = ({ route, navigation }) => {
   const { place: initial, plannerMode } = route.params;
+  const insets = useSafeAreaInsets();
   const planner = useTripPlanner();
   const isPlannerMode = !!planner?.isPlanning && !!plannerMode;
   const [place, setPlace] = useState(initial);
-  const [reviews, setReviews] = useState([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [reviewError, setReviewError] = useState('');
 
   const loadPlace = useCallback(async () => {
     try {
@@ -164,54 +126,14 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
       // Keep initial data
     }
   }, [initial._id]);
-
-  const loadReviews = useCallback(async () => {
-    try {
-      setLoadingReviews(true);
-      const res = await getReviewsApi({ targetType: 'place', targetId: initial._id });
-      setReviews(res?.data?.reviews || []);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load reviews'));
-    } finally {
-      setLoadingReviews(false);
-    }
-  }, [initial._id]);
-
   useFocusEffect(
     useCallback(() => {
       loadPlace();
-      loadReviews();
-    }, [loadPlace, loadReviews])
+    }, [loadPlace])
   );
 
-  const handleSubmitReview = async () => {
-    if (!reviewRating) return setReviewError('Please select a rating.');
-    try {
-      setSubmitting(true);
-      setReviewError('');
-      await createReviewApi({
-        targetType: 'place',
-        targetId: initial._id,
-        rating: reviewRating,
-        comment: reviewComment
-      });
-      setShowReviewForm(false);
-      setReviewComment('');
-      setReviewRating(5);
-      loadReviews();
-    } catch (err) {
-      setReviewError(getApiErrorMessage(err, 'Failed to submit review'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const displayRating =
-    reviews.length > 0
-      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-      : Number(place.rating || 0) > 0 ? Number(place.rating).toFixed(1) : null;
-      
-  const displayReviewCount = reviews.length > 0 ? reviews.length : (place.review_count || 0);
+  const displayRating = (Number(place.rating || 0) > 0 && Number(place.review_count || 0) > 0) ? Number(place.rating).toFixed(1) : null;
+  const displayReviewCount = (place.review_count || 0);
   const typeMeta = getPlaceTypeMeta(place);
   const typeLabel = typeMeta.label || getPlaceType(place);
   const coords = getPlaceCoordinate(place);
@@ -239,7 +161,13 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView 
+        contentContainerStyle={[
+          styles.content, 
+          { paddingBottom: insets.bottom + (isPlannerMode ? 140 : 60) }
+        ]} 
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Hero */}
         <View style={styles.heroCard}>
           <FallbackImage
@@ -360,64 +288,11 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
 
         {/* Reviews */}
         <View style={styles.section}>
-          <View style={styles.reviewsTitleRow}>
-            <Text style={styles.sectionTitle}>
-              Reviews {reviews.length > 0 ? `(${reviews.length})` : ''}
-            </Text>
-            <Pressable
-              style={styles.writeReviewBtn}
-              onPress={() => setShowReviewForm((v) => !v)}
-            >
-              <Ionicons name="create-outline" size={16} color={colors.primary} />
-              <Text style={styles.writeReviewText}>
-                {showReviewForm ? 'Cancel' : 'Write Review'}
-              </Text>
-            </Pressable>
-          </View>
-
-          {showReviewForm && (
-            <View style={styles.reviewForm}>
-              <Text style={styles.ratingPickerLabel}>Your Rating</Text>
-              <View style={styles.ratingPicker}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Pressable key={star} onPress={() => setReviewRating(star)}>
-                    <Ionicons
-                      name={star <= reviewRating ? 'star' : 'star-outline'}
-                      size={30}
-                      color={colors.warning}
-                      style={{ marginHorizontal: 4 }}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-              <AppInput
-                label="Your Comment (optional)"
-                value={reviewComment}
-                onChangeText={setReviewComment}
-                placeholder="Share your experience..."
-                multiline
-                style={{ height: 80 }}
-              />
-              <ErrorText message={reviewError} />
-              <AppButton
-                title="Submit Review"
-                onPress={handleSubmitReview}
-                loading={submitting}
-              />
-            </View>
-          )}
-
-          {loadingReviews ? (
-            <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
-          ) : reviews.length === 0 ? (
-            <EmptyState
-              title="No reviews yet"
-              subtitle="Be the first to review this place."
-              icon="chatbubble-outline"
-            />
-          ) : (
-            reviews.map((r) => <ReviewCard key={r._id} review={r} />)
-          )}
+          <ReviewSection 
+            targetType="place" 
+            targetId={initial._id} 
+            targetName={place.name} 
+          />
         </View>
       </ScrollView>
 

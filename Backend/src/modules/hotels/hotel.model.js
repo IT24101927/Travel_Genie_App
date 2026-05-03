@@ -12,6 +12,7 @@ const hotelSchema = new mongoose.Schema(
     address_text: { type: String, trim: true },
     price_per_night: { type: Number, required: false, min: 0, index: true },
     rating: { type: Number, required: false, default: 0, min: 0, max: 5, index: true },
+    review_count: { type: Number, default: 0 },
     star_class: { type: Number, required: false, min: 0, max: 5 },
     hotel_type: { type: String, trim: true },
     description: { type: String, default: '' },

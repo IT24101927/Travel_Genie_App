@@ -8,7 +8,8 @@ const {
   updateUserById,
   resetUserPassword,
   deleteUserById,
-  getResourceList
+  getResourceList,
+  getTransportInsights
 } = require('./admin.service');
 
 const login = asyncHandler(async (req, res) => {
@@ -51,6 +52,11 @@ const listResource = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, `${req.params.resource} list`, { items });
 });
 
+const transportInsights = asyncHandler(async (req, res) => {
+  const insights = await getTransportInsights();
+  return sendSuccess(res, 200, 'Transport insights', insights);
+});
+
 module.exports = {
   login,
   stats,
@@ -59,5 +65,6 @@ module.exports = {
   editUser,
   resetPassword,
   removeUser,
-  listResource
+  listResource,
+  transportInsights
 };
