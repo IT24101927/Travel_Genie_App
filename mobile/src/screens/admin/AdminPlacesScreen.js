@@ -210,9 +210,9 @@ const AdminPlacesScreen = ({ route, navigation }) => {
     const q = search.trim().toLowerCase();
     if (q) result = result.filter(
       (p) => p.name?.toLowerCase().includes(q) ||
-             p.address_text?.toLowerCase().includes(q) ||
-             getDistrictName(p).toLowerCase().includes(q) ||
-             p.type?.toLowerCase().includes(q)
+        p.address_text?.toLowerCase().includes(q) ||
+        getDistrictName(p).toLowerCase().includes(q) ||
+        p.type?.toLowerCase().includes(q)
     );
     return result;
   }, [districtFilter, places, ratingFilter, search, statusFilter, typeFilter]);

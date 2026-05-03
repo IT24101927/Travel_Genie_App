@@ -29,10 +29,9 @@ const PLACE_TYPE_IMAGE_FALLBACKS = {
 };
 
 export const getPlaceImageCandidates = (place = {}) => {
-  const type = place.category || place.type || '';
+  const type = place.type || '';
   const candidates = [
     place.image_url,
-    place.image,
     place.thumbnail,
     place.coverImage,
     place.photo,

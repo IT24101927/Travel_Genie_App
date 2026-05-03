@@ -107,7 +107,6 @@ const seedAll = async () => {
                 district_id:  districtIdNum,
                 district:     districtNameById[districtIdNum] || '',  // string name for admin-style queries
                 name:         data.name,
-                category:     websiteType,   // mirror type -> category so both fields are populated
                 type:         websiteType,
                 description:  data.description,
                 address_text: data.address_text,
@@ -118,7 +117,6 @@ const seedAll = async () => {
                 review_count: parseInt(data.review_count) || 0,
                 duration:     data.duration || '',
                 image_url:    data.image_url || '',
-                image:        data.image_url || '',
                 tags,
             });
         })
@@ -186,7 +184,6 @@ const seedAll = async () => {
                 address_text: data.address_text,
                 description: data.description,
                 hotel_type: data.hotel_type,
-                priceRange: parseFloat(data.price_per_night) || 0,
                 price_per_night: parseFloat(data.price_per_night) || 0,
                 star_class: parseInt(data.star_class) || 0,
                 amenities: parsedAmenities,
@@ -198,7 +195,6 @@ const seedAll = async () => {
                 district: coordinatePlace?.district || '',
                 lat: coordinatePlace?.lat ?? null,
                 lng: coordinatePlace?.lng ?? null,
-                image: data.image_url,
                 image_url: data.image_url,
             });
         })
