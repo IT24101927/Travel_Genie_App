@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -37,43 +38,49 @@ const TripListScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Adventure Awaits</Text>
-        <Text style={styles.subtext}>Where to next?</Text>
-      </View>
-    
-      <ErrorText message={error} />
-
-      <FlatList
-        data={trips}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => (
-          <TripCard
-            trip={item}
-            onPress={() => navigation.navigate('TripDetails', { trip: item })}
-          />
-        )}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={loadTrips}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={!refreshing ? <EmptyState title="No trips planned" subtitle="Tap the + button to create your first journey." icon="airplane" /> : null}
-      />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Adventure Awaits</Text>
+          <Text style={styles.subtext}>Where to next?</Text>
+        </View>
       
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('TripForm')}>
-        <Ionicons name="add" size={32} color={colors.white} />
-      </Pressable>
-    </View>
+        <ErrorText message={error} />
+
+        <FlatList
+          data={trips}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <TripCard
+              trip={item}
+              onPress={() => navigation.navigate('TripDetails', { trip: item })}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={loadTrips}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={!refreshing ? <EmptyState title="No trips planned" subtitle="Tap the + button to create your first journey." icon="airplane" /> : null}
+        />
+        
+        <Pressable style={styles.fab} onPress={() => navigation.navigate('TripForm')}>
+          <Ionicons name="add" size={32} color={colors.white} />
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -95,12 +102,12 @@ const styles = StyleSheet.create({
     marginTop: 4
   },
   listContent: {
-    paddingBottom: 100
+    paddingBottom: 160
   },
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: 100,
     width: 64,
     height: 64,
     borderRadius: 32,

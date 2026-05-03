@@ -7,13 +7,13 @@ const { width, height } = Dimensions.get('window');
 
 const AppLoader = ({ message = 'Loading...' }) => {
   // Center Logo Pulse
-  const logoPulse = useRef(new Animated.Value(0)).current; 
+  const logoPulse = useRef(new Animated.Value(0)).current;
   // Background rings
   const ring1 = useRef(new Animated.Value(0)).current;
   const ring2 = useRef(new Animated.Value(0)).current;
   const ring3 = useRef(new Animated.Value(0)).current;
-  // Plane Orbit
-  const orbitAnim = useRef(new Animated.Value(0)).current;
+  // Plane Fly (8 Planes)
+  const planesAnim = useRef([...Array(8)].map(() => new Animated.Value(0))).current;
   // Text Breathing
   const textAnim = useRef(new Animated.Value(0)).current;
 
@@ -49,22 +49,50 @@ const AppLoader = ({ message = 'Loading...' }) => {
     createRing(ring2, 1000);
     createRing(ring3, 2000);
 
-    // 4. Orbit Plane (Continuous 360 rotation)
-    Animated.loop(
-      Animated.timing(orbitAnim, {
-        toValue: 1,
-        duration: 3000,
-        easing: Easing.linear,
-        useNativeDriver: true
-      })
-    ).start();
+    // 4. Multiple Planes Fly
+    const planesConfig = [
+      { id: 0, duration: 3500, delay: 0, x: [-width/2 - 200, width/2 + 200], y: [height/2 + 200, -height/2 - 200], rot: '-45deg', size: 48, opacity: 1 },
+      { id: 1, duration: 4200, delay: 800, x: [-width/2 - 200, width/2 + 200], y: [-height/2 - 200, height/2 + 200], rot: '45deg', size: 28, opacity: 0.6 },
+      { id: 2, duration: 5000, delay: 1500, x: [-width/2 - 200, width/2 + 200], y: [150, 150], rot: '0deg', size: 36, opacity: 0.4 },
+      { id: 3, duration: 3800, delay: 400, x: [-width/2 - 200, width/2 + 200], y: [-height/4, -height/3], rot: '-10deg', size: 20, opacity: 0.3 },
+      { id: 4, duration: 4500, delay: 2000, x: [-width/2 - 200, width/2 + 200], y: [-height/2 - 200, height/4 + 200], rot: '40deg', size: 24, opacity: 0.5 },
+      // New planes from Bottom-Right to Top-Left
+      { id: 5, duration: 4000, delay: 500, x: [width/2 + 200, -width/2 - 200], y: [height/2 + 200, -height/2 - 200], rot: '-135deg', size: 40, opacity: 0.8 },
+      { id: 6, duration: 4800, delay: 1800, x: [width/2 + 200, -width/2 - 200], y: [height/4 + 200, -height/2 - 200], rot: '-150deg', size: 26, opacity: 0.5 },
+      { id: 7, duration: 5500, delay: 2800, x: [width/4 + 200, -width/2 - 200], y: [height/2 + 200, -height/4 - 200], rot: '-120deg', size: 20, opacity: 0.3 },
+    ];
 
-  }, [textAnim, logoPulse, ring1, ring2, ring3, orbitAnim]);
+    planesConfig.forEach((p) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(planesAnim[p.id], { toValue: 0, duration: 0, useNativeDriver: true }),
+          Animated.delay(p.delay),
+          Animated.timing(planesAnim[p.id], {
+            toValue: 1,
+            duration: p.duration,
+            easing: Easing.linear,
+            useNativeDriver: true
+          })
+        ])
+      ).start();
+    });
+
+  }, [textAnim, logoPulse, ring1, ring2, ring3, ...planesAnim]);
 
   // Interpolations
   const logoScale = logoPulse.interpolate({ inputRange: [0, 1], outputRange: [0.93, 1.07] });
-  
-  const orbitRotate = orbitAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  // Array of plane configurations for rendering
+  const planesData = [
+    { id: 0, x: [-width/2 - 200, width/2 + 200], y: [height/2 + 200, -height/2 - 200], rot: '-45deg', size: 48, opacity: 1 },
+    { id: 1, x: [-width/2 - 200, width/2 + 200], y: [-height/2 - 200, height/2 + 200], rot: '45deg', size: 28, opacity: 0.6 },
+    { id: 2, x: [-width/2 - 200, width/2 + 200], y: [150, 150], rot: '0deg', size: 36, opacity: 0.4 },
+    { id: 3, x: [-width/2 - 200, width/2 + 200], y: [-height/4, -height/3], rot: '-10deg', size: 20, opacity: 0.3 },
+    { id: 4, x: [-width/2 - 200, width/2 + 200], y: [-height/2 - 200, height/4 + 200], rot: '40deg', size: 24, opacity: 0.5 },
+    { id: 5, x: [width/2 + 200, -width/2 - 200], y: [height/2 + 200, -height/2 - 200], rot: '-135deg', size: 40, opacity: 0.8 },
+    { id: 6, x: [width/2 + 200, -width/2 - 200], y: [height/4 + 200, -height/2 - 200], rot: '-150deg', size: 26, opacity: 0.5 },
+    { id: 7, x: [width/4 + 200, -width/2 - 200], y: [height/2 + 200, -height/4 - 200], rot: '-120deg', size: 20, opacity: 0.3 },
+  ];
 
   const renderRing = (anim) => (
     <Animated.View style={[
@@ -82,26 +110,41 @@ const AppLoader = ({ message = 'Loading...' }) => {
       <View style={styles.topBlob} />
       <View style={styles.bottomBlob} />
 
+      {/* Globe at top */}
+      <View style={styles.globeContainer}>
+        <Ionicons name="earth" size={180} color={`${colors.primary}15`} />
+      </View>
+
       <View style={styles.centerAnchor}>
-        
+
         {/* Animated Expanding Rings */}
         {renderRing(ring1)}
         {renderRing(ring2)}
         {renderRing(ring3)}
 
-        {/* Orbiting Plane */}
-        <Animated.View style={[styles.orbitContainer, { transform: [{ rotate: orbitRotate }] }]}>
-          <View style={styles.planeWrapper}>
-            <Ionicons name="airplane" size={32} color={colors.primary} style={{ transform: [{ rotate: '45deg' }] }} />
-          </View>
-        </Animated.View>
-
-        {/* Center Pulsing Logo replacing the standard ActivityIndicator */}
+        {/* Center Pulsing Logo */}
         <Animated.View style={[styles.mainLogoWrapper, { transform: [{ scale: logoScale }] }]}>
            <Image source={require('../../../assets/images/TravelGenie.png')} style={styles.logoImage} resizeMode="contain" />
         </Animated.View>
 
       </View>
+
+      {/* Flying Planes */}
+      {planesData.map((p) => (
+        <Animated.View key={p.id} style={[
+          styles.flyingPlane, 
+          { 
+            opacity: p.opacity,
+            transform: [
+              { translateX: planesAnim[p.id].interpolate({ inputRange: [0, 1], outputRange: p.x }) }, 
+              { translateY: planesAnim[p.id].interpolate({ inputRange: [0, 1], outputRange: p.y }) }, 
+              { rotate: p.rot }
+            ] 
+          }
+        ]}>
+          <Ionicons name="airplane" size={p.size} color={colors.primary} />
+        </Animated.View>
+      ))}
 
       {/* Breathing Text Locked to Bottom Width */}
       <Animated.View style={[styles.textContainer, { opacity: textAnim }]}>
@@ -143,20 +186,15 @@ const styles = StyleSheet.create({
     width: 75,
     height: 75,
   },
-  orbitContainer: {
+  globeContainer: {
     position: 'absolute',
-    width: 170,
-    height: 170,
-    alignItems: 'center',
-    justifyContent: 'flex-start', // Anchors the plane to the top edge before rotating
-    zIndex: 5,
+    top: 40,
+    right: -40,
+    zIndex: 1,
   },
-  planeWrapper: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -10, // Pulls the plane slightly outside the orbit bounding box
+  flyingPlane: {
+    position: 'absolute',
+    zIndex: 20,
   },
   ring: {
     position: 'absolute',

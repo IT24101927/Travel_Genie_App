@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -40,7 +41,17 @@ const ExpenseSummaryScreen = ({ navigation }) => {
   );
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
     <View style={styles.container}>
+      {/* Header & Back Button */}
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={20} color={colors.primary} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Expense Summary</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
       <View style={styles.card}>
         <View style={styles.bgGlow} />
         <View style={styles.cardHeader}>
@@ -83,14 +94,37 @@ const ExpenseSummaryScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       />
     </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     padding: 16,
     backgroundColor: colors.background
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
   },
   card: {
     backgroundColor: colors.surface,
@@ -161,7 +195,7 @@ const styles = StyleSheet.create({
     fontSize: 18
   },
   listContent: {
-    paddingBottom: 40
+    paddingBottom: 120
   },
   item: {
     flexDirection: 'row',

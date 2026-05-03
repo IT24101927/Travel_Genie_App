@@ -14,27 +14,35 @@ import { Ionicons } from '@expo/vector-icons';
 const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = async () => {
-    const emailCheck = validateEmail(form.email);
-    if (!emailCheck.valid) {
-      setError(emailCheck.message);
-      return;
-    }
+  const setField = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    setErrors(prev => ({ ...prev, [key]: '' }));
+    setApiError('');
+  };
 
-    if (!isRequired(form.password)) {
-      setError('Password is required.');
+  const onSubmit = async () => {
+    const next = {};
+
+    const emailCheck = validateEmail(form.email);
+    if (!emailCheck.valid) next.email = emailCheck.message;
+
+    if (!isRequired(form.password)) next.password = 'Password is required.';
+
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
+      setApiError('');
       await login(form.email.trim(), form.password);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Login failed'));
+      setApiError(getApiErrorMessage(err, 'Login failed'));
     } finally {
       setLoading(false);
     }
@@ -42,8 +50,8 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
+      <KeyboardAvoidingView
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -62,10 +70,8 @@ const LoginScreen = ({ navigation }) => {
               value={form.email}
               autoCapitalize="none"
               keyboardType="email-address"
-              onChangeText={(text) => {
-                setForm((prev) => ({ ...prev, email: text }));
-                setError('');
-              }}
+              error={errors.email}
+              onChangeText={(text) => setField('email', text)}
               placeholder="john@example.com"
             />
             <AppInput
@@ -73,14 +79,12 @@ const LoginScreen = ({ navigation }) => {
               label="Password"
               value={form.password}
               secureTextEntry
-              onChangeText={(text) => {
-                setForm((prev) => ({ ...prev, password: text }));
-                setError('');
-              }}
+              error={errors.password}
+              onChangeText={(text) => setField('password', text)}
               placeholder="••••••••"
             />
 
-            <ErrorText message={error} />
+            <ErrorText message={apiError} />
 
             <View style={styles.buttonContainer}>
               <AppButton title={loading ? 'Authenticating...' : 'Sign In'} onPress={onSubmit} disabled={loading} />
@@ -145,7 +149,7 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   buttonContainer: {
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 16
   },
   forgotContainer: {

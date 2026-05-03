@@ -13,32 +13,38 @@ import { getApiErrorMessage } from '../../utils/apiError';
 
 const ChangePasswordScreen = ({ navigation }) => {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const set = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
-    setError('');
+    setErrors((prev) => ({ ...prev, [key]: '' }));
+    setApiError('');
     setSuccess(false);
   };
 
   const onSubmit = async () => {
-    if (!form.currentPassword) { setError('Current password is required.'); return; }
+    const next = {};
+    if (!form.currentPassword) next.currentPassword = 'Current password is required.';
 
     const passCheck = validatePassword(form.newPassword);
-    if (!passCheck.valid) { setError(passCheck.message); return; }
+    if (!passCheck.valid) next.newPassword = passCheck.message;
 
-    if (form.newPassword !== form.confirmPassword) { setError('Passwords do not match.'); return; }
+    if (form.newPassword && form.newPassword !== form.confirmPassword) next.confirmPassword = 'Passwords do not match.';
+
+    if (Object.keys(next).length > 0) { setErrors(next); return; }
 
     try {
       setLoading(true);
-      setError('');
+      setErrors({});
+      setApiError('');
       await changePasswordApi({ currentPassword: form.currentPassword, newPassword: form.newPassword });
       setSuccess(true);
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to change password'));
+      setApiError(getApiErrorMessage(err, 'Failed to change password'));
     } finally {
       setLoading(false);
     }
@@ -49,10 +55,10 @@ const ChangePasswordScreen = ({ navigation }) => {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
           </Pressable>
           <Text style={styles.title}>Change Password</Text>
-          <View style={{ width: 42 }} />
+          <View style={{ width: 36 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -67,6 +73,7 @@ const ChangePasswordScreen = ({ navigation }) => {
             value={form.currentPassword}
             onChangeText={(t) => set('currentPassword', t)}
             secureTextEntry
+            error={errors.currentPassword}
             placeholder="Your current password"
           />
 
@@ -76,8 +83,9 @@ const ChangePasswordScreen = ({ navigation }) => {
             value={form.newPassword}
             onChangeText={(t) => set('newPassword', t)}
             secureTextEntry
+            error={errors.newPassword}
             placeholder="Min. 8 chars, upper, lower, number, symbol"
-            helperText="Must include uppercase, lowercase, number and symbol"
+            helperText={errors.newPassword ? undefined : 'Must include uppercase, lowercase, number and symbol'}
           />
 
           <AppInput
@@ -86,6 +94,7 @@ const ChangePasswordScreen = ({ navigation }) => {
             value={form.confirmPassword}
             onChangeText={(t) => set('confirmPassword', t)}
             secureTextEntry
+            error={errors.confirmPassword}
             placeholder="Repeat new password"
           />
 
@@ -96,7 +105,7 @@ const ChangePasswordScreen = ({ navigation }) => {
             </View>
           )}
 
-          <ErrorText message={error} />
+          <ErrorText message={apiError} />
 
           <View style={styles.btnWrap}>
             <AppButton title={loading ? 'Changing...' : 'Change Password'} onPress={onSubmit} disabled={loading} />
@@ -114,12 +123,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10
   },
   backBtn: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
   },
   title: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
-  content: { paddingHorizontal: 24, paddingBottom: 40, paddingTop: 16 },
+  content: { paddingHorizontal: 24, paddingBottom: 120, paddingTop: 16 },
   iconWrap: {
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: '#EAF4F1', alignItems: 'center', justifyContent: 'center',

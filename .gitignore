@@ -9,7 +9,6 @@ node_modules/
 .env.local
 .env.*.local
 Backend/.env
-Frontend/.env
 mobile/.env
 
 # React Native / Expo
