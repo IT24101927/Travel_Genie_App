@@ -348,7 +348,7 @@ export default function AdminTripEditScreen({ navigation, route }) {
             items={selPlaces}
             onRemove={removePlace}
             getName={p => p.name||'Unnamed'}
-            getSub={p => p.type||''}
+            getSub={p => p.type||p.category||''}
           />
           {loadingOpts
             ? <ActivityIndicator color={colors.primary} style={{marginBottom:12}} />
@@ -357,7 +357,7 @@ export default function AdminTripEditScreen({ navigation, route }) {
                 icon="add-circle-outline"
                 value=""
                 placeholder={district ? `Search places in ${district.name}…` : 'Select a district first'}
-                options={availPlaces.map(p=>({...p,label:p.name||'',sub:p.type||''}))}
+                options={availPlaces.map(p=>({...p,label:p.name||'',sub:p.type||p.category||''}))}
                 onSelect={addPlace}
               />
           }
@@ -374,7 +374,7 @@ export default function AdminTripEditScreen({ navigation, route }) {
             getName={h => h.name||'Unnamed'}
             getSub={h => {
               const ppn = Number(h.pricePerNight||h.price_per_night||0);
-              return ppn>0 ? `Rs ${ppn.toLocaleString()} / night` : (h.hotel_type||'');
+              return ppn>0 ? `Rs ${ppn.toLocaleString()} / night` : (h.category||'');
             }}
           />
           {loadingOpts
@@ -384,7 +384,7 @@ export default function AdminTripEditScreen({ navigation, route }) {
                 icon="add-circle-outline"
                 value=""
                 placeholder={district ? `Search hotels in ${district.name}…` : 'Select a district first'}
-                options={availHotels.map(h=>({...h,label:h.name||'',sub:(()=> { const p=Number(h.pricePerNight||h.price_per_night||0); return p>0?`Rs ${p.toLocaleString()} / night`:(h.hotel_type||'');})()} ))}
+                options={availHotels.map(h=>({...h,label:h.name||'',sub:(()=>{const p=Number(h.pricePerNight||h.price_per_night||0);return p>0?`Rs ${p.toLocaleString()} / night`:(h.category||'');})()} ))}
                 onSelect={addHotel}
               />
           }

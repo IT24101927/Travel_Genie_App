@@ -1,25 +1,7 @@
-export const DISPLAY_CURRENCIES = [
-  { code: 'LKR', symbol: 'Rs', flag: '🇱🇰', rate: 1 },
-  { code: 'USD', symbol: '$', flag: '🇺🇸', rate: 0.0033 },
-  { code: 'EUR', symbol: '€', flag: '🇪🇺', rate: 0.0031 },
-];
-
-export const convertAmt = (amount, fromCode, toCode) => {
-  if (!amount) return 0;
-  const from = DISPLAY_CURRENCIES.find(c => c.code === fromCode)?.rate ?? 1;
-  const to = DISPLAY_CURRENCIES.find(c => c.code === toCode)?.rate ?? 1;
-  return Math.round((amount / from) * to * 100) / 100;
-};
-
-// Formats a value directly with the given currency's symbol
-export const formatCurrency = (amount, currency = 'LKR') => {
+export const formatCurrency = (amount) => {
   const value = Number(amount || 0);
-  const currencyObj = DISPLAY_CURRENCIES.find(c => c.code === currency);
-  const symbol = currencyObj ? currencyObj.symbol : currency;
-  return `${symbol} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `LKR ${value.toFixed(2)}`;
 };
-
-
 
 export const HOTEL_CURRENCIES = [
   { code: 'LKR', symbol: 'Rs', label: 'LKR', rate: 1 },
@@ -45,7 +27,11 @@ export const convertHotelPriceToLkr = (amount, fromCode = 'LKR') => {
 };
 
 export const getHotelNightlyPriceLkr = (hotel = {}) => {
-  return Number(hotel.price_per_night ?? hotel.pricePerNight ?? 0) || 0;
+  const priceRange = hotel.priceRange;
+  if (typeof priceRange === 'object' && priceRange !== null) {
+    return Number(priceRange.min ?? priceRange.price ?? hotel.price_per_night ?? 0) || 0;
+  }
+  return Number(hotel.price_per_night ?? priceRange ?? hotel.pricePerNight ?? 0) || 0;
 };
 
 export const formatHotelPrice = (amountLkr, code = 'LKR') => {

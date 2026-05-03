@@ -16,10 +16,6 @@ import AdminTransportFormScreen from '../screens/admin/AdminTransportFormScreen'
 import AdminTripsScreen from '../screens/admin/AdminTripsScreen';
 import AdminTripDetailScreen from '../screens/admin/AdminTripDetailScreen';
 import AdminTripEditScreen from '../screens/admin/AdminTripEditScreen';
-import AdminExpensesScreen from '../screens/admin/AdminExpensesScreen';
-import AdminTripHealthScreen from '../screens/admin/AdminTripHealthScreen';
-import AdminPriceRecordsScreen from '../screens/admin/AdminPriceRecordsScreen';
-import NotificationListScreen from '../screens/notifications/NotificationListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -41,10 +37,6 @@ const AdminNavigator = () => {
       <Stack.Screen name="AdminTrips"         component={AdminTripsScreen} />
       <Stack.Screen name="AdminTripDetail"    component={AdminTripDetailScreen} />
       <Stack.Screen name="AdminTripEdit"      component={AdminTripEditScreen} />
-      <Stack.Screen name="AdminExpenses"      component={AdminExpensesScreen} />
-      <Stack.Screen name="AdminTripHealth" component={AdminTripHealthScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AdminPriceRecords" component={AdminPriceRecordsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AdminAlerts" component={NotificationListScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

@@ -39,9 +39,7 @@ const QUICK_ACTIONS = [
   { label: 'Manage Trips',  icon: 'map',      color: colors.statusOngoing,   screen: 'AdminTrips',
     hint: 'View & manage all trips' },
   { label: 'Manage Transport', icon: 'bus',   color: colors.accentDark,      screen: 'AdminTransports',
-    hint: 'Manage SL Transit' },
-  { label: 'Manage Expenses', icon: 'wallet', color: colors.warning,         screen: 'AdminExpenses',
-    hint: 'Budgets & Price Trends' }
+    hint: 'Manage SL Transit' }
 ];
 
 const AdminDashboardScreen = ({ navigation }) => {
@@ -72,7 +70,6 @@ const AdminDashboardScreen = ({ navigation }) => {
     if (key === 'hotels') { navigation.navigate('AdminHotels'); return; }
     if (key === 'transports') { navigation.navigate('AdminTransports'); return; }
     if (key === 'trips')  { navigation.navigate('AdminTrips'); return; }
-    if (key === 'expenses') { navigation.navigate('AdminExpenses'); return; }
     if (key === 'admins') { return; }
     navigation.navigate('AdminResource', {
       resource: key,

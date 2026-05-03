@@ -27,15 +27,15 @@ import { getHotelImageCandidates } from '../../utils/hotelImages';
 import { HOTEL_CURRENCIES, formatHotelPrice, getHotelNightlyPriceLkr } from '../../utils/currencyFormat';
 
 const TYPE_META = {
-  'hotel': { emoji: '🏨', color: '#3498DB' },
-  'resort': { emoji: '🌴', color: '#4CAF50' },
+  'hotel':      { emoji: '🏨', color: '#3498DB' },
+  'resort':     { emoji: '🌴', color: '#4CAF50' },
   'guesthouse': { emoji: '🏡', color: '#FF9800' },
-  'hostel': { emoji: '🛏️', color: '#9C27B0' },
-  'villa': { emoji: '🏘️', color: '#E91E63' },
-  'boutique': { emoji: '✨', color: '#F57C00' },
-  'apartment': { emoji: '🏢', color: '#607D8B' },
-  'lodge': { emoji: '🛖', color: '#795548' },
-  'camp': { emoji: '⛺', color: '#8BC34A' }
+  'hostel':     { emoji: '🛏️', color: '#9C27B0' },
+  'villa':      { emoji: '🏘️', color: '#E91E63' },
+  'boutique':   { emoji: '✨', color: '#F57C00' },
+  'apartment':  { emoji: '🏢', color: '#607D8B' },
+  'lodge':      { emoji: '🛖', color: '#795548' },
+  'camp':       { emoji: '⛺', color: '#8BC34A' }
 };
 
 const TYPE_FILTERS = ['All', ...Object.keys(TYPE_META)];

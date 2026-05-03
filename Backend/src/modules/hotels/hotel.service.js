@@ -92,6 +92,9 @@ const getHotelDocumentById = async (id) => {
 const normalizeHotelPayload = async (payload = {}) => {
   const normalized = { ...payload };
 
+  if (normalized.price_per_night !== undefined && normalized.priceRange === undefined) {
+    normalized.priceRange = normalized.price_per_night;
+  }
 
   const districtId = normalized.district_id ? Number(normalized.district_id) : null;
   if (districtId) {

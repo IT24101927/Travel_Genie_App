@@ -1,6 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from './AuthContext';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 const TripPlannerContext = createContext(null);
 
@@ -13,14 +11,8 @@ const initialPreferences = {
 };
 
 const getPlaceKey = (p) => String(p?._id || p?.place_id || p?.id || '');
-const getHotelKey = (h) => String(h?._id || h?.id || '');
-
-const STORAGE_KEY_PREFIX = 'TRIP_PLANNER_DRAFT_';
 
 export const TripPlannerProvider = ({ children }) => {
-  const { user } = useAuth();
-  const [isReady, setIsReady] = useState(false);
-  
   const [isPlanning, setIsPlanning] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
@@ -28,70 +20,8 @@ export const TripPlannerProvider = ({ children }) => {
   const [preferences, setPreferences] = useState(initialPreferences);
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [selectedHotels, setSelectedHotels] = useState([]);
-  const [tripName, setTripName] = useState('');
-  const [totalBudget, setTotalBudget] = useState('');
-  const [hotelBudget, setHotelBudget] = useState('');
-  const [notes, setNotes] = useState('');
 
-  const userKey = user?._id || user?.id || 'guest';
-  const storageKey = `${STORAGE_KEY_PREFIX}${userKey}`;
-
-  // 1. Persistence - Restore
-  useEffect(() => {
-    const restoreDraft = async () => {
-      try {
-        const json = await AsyncStorage.getItem(storageKey);
-        if (json) {
-          const draft = JSON.parse(json);
-          setIsPlanning(draft.isPlanning || false);
-          setEditingTrip(draft.editingTrip || null);
-          setSelectedDistrict(draft.selectedDistrict || null);
-          setSelectedPlaces(draft.selectedPlaces || []);
-          setPreferences(draft.preferences || initialPreferences);
-          setSelectedHotel(draft.selectedHotel || null);
-          setSelectedHotels(draft.selectedHotels || []);
-          setTripName(draft.tripName || '');
-          setTotalBudget(draft.totalBudget || '');
-          setHotelBudget(draft.hotelBudget || '');
-          setNotes(draft.notes || '');
-        }
-      } catch (e) {
-        console.error('Failed to restore trip draft', e);
-      } finally {
-        setIsReady(true);
-      }
-    };
-    restoreDraft();
-  }, [storageKey]);
-
-  // 2. Persistence - Save
-  useEffect(() => {
-    if (!isReady) return;
-    const saveDraft = async () => {
-      try {
-        const draft = {
-          isPlanning,
-          editingTrip,
-          selectedDistrict,
-          selectedPlaces,
-          preferences,
-          selectedHotel,
-          selectedHotels,
-          tripName,
-          totalBudget,
-          hotelBudget,
-          notes,
-        };
-        await AsyncStorage.setItem(storageKey, JSON.stringify(draft));
-      } catch (e) {
-        console.error('Failed to save trip draft', e);
-      }
-    };
-    saveDraft();
-  }, [
-    isReady, storageKey, isPlanning, editingTrip, selectedDistrict, selectedPlaces, 
-    preferences, selectedHotel, selectedHotels, tripName, totalBudget, hotelBudget, notes
-  ]);
+  const getHotelKey = (h) => String(h?._id || h?.id || '');
 
   const addOrUpdateSelectedHotel = useCallback((hotel, nightsInfo) => {
     const key = getHotelKey(hotel);
@@ -122,6 +52,10 @@ export const TripPlannerProvider = ({ children }) => {
     setSelectedHotels([]);
     setSelectedHotel(null);
   }, []);
+  const [tripName, setTripName] = useState('');
+  const [totalBudget, setTotalBudget] = useState('');
+  const [hotelBudget, setHotelBudget] = useState('');
+  const [notes, setNotes] = useState('');
 
   const togglePlace = useCallback((place) => {
     const key = getPlaceKey(place);
@@ -183,7 +117,7 @@ export const TripPlannerProvider = ({ children }) => {
     setNotes(trip.notes || '');
   }, []);
 
-  const finishPlanning = useCallback(async () => {
+  const finishPlanning = useCallback(() => {
     setIsPlanning(false);
   }, []);
 
@@ -194,7 +128,6 @@ export const TripPlannerProvider = ({ children }) => {
 
   const value = useMemo(
     () => ({
-      isReady,
       isPlanning,
       editingTrip,
       selectedDistrict,
@@ -227,7 +160,6 @@ export const TripPlannerProvider = ({ children }) => {
       cancelPlanning,
     }),
     [
-      isReady,
       isPlanning,
       editingTrip,
       selectedDistrict,

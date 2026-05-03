@@ -13,7 +13,6 @@ import { getTripsApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { useTripPlanner } from '../../context/TripPlannerContext';
 import { navigateToPlannerDistrictPicker } from '../../navigation/tripPlannerFlow';
-import WelcomeGuide from '../../components/common/WelcomeGuide';
 
 const StatBox = ({ icon, value, label, color }) => (
   <View style={styles.statBox}>
@@ -30,7 +29,6 @@ const TripListScreen = ({ navigation }) => {
   const [trips, setTrips] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [showHelp, setShowHelp] = useState(false);
 
   const loadTrips = useCallback(async () => {
     try {
@@ -62,12 +60,7 @@ const TripListScreen = ({ navigation }) => {
   const ListHeader = () => (
     <View style={styles.headerBlock}>
       <View style={styles.heroSection}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.greeting}>My Trips</Text>
-          <Pressable onPress={() => setShowHelp(true)} style={styles.helpBtn}>
-            <Ionicons name="help-circle-outline" size={26} color={colors.primary} />
-          </Pressable>
-        </View>
+        <Text style={styles.greeting}>My Trips</Text>
         <Text style={styles.subtext}>Plan, track and relive your Sri Lanka adventures.</Text>
       </View>
 
@@ -139,11 +132,6 @@ const TripListScreen = ({ navigation }) => {
         }
       />
 
-      <WelcomeGuide 
-        forceShow={showHelp} 
-        onComplete={() => setShowHelp(false)} 
-      />
-
       {trips.length > 0 ? (
         <Pressable style={styles.fab} onPress={startTripPlanner}>
           <Ionicons name="add" size={30} color={colors.white} />
@@ -179,13 +167,6 @@ const styles = StyleSheet.create({
   subtext: {
     color: colors.textSecondary,
     fontSize: 15,
-  },
-  helpBtn: {
-    padding: 5,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border
   },
   statsRow: {
     flexDirection: 'row',

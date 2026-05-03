@@ -44,7 +44,7 @@ export const getKnownPlaceType = (value, fallback = 'Temple') => {
 };
 
 export const getPlaceType = (place = {}) => {
-  const value = String(place.type || '').trim();
+  const value = String(place.category || place.type || '').trim();
   return TYPE_ALIASES[value] || value || 'Place';
 };
 

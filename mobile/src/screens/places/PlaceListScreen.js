@@ -37,35 +37,35 @@ const CARD_H = Math.floor(CARD_W * 1.3);
 const NUM_COLUMNS = 2;
 const ROW_GAP = 14;
 const ROW_H = CARD_H + ROW_GAP;
-const MAP_H = 250;
+const MAP_H  = 250;
 
 /* District centre coords for map context */
 const DISTRICT_COORDS = {
-  'Colombo': { latitude: 6.9271, longitude: 79.8612 },
-  'Gampaha': { latitude: 7.0917, longitude: 80.0000 },
-  'Kalutara': { latitude: 6.5854, longitude: 79.9607 },
-  'Kandy': { latitude: 7.2906, longitude: 80.6337 },
-  'Matale': { latitude: 7.4675, longitude: 80.6234 },
-  'Nuwara Eliya': { latitude: 6.9497, longitude: 80.7891 },
-  'Galle': { latitude: 6.0535, longitude: 80.2210 },
-  'Matara': { latitude: 5.9549, longitude: 80.5550 },
-  'Hambantota': { latitude: 6.1429, longitude: 81.1212 },
-  'Jaffna': { latitude: 9.6615, longitude: 80.0255 },
-  'Kilinochchi': { latitude: 9.3803, longitude: 80.4000 },
-  'Mannar': { latitude: 8.9810, longitude: 79.9044 },
-  'Vavuniya': { latitude: 8.7514, longitude: 80.4971 },
-  'Mullaitivu': { latitude: 9.2671, longitude: 80.8128 },
-  'Batticaloa': { latitude: 7.7310, longitude: 81.6747 },
-  'Ampara': { latitude: 7.2910, longitude: 81.6724 },
-  'Trincomalee': { latitude: 8.5874, longitude: 81.2152 },
-  'Kurunegala': { latitude: 7.4863, longitude: 80.3647 },
-  'Puttalam': { latitude: 8.0362, longitude: 79.8283 },
-  'Anuradhapura': { latitude: 8.3114, longitude: 80.4037 },
-  'Polonnaruwa': { latitude: 7.9403, longitude: 81.0188 },
-  'Badulla': { latitude: 6.9934, longitude: 81.0550 },
-  'Monaragala': { latitude: 6.8728, longitude: 81.3507 },
-  'Ratnapura': { latitude: 6.6828, longitude: 80.4125 },
-  'Kegalle': { latitude: 7.2513, longitude: 80.3464 },
+  'Colombo':      { latitude: 6.9271,  longitude: 79.8612 },
+  'Gampaha':      { latitude: 7.0917,  longitude: 80.0000 },
+  'Kalutara':     { latitude: 6.5854,  longitude: 79.9607 },
+  'Kandy':        { latitude: 7.2906,  longitude: 80.6337 },
+  'Matale':       { latitude: 7.4675,  longitude: 80.6234 },
+  'Nuwara Eliya': { latitude: 6.9497,  longitude: 80.7891 },
+  'Galle':        { latitude: 6.0535,  longitude: 80.2210 },
+  'Matara':       { latitude: 5.9549,  longitude: 80.5550 },
+  'Hambantota':   { latitude: 6.1429,  longitude: 81.1212 },
+  'Jaffna':       { latitude: 9.6615,  longitude: 80.0255 },
+  'Kilinochchi':  { latitude: 9.3803,  longitude: 80.4000 },
+  'Mannar':       { latitude: 8.9810,  longitude: 79.9044 },
+  'Vavuniya':     { latitude: 8.7514,  longitude: 80.4971 },
+  'Mullaitivu':   { latitude: 9.2671,  longitude: 80.8128 },
+  'Batticaloa':   { latitude: 7.7310,  longitude: 81.6747 },
+  'Ampara':       { latitude: 7.2910,  longitude: 81.6724 },
+  'Trincomalee':  { latitude: 8.5874,  longitude: 81.2152 },
+  'Kurunegala':   { latitude: 7.4863,  longitude: 80.3647 },
+  'Puttalam':     { latitude: 8.0362,  longitude: 79.8283 },
+  'Anuradhapura': { latitude: 8.3114,  longitude: 80.4037 },
+  'Polonnaruwa':  { latitude: 7.9403,  longitude: 81.0188 },
+  'Badulla':      { latitude: 6.9934,  longitude: 81.0550 },
+  'Monaragala':   { latitude: 6.8728,  longitude: 81.3507 },
+  'Ratnapura':    { latitude: 6.6828,  longitude: 80.4125 },
+  'Kegalle':      { latitude: 7.2513,  longitude: 80.3464 },
 };
 
 const getPlaceId = (place) => String(place?._id || place?.place_id || place?.id || '');
@@ -437,9 +437,9 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
 
 /* ─── Memoised list header ─── */
 const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
-  categories, selectedCat, onCatChange, count,
-  places, selectedPlaceId, selectedPlace, onMarkerPress, onClearSelection, onViewDetails, onScrollToTop,
-  compact = false }) => (
+                           categories, selectedCat, onCatChange, count,
+                           places, selectedPlaceId, selectedPlace, onMarkerPress, onClearSelection, onViewDetails, onScrollToTop,
+                           compact = false }) => (
   <>
     <PlacesMap
       districtName={districtName}
@@ -521,9 +521,9 @@ export default function PlaceListScreen({ navigation, route }) {
     ? planner?.selectedDistrict?.name || routeDistrictName
     : routeDistrictName;
 
-  const [allPlaces, setAllPlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [allPlaces, setAllPlaces]     = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [search, setSearch]           = useState('');
   const [selectedCat, setSelectedCat] = useState('All');
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
   const [showToTop, setShowToTop] = useState(false);
@@ -535,9 +535,9 @@ export default function PlaceListScreen({ navigation, route }) {
     try {
       setLoading(true);
       const params = {};
-      if (districtId) params.districtId = districtId;   // seeded places
-      else if (districtName) params.district = districtName; // admin-created places
-      if (searchTerm.trim()) params.search = searchTerm.trim();
+      if (districtId)        params.districtId = districtId;   // seeded places
+      else if (districtName) params.district   = districtName; // admin-created places
+      if (searchTerm.trim()) params.search     = searchTerm.trim();
       const res = await getPlacesApi(params);
       /* Response shape: { success, data: { places: [...] } } */
       setAllPlaces(res?.data?.places || res?.data || []);
@@ -552,14 +552,14 @@ export default function PlaceListScreen({ navigation, route }) {
 
   /* Categories from loaded places */
   const categories = useMemo(() => {
-    const set = new Set(allPlaces.map((p) => p.type).filter(Boolean));
+    const set = new Set(allPlaces.map((p) => p.category || p.type).filter(Boolean));
     return ['All', ...Array.from(set).sort()];
   }, [allPlaces]);
 
   /* Client-side category filter */
   const filtered = useMemo(() => {
     if (selectedCat === 'All') return allPlaces;
-    return allPlaces.filter((p) => p.type === selectedCat);
+    return allPlaces.filter((p) => (p.category || p.type) === selectedCat);
   }, [allPlaces, selectedCat]);
 
   const selectedPlace = useMemo(
@@ -593,7 +593,7 @@ export default function PlaceListScreen({ navigation, route }) {
   }, [selectedPlaceId, selectedPlace]);
 
   /* Stable handlers */
-  const handleCatChange = useCallback((c) => {
+  const handleCatChange    = useCallback((c) => {
     setSelectedCat(c);
     setSelectedPlaceId(null);
   }, []);
@@ -721,8 +721,8 @@ export default function PlaceListScreen({ navigation, route }) {
       compact={isPlannerMode}
     />
   ), [districtName, search, handleSearchChange, handleSearchSubmit,
-    categories, selectedCat, handleCatChange, filtered, selectedPlaceId,
-    selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop, isPlannerMode]);
+      categories, selectedCat, handleCatChange, filtered, selectedPlaceId,
+      selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop, isPlannerMode]);
 
   /* ─── Loading state ─── */
   if (loading) {
@@ -942,8 +942,8 @@ export default function PlaceListScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  safeArea:    { flex: 1, backgroundColor: colors.background },
+  center:      { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { color: colors.textMuted, fontSize: 14 },
 
   /* Header */
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   screenTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary },
-  screenSub: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
+  screenSub:   { fontSize: 12, color: colors.textMuted, marginTop: 1 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.surface2, paddingHorizontal: 10, paddingVertical: 6,
@@ -1195,15 +1195,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
     backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
   },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipActive:     { backgroundColor: colors.primary, borderColor: colors.primary },
   chipEmoji: { fontSize: 13 },
-  chipText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+  chipText:       { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
   chipTextActive: { color: colors.white },
 
   /* Grid */
   cardList: { flex: 1 },
   grid: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 170 },
-  row: { justifyContent: 'space-between', marginBottom: 14 },
+  row:  { justifyContent: 'space-between', marginBottom: 14 },
 
   /* Card */
   card: {
@@ -1301,9 +1301,9 @@ const styles = StyleSheet.create({
   },
 
   /* Empty */
-  empty: { alignItems: 'center', paddingTop: 50, gap: 10, paddingHorizontal: 32 },
-  emptyText: { color: colors.textMuted, fontSize: 16, fontWeight: '700' },
-  emptySubText: { color: colors.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  empty:       { alignItems: 'center', paddingTop: 50, gap: 10, paddingHorizontal: 32 },
+  emptyText:   { color: colors.textMuted, fontSize: 16, fontWeight: '700' },
+  emptySubText:{ color: colors.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 },
   toTopBtn: {
     position: 'absolute',
     right: 24,

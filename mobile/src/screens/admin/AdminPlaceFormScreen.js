@@ -54,17 +54,17 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
     || '';
 
   const [form, setForm] = useState({
-    place_id: existing?.place_id?.toString() || '',
-    district_id: prefilledDistrictId,
-    name: existing?.name || '',
-    description: existing?.description || '',
+    place_id:     existing?.place_id?.toString() || '',
+    district_id:  prefilledDistrictId,
+    name:         existing?.name || '',
+    description:  existing?.description || '',
     address_text: existing?.address_text || '',
-    lat: existing?.lat?.toString() || '',
-    lng: existing?.lng?.toString() || '',
-    type: normalizePlaceType(existing?.type),
-    duration: existing?.duration || '',
-    image_url: existing?.image_url || '',
-    isActive: existing?.isActive !== false
+    lat:          existing?.lat?.toString() || '',
+    lng:          existing?.lng?.toString() || '',
+    type:         normalizePlaceType(existing?.type || existing?.category),
+    duration:     existing?.duration || '',
+    image_url:    existing?.image_url || '',
+    isActive:     existing?.isActive !== false
   });
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -207,14 +207,14 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
       setApiError('');
 
       const payload = {
-        name: form.name.trim(),
-        district_id: parseInt(form.district_id),
-        description: form.description.trim(),
+        name:         form.name.trim(),
+        district_id:  parseInt(form.district_id),
+        description:  form.description.trim(),
         address_text: form.address_text.trim(),
-        type: form.type,
-        duration: form.duration.trim(),
-        image_url: form.image_url.trim(),
-        isActive: form.isActive,
+        type:         form.type,
+        duration:     form.duration.trim(),
+        image_url:    form.image_url.trim(),
+        isActive:     form.isActive,
         ...(form.lat ? { lat: parseFloat(form.lat) } : {}),
         ...(form.lng ? { lng: parseFloat(form.lng) } : {})
       };
@@ -244,17 +244,17 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
           text: 'Reset', style: 'destructive',
           onPress: () => {
             setForm({
-              place_id: existing?.place_id?.toString() || '',
-              district_id: prefilledDistrictId,
-              name: existing?.name || '',
-              description: existing?.description || '',
+              place_id:     existing?.place_id?.toString() || '',
+              district_id:  prefilledDistrictId,
+              name:         existing?.name || '',
+              description:  existing?.description || '',
               address_text: existing?.address_text || '',
-              lat: existing?.lat?.toString() || '',
-              lng: existing?.lng?.toString() || '',
-              type: normalizePlaceType(existing?.type),
-              duration: existing?.duration || '',
-              image_url: existing?.image_url || '',
-              isActive: existing?.isActive !== false,
+              lat:          existing?.lat?.toString() || '',
+              lng:          existing?.lng?.toString() || '',
+              type:         normalizePlaceType(existing?.type || existing?.category),
+              duration:     existing?.duration || '',
+              image_url:    existing?.image_url || '',
+              isActive:     existing?.isActive !== false,
             });
             setErrors({});
             setApiError('');

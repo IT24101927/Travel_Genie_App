@@ -6,7 +6,6 @@ import AddExpenseScreen from '../screens/expenses/AddExpenseScreen';
 import EditExpenseScreen from '../screens/expenses/EditExpenseScreen';
 import ExpenseSummaryScreen from '../screens/expenses/ExpenseSummaryScreen';
 import BudgetUsageScreen from '../screens/expenses/BudgetUsageScreen';
-import ExpenseTrendsScreen from '../screens/expenses/ExpenseTrendsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,7 +17,6 @@ const ExpenseStackNavigator = () => {
       <Stack.Screen name="EditExpense" component={EditExpenseScreen} />
       <Stack.Screen name="ExpenseSummary" component={ExpenseSummaryScreen} />
       <Stack.Screen name="BudgetUsage" component={BudgetUsageScreen} />
-      <Stack.Screen name="ExpenseTrends" component={ExpenseTrendsScreen} />
     </Stack.Navigator>
   );
 };

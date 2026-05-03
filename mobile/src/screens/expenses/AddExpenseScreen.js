@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView, Modal, Platform, Pressable,
-  ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 import AppInput from '../../components/common/AppInput';
 import AppButton from '../../components/common/AppButton';
@@ -16,71 +12,55 @@ import { createExpenseApi } from '../../api/expenseApi';
 import { getTripsApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 
-const PAYMENT_METHODS = [
-  { id: 'cash',          label: 'Cash',          icon: 'cash-outline' },
-  { id: 'card',          label: 'Card',          icon: 'card-outline' },
-  { id: 'wallet',        label: 'Wallet',        icon: 'phone-portrait-outline' },
-  { id: 'bank_transfer', label: 'Bank Transfer', icon: 'swap-horizontal-outline' },
-  { id: 'other',         label: 'Other',         icon: 'ellipsis-horizontal-outline' },
-];
-
-import { DISPLAY_CURRENCIES as CURRENCIES } from '../../utils/currencyFormat';
-
-const AddExpenseScreen = ({ navigation, route }) => {
-  const preselectedTripId = route.params?.tripId || '';
-  const preselectedTripTitle = route.params?.tripTitle || '';
-
+const AddExpenseScreen = ({ navigation }) => {
   const [form, setForm] = useState({
-    tripId: preselectedTripId,
-    title: '',
-    category: 'food',
-    status: 'paid',
+    tripId: '',
+    category: 'transport',
     amount: '',
-    currency: 'LKR',
-    date: new Date(),
+    date: new Date().toISOString().slice(0, 10),
     paymentMethod: 'cash',
-    tags: '',
-    notes: '',
+    notes: ''
   });
+  const [trips, setTrips] = useState([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
 
-  // If no tripId is provided, we can't save. Display an error immediately.
+  const paymentMethods = ['cash', 'card', 'wallet', 'bank_transfer', 'other'];
+
   useEffect(() => {
-    if (!preselectedTripId) {
-      setError('No trip selected. Please go back and select a trip.');
-    }
-  }, [preselectedTripId]);
+    const loadTrips = async () => {
+      try {
+        const response = await getTripsApi();
+        const list = response?.data?.trips || [];
+        setTrips(list);
+        if (!form.tripId && list.length > 0) {
+          setForm((p) => ({ ...p, tripId: list[0]._id }));
+        }
+      } catch (err) {
+        setError(getApiErrorMessage(err, 'Failed to load trips'));
+      }
+    };
 
-  const onDateChange = (event, selectedDate) => {
-    if (Platform.OS === 'android') setShowDatePicker(false);
-    if (selectedDate) {
-      setForm((p) => ({ ...p, date: selectedDate }));
-    }
-  };
-
-  const formatDisplayDate = (d) => {
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
+    loadTrips();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSave = async () => {
-    if (!form.tripId) { setError('Please select a trip.'); return; }
-    if (!form.title.trim()) { setError('Description is required.'); return; }
-    const amount = Number(form.amount);
-    if (!amount || amount <= 0) { setError('Amount must be greater than 0.'); return; }
+    if (!form.tripId) {
+      setError('Please select a trip ID.');
+      return;
+    }
 
-    const tagsArray = form.tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
+    const amount = Number(form.amount);
+    if (!amount || amount <= 0) {
+      setError('Amount must be greater than 0.');
+      return;
+    }
 
     const payload = {
       ...form,
       amount,
-      tags: tagsArray,
-      date: form.date.toISOString(),
+      date: new Date(form.date).toISOString()
     };
 
     try {
@@ -97,253 +77,103 @@ const AddExpenseScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={20} color={colors.primary} />
-            </Pressable>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={styles.headerTitle}>New Expense</Text>
-              {preselectedTripTitle ? (
-                <Text style={styles.headerSub} numberOfLines={1}>{preselectedTripTitle}</Text>
-              ) : null}
-            </View>
-            <View style={{ width: 36 }} />
-          </View>
-
-          {/* Amount Section */}
-          <View style={styles.amountCard}>
-            <Text style={styles.amountLabel}>AMOUNT</Text>
-            <View style={styles.amountRow}>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Header & Back Button */}
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Add Expense</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Link to Trip</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {trips.length === 0 ? <Text style={styles.noTrips}>No trips found</Text> : trips.map((trip) => (
               <TouchableOpacity
-                style={styles.currencySelector}
-                onPress={() => setShowCurrencyPicker(true)}
+                key={trip._id}
+                style={[styles.tripChip, form.tripId === trip._id && styles.tripChipActive]}
+                onPress={() => setForm((p) => ({ ...p, tripId: trip._id }))}
               >
-                <Text style={styles.currencySymbol}>
-                  {CURRENCIES.find(c => c.code === form.currency)?.flag} {form.currency}
+                <Ionicons name="airplane" size={14} color={form.tripId === trip._id ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.tripText, form.tripId === trip._id && styles.tripTextActive]}>
+                  {trip.title}
                 </Text>
-                <Ionicons name="chevron-down" size={16} color={colors.primary} />
               </TouchableOpacity>
-              <TextInput
-                style={styles.amountInput}
-                keyboardType="decimal-pad"
-                value={form.amount}
-                onChangeText={(text) => setForm((p) => ({ ...p, amount: text }))}
-                placeholder="0.00"
-                placeholderTextColor={colors.textMuted}
-                maxLength={10}
-              />
-            </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Details</Text>
+          <View style={styles.amountContainer}>
+             <Text style={styles.currencySymbol}>$</Text>
+             <AppInput 
+               label="" 
+               style={styles.amountInput} 
+               keyboardType="decimal-pad" 
+               value={form.amount} 
+               onChangeText={(text) => setForm((p) => ({ ...p, amount: text }))}
+               placeholder="0.00" 
+             />
           </View>
+          
+          <AppInput label="Date (YYYY-MM-DD)" value={form.date} onChangeText={(text) => setForm((p) => ({ ...p, date: text }))} />
+        </View>
 
-          {/* Currency Picker Modal */}
-          {showCurrencyPicker && (
-            <Modal transparent animationType="fade">
-              <Pressable style={styles.dateOverlay} onPress={() => setShowCurrencyPicker(false)}>
-                <View style={styles.currencyModal}>
-                  <Text style={styles.currencyModalTitle}>Select Currency</Text>
-                  {CURRENCIES.map((c) => (
-                    <TouchableOpacity
-                      key={c.code}
-                      style={styles.currencyOption}
-                      onPress={() => {
-                        setForm((p) => ({ ...p, currency: c.code }));
-                        setShowCurrencyPicker(false);
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <Text style={{ fontSize: 20 }}>{c.flag}</Text>
-                        <Text style={[styles.currencyCode, form.currency === c.code && styles.currencyCodeActive]}>
-                          {c.code}
-                        </Text>
-                      </View>
-                      {form.currency === c.code && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </Pressable>
-            </Modal>
-          )}
-
-          {/* Description */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <AppInput
-              label=""
-              value={form.title}
-              onChangeText={(text) => setForm((p) => ({ ...p, title: text }))}
-              placeholder="e.g. Lunch at a beachside café"
-            />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Category</Text>
+          <View style={styles.chipGrid}>
+             {expenseCategories.map(cat => (
+               <TouchableOpacity 
+                 key={cat} 
+                 style={[styles.catChip, form.category === cat && styles.catChipActive]}
+                 onPress={() => setForm(p => ({ ...p, category: cat }))}
+               >
+                 <Text style={[styles.catText, form.category === cat && styles.catTextActive]}>{cat}</Text>
+               </TouchableOpacity>
+             ))}
           </View>
+        </View>
 
-          {/* Expense Status */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Expense Status</Text>
-            <View style={styles.catGrid}>
-              <TouchableOpacity
-                style={[styles.payChip, form.status === 'planned' && styles.payChipActive]}
-                onPress={() => setForm(p => ({ ...p, status: 'planned' }))}
-              >
-                <Ionicons name="calendar-outline" size={16} color={form.status === 'planned' ? colors.primary : colors.textMuted} />
-                <Text style={[styles.payText, form.status === 'planned' && styles.payTextActive]}>Planned</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.payChip, form.status === 'paid' && styles.payChipActive]}
-                onPress={() => setForm(p => ({ ...p, status: 'paid' }))}
-              >
-                <Ionicons name="checkmark-circle-outline" size={16} color={form.status === 'paid' ? colors.primary : colors.textMuted} />
-                <Text style={[styles.payText, form.status === 'paid' && styles.payTextActive]}>Paid</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
+          <View style={styles.chipGrid}>
+             {paymentMethods.map(method => (
+               <TouchableOpacity 
+                 key={method} 
+                 style={[styles.catChip, form.paymentMethod === method && styles.catChipActive]}
+                 onPress={() => setForm(p => ({ ...p, paymentMethod: method }))}
+               >
+                 <Text style={[styles.catText, form.paymentMethod === method && styles.catTextActive]}>{method.replace('_', ' ')}</Text>
+               </TouchableOpacity>
+             ))}
           </View>
+        </View>
 
-          {/* Date Picker */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Date</Text>
-            <Pressable style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-              <Text style={styles.dateText}>{formatDisplayDate(form.date)}</Text>
-              <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
-            </Pressable>
-          </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notes</Text>
+          <AppInput 
+            label="Optional Notes" 
+            value={form.notes} 
+            onChangeText={(text) => setForm((p) => ({ ...p, notes: text }))} 
+            multiline 
+            style={styles.textArea}
+            placeholder="Dinner with crew..."
+          />
+        </View>
 
-          {/* Date Picker Modal / Inline */}
-          {showDatePicker && Platform.OS === 'ios' && (
-            <Modal transparent animationType="fade">
-              <Pressable style={styles.dateOverlay} onPress={() => setShowDatePicker(false)}>
-                <View style={styles.dateModal}>
-                  <View style={styles.dateModalHeader}>
-                    <Text style={styles.dateModalTitle}>Select Date</Text>
-                    <Pressable onPress={() => setShowDatePicker(false)}>
-                      <Text style={styles.dateModalDone}>Done</Text>
-                    </Pressable>
-                  </View>
-                  <DateTimePicker
-                    value={form.date}
-                    mode="date"
-                    display="spinner"
-                    onChange={onDateChange}
-                    textColor={colors.textPrimary}
-                  />
-                </View>
-              </Pressable>
-            </Modal>
-          )}
-          {showDatePicker && Platform.OS === 'android' && (
-            <DateTimePicker
-              value={form.date}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-            />
-          )}
-
-          {/* Category */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Category</Text>
-            <View style={styles.catGrid}>
-              {expenseCategories.map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[
-                    styles.catChip,
-                    form.category === cat.id && {
-                      backgroundColor: cat.color + '18',
-                      borderColor: cat.color,
-                    },
-                  ]}
-                  onPress={() => setForm((p) => ({ ...p, category: cat.id }))}
-                >
-                  <Ionicons
-                    name={cat.icon}
-                    size={18}
-                    color={form.category === cat.id ? cat.color : colors.textMuted}
-                  />
-                  <Text
-                    style={[
-                      styles.catText,
-                      form.category === cat.id && { color: cat.color },
-                    ]}
-                  >
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Payment Method */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Payment Method</Text>
-            <View style={styles.catGrid}>
-              {PAYMENT_METHODS.map((method) => (
-                <TouchableOpacity
-                  key={method.id}
-                  style={[
-                    styles.payChip,
-                    form.paymentMethod === method.id && styles.payChipActive,
-                  ]}
-                  onPress={() => setForm((p) => ({ ...p, paymentMethod: method.id }))}
-                >
-                  <Ionicons
-                    name={method.icon}
-                    size={16}
-                    color={form.paymentMethod === method.id ? colors.primary : colors.textMuted}
-                  />
-                  <Text
-                    style={[
-                      styles.payText,
-                      form.paymentMethod === method.id && styles.payTextActive,
-                    ]}
-                  >
-                    {method.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Tags */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tags</Text>
-            <AppInput
-              label=""
-              value={form.tags}
-              onChangeText={(text) => setForm((p) => ({ ...p, tags: text }))}
-              placeholder="e.g. food, drinks, beach"
-            />
-          </View>
-
-          {/* Notes */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notes</Text>
-            <AppInput
-              label=""
-              value={form.notes}
-              onChangeText={(text) => setForm((p) => ({ ...p, notes: text }))}
-              multiline
-              style={styles.textArea}
-              placeholder="Any additional details..."
-            />
-          </View>
-
-          <ErrorText message={error} />
-
-          <View style={styles.buttonContainer}>
-            <AppButton
-              title="Save Expense"
-              onPress={onSave}
-              disabled={saving}
-              loading={saving}
-            />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <ErrorText message={error} />
+        <View style={styles.buttonContainer}>
+          <AppButton title={saving ? 'Saving...' : 'Save Expense'} onPress={onSave} disabled={saving} />
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -355,253 +185,119 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.background
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '800',
     color: colors.textPrimary,
-  },
-  headerSub: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-    marginTop: 2,
-    maxWidth: 200,
   },
   content: {
     padding: 16,
-    paddingBottom: 120,
-  },
-  amountCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  amountLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  currencySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    gap: 4,
-  },
-  currencySymbol: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: colors.primary,
-  },
-  amountInput: {
-    fontSize: 34,
-    fontWeight: '900',
-    paddingVertical: 8,
-    flex: 1,
-    color: colors.textPrimary,
-  },
-  currencyModal: {
-    backgroundColor: colors.surface,
-    padding: 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  currencyModalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  currencyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  currencyCode: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  currencyCodeActive: {
-    color: colors.primary,
+    paddingBottom: 120
   },
   section: {
-    marginBottom: 22,
+    marginBottom: 24
   },
   sectionTitle: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    marginBottom: 12,
+    marginBottom: 16
   },
   chipRow: {
-    gap: 8,
-    paddingBottom: 4,
+    gap: 10,
+    paddingBottom: 8
   },
   noTrips: {
     color: colors.textMuted,
-    fontStyle: 'italic',
+    fontStyle: 'italic'
   },
   tripChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    gap: 6,
+    borderRadius: 14,
+    gap: 8,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border
   },
   tripChipActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primary + '15'
   },
   tripText: {
     color: colors.textSecondary,
-    fontWeight: '700',
-    fontSize: 13,
-    maxWidth: 120,
+    fontWeight: '700'
   },
   tripTextActive: {
-    color: colors.white,
+    color: colors.primary
   },
-  dateBtn: {
+  amountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 10,
+    gap: 12,
+    marginBottom: 8
   },
-  dateText: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  dateOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  dateModal: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 30,
-  },
-  dateModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  dateModalTitle: {
-    color: colors.textPrimary,
-    fontSize: 16,
+  currencySymbol: {
+    fontSize: 32,
     fontWeight: '800',
+    color: colors.accent,
+    marginBottom: 24 
   },
-  dateModalDone: {
-    color: colors.primary,
-    fontSize: 15,
-    fontWeight: '700',
+  amountInput: {
+    fontSize: 24,
+    fontWeight: '800',
+    paddingVertical: 18,
+    flex: 1
   },
-  catGrid: {
+  chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10
   },
   catChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: colors.surface2,
-    borderRadius: 14,
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'transparent'
+  },
+  catChipActive: {
+    backgroundColor: colors.primary + '20',
+    borderColor: colors.primary
   },
   catText: {
     color: colors.textSecondary,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  payChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: colors.surface2,
-    borderRadius: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  payChipActive: {
-    backgroundColor: colors.primary + '15',
-    borderColor: colors.primary,
-  },
-  payText: {
-    color: colors.textSecondary,
     fontWeight: '600',
-    fontSize: 12,
+    textTransform: 'capitalize'
   },
-  payTextActive: {
-    color: colors.primary,
+  catTextActive: {
+    color: colors.primary
   },
   textArea: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: 'top'
   },
   buttonContainer: {
-    marginTop: 10,
-  },
+    marginTop: 10
+  }
 });
 
 export default AddExpenseScreen;

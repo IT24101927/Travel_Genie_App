@@ -6,16 +6,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "db:seed-all": "node src/scripts/seedAll.js",
-    "db:seed-districts": "node src/scripts/seedDistrictsFromCsv.js",
-    "db:seed-transports": "node src/scripts/seedTransports.js",
-    "db:seed-expenses": "node src/scripts/seedExpenses.js",
-    "db:seed-price-trends": "node src/scripts/seedPriceTrends.js",
-    "db:seed-admin": "node src/scripts/seedAdmin.js",
-    "db:seed-test-users": "node src/scripts/seedTestUsers.js",
-    "db:seed-trips": "node src/scripts/seedTrips.js",
     "db:check-hotels": "node src/scripts/checkHotels.js",
-    "db:fetch-images": "node src/scripts/fetchPlaceImages.js",
+    "db:seed-transports": "node src/scripts/seedTransports.js",
+    "db:backfill-place-types": "node src/scripts/backfillPlaceTypesAndTags.js",
+    "db:clean-place-tags": "node src/scripts/cleanOrphanedPlaceTags.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

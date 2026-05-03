@@ -15,7 +15,7 @@ const createHotelHandler = asyncHandler(async (req, res) => {
   };
 
   if (req.file) {
-    payload.image_url = `/uploads/hotels/${req.file.filename}`;
+    payload.image = `/uploads/hotels/${req.file.filename}`;
   }
 
   const hotel = await createHotel(req.user.userId, payload);
@@ -48,7 +48,7 @@ const updateHotelHandler = asyncHandler(async (req, res) => {
   }
 
   if (req.file) {
-    payload.image_url = `/uploads/hotels/${req.file.filename}`;
+    payload.image = `/uploads/hotels/${req.file.filename}`;
   }
 
   const hotel = await updateHotel(req.params.id, payload);

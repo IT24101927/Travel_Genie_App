@@ -7,10 +7,10 @@ const HOTEL_FALLBACKS = [
 
 const NAME_KEYWORD_FALLBACKS = [
   { match: /resort|beach|sea|ocean/i, url: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&auto=format' },
-  { match: /villa|bungalow/i, url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800&auto=format' },
-  { match: /lodge|forest|jungle/i, url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format' },
-  { match: /boutique|grand|royal/i, url: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&auto=format' },
-  { match: /hostel|backpacker/i, url: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&auto=format' },
+  { match: /villa|bungalow/i,         url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800&auto=format' },
+  { match: /lodge|forest|jungle/i,    url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format' },
+  { match: /boutique|grand|royal/i,   url: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&auto=format' },
+  { match: /hostel|backpacker/i,      url: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&auto=format' },
 ];
 
 const pickKeywordImage = (name) => {
@@ -21,6 +21,7 @@ const pickKeywordImage = (name) => {
 
 export const getHotelImageCandidates = (hotel = {}) => {
   const candidates = [
+    hotel.image,
     hotel.image_url,
     hotel.thumbnail,
     hotel.coverImage,

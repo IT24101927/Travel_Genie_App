@@ -70,15 +70,8 @@ const consumeVerificationToken = ({ email, verificationToken }) => {
   return true;
 };
 
-const isTokenValid = ({ email, verificationToken }) => {
-  const normalizedEmail = normalizeEmail(email);
-  const entry = verifiedStore.get(normalizedEmail);
-  return !!(entry && entry.verificationToken === verificationToken);
-};
-
 module.exports = {
   issueCode,
   verifyCode,
-  consumeVerificationToken,
-  isTokenValid
+  consumeVerificationToken
 };

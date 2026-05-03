@@ -68,6 +68,7 @@ const getDistrictKey = (district = {}) => {
 const getCoverCandidates = (district, hotel) => {
   const candidates = [
     district?.image_url,
+    district?.image,
     ...(hotel ? getHotelImageCandidates(hotel) : []),
   ];
   const seen = new Set();
@@ -185,7 +186,7 @@ const HotelDistrictListScreen = ({ navigation }) => {
       if (!key) return;
       const current = map.get(key) || { count: 0, coverHotel: null };
       current.count += 1;
-      if (!current.coverHotel && (hotel.image_url || hotel.coverImage)) {
+      if (!current.coverHotel && (hotel.image || hotel.image_url || hotel.coverImage)) {
         current.coverHotel = hotel;
       }
       if (!current.coverHotel) current.coverHotel = hotel;

@@ -71,14 +71,14 @@ const getHotelId = (h) => String(h?._id || h?.hotel_id || h?.id || '');
 
 const normalizePlaceForTrip = (place) => ({
   id: getPlaceId(place), place_id: place?.place_id || null, name: place?.name || '',
-  type: place?.type || '', image: place?.image_url || '',
+  type: place?.category || place?.type || '', image: place?.image_url || place?.image || '',
   rating: Number(place?.rating || 0), address: place?.address_text || '',
   lat: place?.lat ?? null, lng: place?.lng ?? null,
 });
 
 const normalizeHotelForTrip = (hotel) => hotel ? ({
   id: getHotelId(hotel), hotel_id: hotel?.hotel_id || null, name: hotel?.name || '',
-  type: hotel?.hotel_type || '', image: hotel?.image_url || '',
+  type: hotel?.hotel_type || '', image: hotel?.image_url || hotel?.image || '',
   rating: Number(hotel?.rating || 0), starClass: Number(hotel?.star_class || 0),
   pricePerNight: getHotelNightlyPriceLkr(hotel), address: hotel?.address_text || hotel?.location || '',
   lat: hotel?.lat ?? null, lng: hotel?.lng ?? null,
@@ -142,19 +142,19 @@ const TripPlannerScreen = ({ navigation }) => {
   // ── Budget breakdown with split ────────────────────────────────────────────
   const budCurrency = 'LKR';
   const sym = CURRENCY_SYMS[budCurrency] || 'Rs';
-  const budTotal = Number(totalBudget || 0);
-  const budHotel = Number(hotelBudget || 0);
+  const budTotal     = Number(totalBudget || 0);
+  const budHotel     = Number(hotelBudget || 0);
   const budRemaining = Math.max(budTotal - budHotel, 0);
-  const split = normalizeSplit(null); // uses 55/30/15 default
-  const budDays = Math.max(nights, 1);
-  const budFood = Math.round(budRemaining * (split.food / 100));
-  const budTravel = Math.round(budRemaining * (split.transport / 100));
-  const budMisc = budRemaining - budFood - budTravel;
-  const pctHotel = budTotal > 0 ? Math.round((budHotel / budTotal) * 100) : 0;
-  const pctFood = budTotal > 0 ? Math.round((budFood / budTotal) * 100) : 0;
-  const pctTravel = budTotal > 0 ? Math.round((budTravel / budTotal) * 100) : 0;
-  const pctMisc = Math.max(0, 100 - pctHotel - pctFood - pctTravel);
-  const foodPerDay = budDays > 0 ? Math.round(budFood / budDays) : 0;
+  const split        = normalizeSplit(null); // uses 55/30/15 default
+  const budDays      = Math.max(nights, 1);
+  const budFood      = Math.round(budRemaining * (split.food / 100));
+  const budTravel    = Math.round(budRemaining * (split.transport / 100));
+  const budMisc      = budRemaining - budFood - budTravel;
+  const pctHotel     = budTotal > 0 ? Math.round((budHotel / budTotal) * 100) : 0;
+  const pctFood      = budTotal > 0 ? Math.round((budFood / budTotal) * 100) : 0;
+  const pctTravel    = budTotal > 0 ? Math.round((budTravel / budTotal) * 100) : 0;
+  const pctMisc      = Math.max(0, 100 - pctHotel - pctFood - pctTravel);
+  const foodPerDay   = budDays > 0 ? Math.round(budFood / budDays) : 0;
   const travelPerDay = budDays > 0 ? Math.round(budTravel / budDays) : 0;
   const perDayNonHotel = budDays > 0 ? Math.round(budRemaining / budDays) : 0;
 
@@ -441,10 +441,10 @@ const TripPlannerScreen = ({ navigation }) => {
 
               {/* Stacked bar */}
               <View style={s.budBar}>
-                {pctHotel > 0 && <View style={[s.budSeg, { flex: pctHotel, backgroundColor: colors.info }]} />}
-                {pctFood > 0 && <View style={[s.budSeg, { flex: pctFood, backgroundColor: colors.success }]} />}
+                {pctHotel  > 0 && <View style={[s.budSeg, { flex: pctHotel,  backgroundColor: colors.info }]} />}
+                {pctFood   > 0 && <View style={[s.budSeg, { flex: pctFood,   backgroundColor: colors.success }]} />}
                 {pctTravel > 0 && <View style={[s.budSeg, { flex: pctTravel, backgroundColor: colors.warning }]} />}
-                {pctMisc > 0 && <View style={[s.budSeg, { flex: pctMisc, backgroundColor: colors.accent }]} />}
+                {pctMisc   > 0 && <View style={[s.budSeg, { flex: pctMisc,   backgroundColor: colors.accent }]} />}
               </View>
 
               {/* Hotel row */}
@@ -543,9 +543,9 @@ const TripPlannerScreen = ({ navigation }) => {
             {saving
               ? <Text style={s.saveBtnText}>Saving…</Text>
               : <>
-                <Text style={s.saveBtnText}>{editingTrip ? 'Update Trip' : 'Save Trip'}</Text>
-                <Ionicons name="checkmark" size={16} color={colors.white} />
-              </>
+                  <Text style={s.saveBtnText}>{editingTrip ? 'Update Trip' : 'Save Trip'}</Text>
+                  <Ionicons name="checkmark" size={16} color={colors.white} />
+                </>
             }
           </Pressable>
         </View>

@@ -28,15 +28,15 @@ import { getPlacesApi } from '../../api/placeApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 
 const HOTEL_TYPES = [
-  { id: 'hotel', emoji: '🏨', color: '#3498DB' },
-  { id: 'resort', emoji: '🌴', color: '#4CAF50' },
-  { id: 'guesthouse', emoji: '🏡', color: '#FF9800' },
-  { id: 'hostel', emoji: '🛏️', color: '#9C27B0' },
-  { id: 'villa', emoji: '🏘️', color: '#E91E63' },
-  { id: 'boutique', emoji: '✨', color: '#F57C00' },
-  { id: 'apartment', emoji: '🏢', color: '#607D8B' },
-  { id: 'lodge', emoji: '🛖', color: '#795548' },
-  { id: 'camp', emoji: '⛺', color: '#8BC34A' }
+  { id: 'hotel',       emoji: '🏨', color: '#3498DB' },
+  { id: 'resort',      emoji: '🌴', color: '#4CAF50' },
+  { id: 'guesthouse',  emoji: '🏡', color: '#FF9800' },
+  { id: 'hostel',      emoji: '🛏️', color: '#9C27B0' },
+  { id: 'villa',       emoji: '🏘️', color: '#E91E63' },
+  { id: 'boutique',    emoji: '✨', color: '#F57C00' },
+  { id: 'apartment',   emoji: '🏢', color: '#607D8B' },
+  { id: 'lodge',       emoji: '🛖', color: '#795548' },
+  { id: 'camp',        emoji: '⛺', color: '#8BC34A' }
 ];
 
 const AMENITIES_LIST = [
@@ -158,26 +158,26 @@ const AdminHotelFormScreen = ({ route, navigation }) => {
   const existingLng = getHotelCoordinate(existing, 'lng');
 
   const [form, setForm] = useState({
-    hotel_id: existing?.hotel_id?.toString() || '',
-    place_id: existing?.place_id?.toString() || '',
+    hotel_id:        existing?.hotel_id?.toString() || '',
+    place_id:        existing?.place_id?.toString() || '',
     nearby_place_id: existing?.nearby_place_id?.toString() || '',
-    district_id: prefilledDistrictId,
-    name: existing?.name || '',
-    description: existing?.description || '',
-    address_text: existing?.address_text || '',
-    location: typeof existing?.location === 'string' ? existing.location : '',
-    hotel_type: existing?.hotel_type || 'hotel',
+    district_id:     prefilledDistrictId,
+    name:            existing?.name || '',
+    description:     existing?.description || '',
+    address_text:    existing?.address_text || '',
+    location:        typeof existing?.location === 'string' ? existing.location : '',
+    hotel_type:      existing?.hotel_type || 'hotel',
     price_per_night: existing?.price_per_night?.toString() || '',
-    star_class: existing?.star_class?.toString() || '',
-    lat: existingLat?.toString() || '',
-    lng: existingLng?.toString() || '',
-    contact_phone: existingPhone,
-    contact_email: existingEmail,
+    star_class:      existing?.star_class?.toString() || '',
+    lat:             existingLat?.toString() || '',
+    lng:             existingLng?.toString() || '',
+    contact_phone:   existingPhone,
+    contact_email:   existingEmail,
     contact_website: existingWebsite,
-    noContact: existing ? (!existingPhone && !existingEmail && !existingWebsite) : false,
-    amenities: existingAmenities,
-    image_url: existing?.image_url || '',
-    isActive: existing?.isActive !== false
+    noContact:       existing ? (!existingPhone && !existingEmail && !existingWebsite) : false,
+    amenities:       existingAmenities,
+    image_url:       existing?.image_url || '',
+    isActive:        existing?.isActive !== false
   });
 
   const [errors, setErrors] = useState({});
@@ -201,33 +201,33 @@ const AdminHotelFormScreen = ({ route, navigation }) => {
 
   const applyHotelToForm = useCallback((hotel) => {
     if (!hotel) return;
-    const phone = getContactValue(hotel, 'phone');
-    const email = getContactValue(hotel, 'email');
+    const phone   = getContactValue(hotel, 'phone');
+    const email   = getContactValue(hotel, 'email');
     const website = getContactValue(hotel, 'website');
-    const lat = getHotelCoordinate(hotel, 'lat');
-    const lng = getHotelCoordinate(hotel, 'lng');
+    const lat     = getHotelCoordinate(hotel, 'lat');
+    const lng     = getHotelCoordinate(hotel, 'lng');
     setForm((prev) => ({
       ...prev,
-      hotel_id: hotel.hotel_id?.toString() || '',
-      place_id: hotel.place_id?.toString() || '',
+      hotel_id:        hotel.hotel_id?.toString() || '',
+      place_id:        hotel.place_id?.toString() || '',
       nearby_place_id: hotel.nearby_place_id?.toString() || '',
-      district_id: hotel.district_id?.toString() || prev.district_id,
-      name: hotel.name || '',
-      description: hotel.description || '',
-      address_text: hotel.address_text || '',
-      location: typeof hotel.location === 'string' ? hotel.location : '',
-      hotel_type: hotel.hotel_type || 'hotel',
+      district_id:     hotel.district_id?.toString() || prev.district_id,
+      name:            hotel.name || '',
+      description:     hotel.description || '',
+      address_text:    hotel.address_text || '',
+      location:        typeof hotel.location === 'string' ? hotel.location : '',
+      hotel_type:      hotel.hotel_type || 'hotel',
       price_per_night: hotel.price_per_night?.toString() || '',
-      star_class: hotel.star_class?.toString() || '',
-      lat: lat?.toString() || '',
-      lng: lng?.toString() || '',
-      contact_phone: phone,
-      contact_email: email,
+      star_class:      hotel.star_class?.toString() || '',
+      lat:             lat?.toString() || '',
+      lng:             lng?.toString() || '',
+      contact_phone:   phone,
+      contact_email:   email,
       contact_website: website,
-      noContact: !phone && !email && !website,
-      amenities: normalizeAmenities(hotel.amenities),
-      image_url: hotel.image_url || '',
-      isActive: hotel.isActive !== false,
+      noContact:       !phone && !email && !website,
+      amenities:       normalizeAmenities(hotel.amenities),
+      image_url:       hotel.image_url || hotel.image || '',
+      isActive:        hotel.isActive !== false,
     }));
   }, []);
 
@@ -401,16 +401,16 @@ const AdminHotelFormScreen = ({ route, navigation }) => {
       setErrors({});
       setApiError('');
       const payload = {
-        name: form.name.trim(),
-        description: form.description.trim(),
+        name:         form.name.trim(),
+        description:  form.description.trim(),
         address_text: form.address_text.trim(),
-        location: form.location.trim() || form.address_text.trim(),
-        hotel_type: form.hotel_type,
-        image_url: form.image_url.trim(),
-        amenities: form.amenities,
+        location:     form.location.trim() || form.address_text.trim(),
+        hotel_type:   form.hotel_type,
+        image_url:    form.image_url.trim(),
+        amenities:    form.amenities,
         contact: {
-          phone: form.contact_phone.trim(),
-          email: form.contact_email.trim(),
+          phone:   form.contact_phone.trim(),
+          email:   form.contact_email.trim(),
           website: form.contact_website.trim()
         },
         isActive: form.isActive,
@@ -444,27 +444,27 @@ const AdminHotelFormScreen = ({ route, navigation }) => {
           text: 'Reset', style: 'destructive',
           onPress: () => {
             setForm({
-              hotel_id: existing?.hotel_id?.toString() || '',
-              place_id: existing?.place_id?.toString() || '',
+              hotel_id:        existing?.hotel_id?.toString() || '',
+              place_id:        existing?.place_id?.toString() || '',
               nearby_place_id: existing?.nearby_place_id?.toString() || '',
-              district_id: prefilledDistrictId,
-              name: existing?.name || '',
-              description: existing?.description || '',
-              address_text: existing?.address_text || '',
-              location: typeof existing?.location === 'string' ? existing.location : '',
-              hotel_type: existing?.hotel_type || 'hotel',
+              district_id:     prefilledDistrictId,
+              name:            existing?.name || '',
+              description:     existing?.description || '',
+              address_text:    existing?.address_text || '',
+              location:        typeof existing?.location === 'string' ? existing.location : '',
+              hotel_type:      existing?.hotel_type || 'hotel',
               price_per_night: existing?.price_per_night?.toString() || '',
-              star_class: existing?.star_class?.toString() || '',
-              rating: existing?.rating?.toString() || '',
-              lat: getHotelCoordinate(existing, 'lat')?.toString() || '',
-              lng: getHotelCoordinate(existing, 'lng')?.toString() || '',
-              contact_phone: getContactValue(existing, 'phone'),
-              contact_email: getContactValue(existing, 'email'),
+              star_class:      existing?.star_class?.toString() || '',
+              rating:          existing?.rating?.toString() || '',
+              lat:             getHotelCoordinate(existing, 'lat')?.toString() || '',
+              lng:             getHotelCoordinate(existing, 'lng')?.toString() || '',
+              contact_phone:   getContactValue(existing, 'phone'),
+              contact_email:   getContactValue(existing, 'email'),
               contact_website: getContactValue(existing, 'website'),
-              noContact: existing ? (!getContactValue(existing, 'phone') && !getContactValue(existing, 'email') && !getContactValue(existing, 'website')) : false,
-              amenities: normalizeAmenities(existing?.amenities),
-              image_url: existing?.image_url || '',
-              isActive: existing?.isActive !== false,
+              noContact:       existing ? (!getContactValue(existing, 'phone') && !getContactValue(existing, 'email') && !getContactValue(existing, 'website')) : false,
+              amenities:       normalizeAmenities(existing?.amenities),
+              image_url:       existing?.image_url || '',
+              isActive:        existing?.isActive !== false,
             });
             setErrors({});
             setApiError('');
