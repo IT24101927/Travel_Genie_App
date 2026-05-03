@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppInput from '../../components/common/AppInput';
 import EmptyState from '../../components/common/EmptyState';
@@ -11,7 +12,7 @@ import { getPlacesApi } from '../../api/placeApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { Pressable } from 'react-native';
 
-const PlaceListScreen = () => {
+const PlaceListScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const [places, setPlaces] = useState([]);
   const [error, setError] = useState('');
@@ -37,10 +38,11 @@ const PlaceListScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerTitle}>Discover</Text>
-      
-      <View style={styles.searchContainer}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <Text style={styles.headerTitle}>Discover</Text>
+        
+        <View style={styles.searchContainer}>
         <AppInput 
           label="" 
           value={search} 
@@ -59,28 +61,37 @@ const PlaceListScreen = () => {
         data={places}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <Pressable
+            style={styles.card}
+            onPress={() => navigation.navigate('PlaceDetails', { place: item })}
+          >
             <View style={styles.headerRow}>
                <Text style={styles.title}>{item.name}</Text>
                <View style={styles.catBadge}>
                  <Text style={styles.catText}>{item.category}</Text>
                </View>
             </View>
-            
+
             <View style={styles.districtRow}>
               <Ionicons name="map" size={14} color={colors.accent} />
               <Text style={styles.district}>{item.district}</Text>
             </View>
-            
+
             {item.description ? (
-              <Text style={styles.description} numberOfLines={3}>{item.description}</Text>
+              <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
             ) : null}
-          </View>
+
+            <View style={styles.tapHint}>
+              <Text style={styles.tapHintText}>Tap to view details & reviews</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+            </View>
+          </Pressable>
         )}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={<EmptyState title="No places found" subtitle="Try testing a different keyword." icon="compass-outline" />}
       />
     </View>
+    </SafeAreaView>
   );
 };
 
@@ -168,6 +179,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20
+  },
+  tapHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+    gap: 2
+  },
+  tapHintText: {
+    color: colors.textMuted,
+    fontSize: 11
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background
   }
 });
 

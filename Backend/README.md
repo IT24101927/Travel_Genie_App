@@ -10,7 +10,7 @@
 
 REST API for the TravelGenie travel planning platform, built with Express and Mongoose on MongoDB.
 
-[� Mobile Docs](../mobile/README.md) · [🏠 Project Overview](../README.md)
+[📱 Mobile Docs](../mobile/README.md) · [🏠 Project Overview](../README.md)
 
 </div>
 
@@ -75,16 +75,18 @@ npm start       # Production
 ## 📁 Project Structure
 
 ```
-Backend/
+Backend/src/
 ├── config/
-│   ├── db.js                # Mongoose connection
-│   └── env.js               # Environment variables
+│   ├── db.js                # Database connection configuration
+│   └── env.js               # Environment variables validation & export
 ├── middleware/
-│   ├── auth.js              # protect() + authorize() middleware
-│   ├── errorHandler.js      # Global error handler
-│   ├── requestValidation.js # Input validation helpers
-│   └── upload.js            # multer config (images)
+│   ├── authMiddleware.js    # JWT protection & roles
+│   ├── errorMiddleware.js   # Global error handling
+│   ├── notFoundMiddleware.js# 404 route handler
+│   ├── uploadMiddleware.js  # multer config (images)
+│   └── validateMiddleware.js# Input validation helpers
 ├── modules/
+│   ├── admin/               # Admin dashboard & management
 │   ├── auth/                # Authentication & JWT logic
 │   ├── users/               # Users, preferences, interests
 │   ├── places/              # Destinations & places
@@ -94,11 +96,15 @@ Backend/
 │   ├── expenses/            # Expenses & budget tracking
 │   ├── reviews/             # Feedback & ratings
 │   └── notifications/       # User & system notifications
+├── routes/
+│   └── index.js             # Shared route register
 ├── utils/
-│   ├── helpers.js           # successResponse / errorResponse
-│   └── notificationEmail.js # SMTP notification sender
-├── uploads/                 # Uploaded images (served as static)
-└── server.js                # Express app + route mounts
+│   ├── apiResponse.js       # Standardized response format
+│   ├── appError.js          # Custom error class
+│   ├── jwt.js               # Utility for tokens
+│   └── mailer.js            # Email sending utility
+├── app.js                   # Express app configuration
+└── server.js                # API Entry point
 ```
 
 ---
@@ -110,6 +116,21 @@ All endpoints are prefixed with `/api`.
 > 🔓 **Public** — no token needed  
 > 🔐 **Protected** — requires `Authorization: Bearer <token>`  
 > 🛡️ **Admin** — requires `role: admin`
+
+---
+
+### 👑 Admin — `/api/admin`
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `POST` | `/login` | 🔓 | Admin dedicated login |
+| `GET` | `/stats` | 🛡️ | Dashboard global statistics |
+| `GET` | `/users` | 🛡️ | Comprehensive user list |
+| `POST` | `/users` | 🛡️ | Provision a new user |
+| `PUT` | `/users/:id` | 🛡️ | Edit user data / roles |
+| `POST` | `/users/:id/reset-password` | 🛡️ | Force reset user password |
+| `DELETE` | `/users/:id` | 🛡️ | Purge user account |
+| `GET` | `/resources/:resource` | 🛡️ | Generic collection list access |
 
 ---
 

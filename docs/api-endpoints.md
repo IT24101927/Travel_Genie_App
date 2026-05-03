@@ -2,18 +2,18 @@
 
 Base URL: `https://<your-backend-domain>/api/v1`
 
-## Auth
+## 🔐 Auth
 
 - `POST /auth/register` - Register user
 - `POST /auth/login` - Login user
 - `GET /auth/me` - Get authenticated user (protected)
 
-## Users
+## 👤 Users
 
 - `GET /users/me` - View profile (protected)
 - `PUT /users/me` - Update profile + optional image upload (protected)
 
-## Trips
+## 🧳 Trips
 
 - `POST /trips` - Create trip (protected)
 - `GET /trips` - Get user trips (protected)
@@ -21,7 +21,7 @@ Base URL: `https://<your-backend-domain>/api/v1`
 - `PUT /trips/:id` - Update trip (protected)
 - `DELETE /trips/:id` - Delete trip (protected)
 
-## Places
+## 📍 Places
 
 - `GET /places` - List/search places
 - `GET /places/:id` - Get place by id
@@ -29,7 +29,7 @@ Base URL: `https://<your-backend-domain>/api/v1`
 - `PUT /places/:id` - Update place (admin)
 - `DELETE /places/:id` - Delete place (admin)
 
-## Hotels
+## 🏨 Hotels
 
 - `GET /hotels` - List/filter hotels
 - `GET /hotels/:id` - Get hotel by id
@@ -37,7 +37,7 @@ Base URL: `https://<your-backend-domain>/api/v1`
 - `PUT /hotels/:id` - Update hotel (admin)
 - `DELETE /hotels/:id` - Delete hotel (admin)
 
-## Expenses
+## 💸 Expenses
 
 - `POST /expenses` - Create expense (protected)
 - `GET /expenses` - List expenses (protected)
@@ -45,14 +45,14 @@ Base URL: `https://<your-backend-domain>/api/v1`
 - `PUT /expenses/:id` - Update expense (protected)
 - `DELETE /expenses/:id` - Delete expense (protected)
 
-### Expense Summary Endpoints
+### 📊 Expense Summary Endpoints
 
 - `GET /expenses/summary/user-total` - Total user expenses
 - `GET /expenses/summary/recent?limit=5` - Recent expenses
 - `GET /expenses/summary/trip/:tripId` - Total trip expenses
 - `GET /expenses/summary/budget-usage/:tripId` - Budget usage percentage
 
-## Reviews
+## ⭐ Reviews
 
 - `GET /reviews` - List reviews
 - `GET /reviews/:id` - Get review
@@ -61,13 +61,27 @@ Base URL: `https://<your-backend-domain>/api/v1`
 - `PUT /reviews/:id` - Update own review/admin
 - `DELETE /reviews/:id` - Delete own review/admin
 
-## Notifications
+## 🔔 Notifications
 
 - `GET /notifications` - List notifications (protected)
 - `PATCH /notifications/:id/read` - Mark as read
 - `DELETE /notifications/:id` - Delete notification
 - `POST /notifications` - Create notification (admin)
 
-## Optional AI
+## 🚌 Transport
 
-- `POST /ai/recommendations/*` - Proxied recommendation endpoints (optional)
+- `POST /transport` - Create transit schedule (admin)
+- `GET /transport` - List all transit schedules
+- `GET /transport/:id` - Get schedule by id
+- `PUT /transport/:id` - Update schedule (admin)
+- `DELETE /transport/:id` - Delete schedule (admin)
+
+## 👑 Admin
+
+- `POST /admin/login` - Admin dedicated login
+- `GET /admin/stats` - Global dashboard statistics (admin)
+- `GET /admin/users` - View all users (admin)
+- `POST /admin/users` - Provision a new user (admin)
+- `PUT /admin/users/:id` - Edit user roles (admin)
+- `DELETE /admin/users/:id` - Delete user account (admin)
+- `GET /admin/resources/:resource` - Get any resource dynamically (admin)
