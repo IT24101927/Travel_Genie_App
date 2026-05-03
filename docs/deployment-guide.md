@@ -21,26 +21,66 @@
    - `JWT_EXPIRES_IN=7d`
    - `CORS_ORIGINS=*` (tighten for production)
 
-## 3. Mobile API Base URL
+## 3. Configuring the Mobile API
 
-In `mobile/app.json`, set:
+Before building or starting the mobile app for production, you must point it to your hosted backend.
+
+1. Open `mobile/app.json`.
+2. Add or update the `extra` field within the `expo` object:
 
 ```json
 {
   "expo": {
+    ...
     "extra": {
-      "apiBaseUrl": "https://your-render-service.onrender.com/api/v1"
+      "apiBaseUrl": "https://your-backend-service.railway.app/api/v1"
     }
   }
 }
 ```
 
-Then restart Expo.
+*Note: The app will automatically prioritize this URL over local development defaults.*
 
-## 4. Viva Demo Flow
+---
 
-- Show mobile login
-- Show create trip
-- Show add expenses
-- Show expense summaries
-- Show hosted backend URL in API calls
+## 4. Frontend Deployment (Mobile)
+
+Since the app uses Expo, you have two primary ways to share the frontend:
+
+### Option A: Professional APK (Android)
+Generate an installable `.apk` file that works on any Android device without needing your PC to be running.
+
+1. Install EAS CLI: `npm install -g eas-cli`
+2. Log in to your Expo account: `eas login`
+3. Configure the build: `eas build:configure`
+4. Run the build: `eas build --platform android --profile preview`
+5. Download the resulting `.apk` from the link provided by Expo.
+
+### Option B: Expo Go (Quick Demo)
+1. Ensure your `Backend` is hosted (Railway/Render).
+2. Update `mobile/app.json` or `.env` with the hosted API URL.
+3. Run `npx expo start --tunnel`.
+4. Scan the QR code with the **Expo Go** app.
+
+---
+
+## 4. Team Viva Demo Flow
+
+To demonstrate the full platform capabilities during the Viva:
+
+1. **User Workflow**:
+   - Login to the mobile app.
+   - Create a new trip (District → Places → Hotels).
+   - Add transit bookings from the "Transit Board".
+   - Record expenses and view budget health/summaries.
+   - Post a review for a visited location.
+
+2. **Admin Workflow**:
+   - Log in to the Admin Dashboard.
+   - Moderate the newly created review (Approve/Reject).
+   - Check system-wide statistics and budget alerts.
+   - Manage transport schedules or market price records.
+
+3. **Backend Validation**:
+   - Show the hosted API URL.
+   - Demonstrate the MongoDB Atlas collection updates in real-time.

@@ -1,6 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
-const { createReview, getReviews, getReviewById, updateReview, deleteReview } = require('./review.service');
+const { createReview, getReviews, getReviewById, updateReview, deleteReview, voteReview, flagReview, respondToReview, updateReviewStatus } = require('./review.service');
 
 const createReviewHandler = asyncHandler(async (req, res) => {
   const review = await createReview(req.user, req.body);
@@ -27,10 +27,37 @@ const deleteReviewHandler = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, 'Review deleted successfully');
 });
 
+const voteReviewHandler = asyncHandler(async (req, res) => {
+  const { isHelpful } = req.body;
+  const review = await voteReview(req.params.id, req.user.userId, isHelpful);
+  return sendSuccess(res, 200, 'Vote recorded successfully', { review });
+});
+
+const flagReviewHandler = asyncHandler(async (req, res) => {
+  const review = await flagReview(req.params.id);
+  return sendSuccess(res, 200, 'Review flagged for moderation', { review });
+});
+
+const respondToReviewHandler = asyncHandler(async (req, res) => {
+  const { comment } = req.body;
+  const review = await respondToReview(req.params.id, comment);
+  return sendSuccess(res, 200, 'Response added successfully', { review });
+});
+
+const updateReviewStatusHandler = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  const review = await updateReviewStatus(req.params.id, status);
+  return sendSuccess(res, 200, 'Review status updated successfully', { review });
+});
+
 module.exports = {
   createReviewHandler,
   getReviewsHandler,
   getReviewHandler,
   updateReviewHandler,
-  deleteReviewHandler
+  deleteReviewHandler,
+  voteReviewHandler,
+  flagReviewHandler,
+  respondToReviewHandler,
+  updateReviewStatusHandler
 };

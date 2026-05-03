@@ -9,7 +9,11 @@ const {
   getReviewsHandler,
   getReviewHandler,
   updateReviewHandler,
-  deleteReviewHandler
+  deleteReviewHandler,
+  voteReviewHandler,
+  flagReviewHandler,
+  respondToReviewHandler,
+  updateReviewStatusHandler
 } = require('./review.controller');
 
 const router = express.Router();
@@ -21,5 +25,11 @@ router.get('/:id', getReviewHandler);
 router.post('/', protect, createReviewValidation, validateRequest, createReviewHandler);
 router.put('/:id', protect, updateReviewValidation, validateRequest, updateReviewHandler);
 router.delete('/:id', protect, deleteReviewHandler);
+router.post('/:id/helpful', protect, voteReviewHandler);
+router.post('/:id/flag', protect, flagReviewHandler);
+
+// Admin specialized actions
+router.put('/:id/status', protect, authorize('admin'), updateReviewStatusHandler);
+router.post('/:id/response', protect, authorize('admin'), respondToReviewHandler);
 
 module.exports = router;
