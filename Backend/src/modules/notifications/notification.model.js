@@ -24,7 +24,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['reminder', 'system', 'trip', 'expense', 'other', 'BUDGET_100', 'BUDGET_80'],
+      enum: ['reminder', 'system', 'trip', 'expense', 'other', 'BUDGET_100', 'BUDGET_80', 'PRICE_UPDATE', 'REVIEW_FLAGGED', 'REVIEW_APPROVED', 'REVIEW_REJECTED'],
       default: 'system'
     },
     isRead: {

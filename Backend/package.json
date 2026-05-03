@@ -14,7 +14,6 @@
     "db:seed-admin": "node src/scripts/seedAdmin.js",
     "db:seed-test-users": "node src/scripts/seedTestUsers.js",
     "db:seed-trips": "node src/scripts/seedTrips.js",
-    "db:check-hotels": "node src/scripts/checkHotels.js",
     "db:fetch-images": "node src/scripts/fetchPlaceImages.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

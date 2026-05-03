@@ -19,6 +19,7 @@ import AdminTripEditScreen from '../screens/admin/AdminTripEditScreen';
 import AdminExpensesScreen from '../screens/admin/AdminExpensesScreen';
 import AdminTripHealthScreen from '../screens/admin/AdminTripHealthScreen';
 import AdminPriceRecordsScreen from '../screens/admin/AdminPriceRecordsScreen';
+import AdminReviewsScreen from '../screens/admin/AdminReviewsScreen';
 import NotificationListScreen from '../screens/notifications/NotificationListScreen';
 
 const Stack = createNativeStackNavigator();
@@ -44,6 +45,7 @@ const AdminNavigator = () => {
       <Stack.Screen name="AdminExpenses"      component={AdminExpensesScreen} />
       <Stack.Screen name="AdminTripHealth" component={AdminTripHealthScreen} options={{ headerShown: false }} />
       <Stack.Screen name="AdminPriceRecords" component={AdminPriceRecordsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AdminReviews" component={AdminReviewsScreen} />
       <Stack.Screen name="AdminAlerts" component={NotificationListScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );

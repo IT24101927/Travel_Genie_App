@@ -13,7 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +31,7 @@ import { getReviewsApi, createReviewApi } from '../../api/reviewApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getHotelImageCandidates } from '../../utils/hotelImages';
 import { HOTEL_CURRENCIES, formatHotelPrice, getHotelNightlyPriceLkr } from '../../utils/currencyFormat';
+import ReviewSection from '../../components/reviews/ReviewSection';
 
 const { width } = Dimensions.get('window');
 const HERO_H = Math.floor(width * 0.85);
@@ -103,48 +104,7 @@ const getHotelMapRegion = (coords) => ({
   longitudeDelta: 0.018,
 });
 
-// ─── Star Row ───────────────────────────────────────────────────────────────
-const StarRow = ({ rating, size = 16, interactive = false, onPress }) => {
-  const filled = Math.round(Number(rating) || 0);
-  return (
-    <View style={ds.starRow}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Pressable key={i} onPress={interactive ? () => onPress(i) : undefined} disabled={!interactive}>
-          <Ionicons
-            name={i <= filled ? 'star' : 'star-outline'}
-            size={size}
-            color={colors.warning}
-            style={{ marginHorizontal: 1 }}
-          />
-        </Pressable>
-      ))}
-    </View>
-  );
-};
-
-// ─── Review Card ────────────────────────────────────────────────────────────
-const ReviewCard = ({ review }) => (
-  <View style={ds.reviewCard}>
-    <View style={ds.reviewHeader}>
-      <View style={ds.reviewAvatar}>
-        <Text style={ds.reviewAvatarText}>
-          {review.userId?.fullName ? review.userId.fullName.charAt(0).toUpperCase() : '?'}
-        </Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={ds.reviewName}>{review.userId?.fullName || 'Traveler'}</Text>
-        <StarRow rating={review.rating} size={12} />
-      </View>
-      <View style={ds.reviewRatingPill}>
-        <Ionicons name="star" size={10} color={colors.warning} />
-        <Text style={ds.reviewRatingPillText}>{review.rating}</Text>
-      </View>
-    </View>
-    {review.comment ? (
-      <Text style={ds.reviewComment}>{review.comment}</Text>
-    ) : null}
-  </View>
-);
+// Removed old StarRow and ReviewCard components as they are now part of ReviewSection
 
 // ─── Info Stat Card ──────────────────────────────────────────────────────────
 const InfoCard = ({ icon, iconBg, label, value, sub }) => (
@@ -228,7 +188,18 @@ const HotelLocationMap = ({ hotel, coords, onOpenInMaps }) => {
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 const HotelDetailsScreen = ({ route, navigation }) => {
   const { hotel: initial } = route.params;
+  const insets = useSafeAreaInsets();
   const [hotel, setHotel] = useState(initial);
+  const [error, setError] = useState('');
+
+  const loadHotel = useCallback(async () => {
+    try {
+      const res = await getHotelApi(initial._id);
+      setHotel(res?.data?.hotel || initial);
+    } catch {
+      // keep initial data
+    }
+  }, [initial._id]);
   const [displayCurrency, setDisplayCurrency] = useState('LKR');
 
   const planner = useTripPlanner();
@@ -255,70 +226,15 @@ const HotelDetailsScreen = ({ route, navigation }) => {
       if (plannerSelectedHotel.checkOut) setCheckOutDate(new Date(plannerSelectedHotel.checkOut));
     }
   }, [showPlannerModal, plannerSelectedHotel]);
-  const [reviews, setReviews] = useState([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [reviewError, setReviewError] = useState('');
-
-  const loadHotel = useCallback(async () => {
-    try {
-      const res = await getHotelApi(initial._id);
-      setHotel(res?.data?.hotel || initial);
-    } catch {
-      // keep initial data
-    }
-  }, [initial._id]);
-
-  const loadReviews = useCallback(async () => {
-    try {
-      setLoadingReviews(true);
-      const res = await getReviewsApi({ targetType: 'hotel', targetId: initial._id });
-      setReviews(res?.data?.reviews || []);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load reviews'));
-    } finally {
-      setLoadingReviews(false);
-    }
-  }, [initial._id]);
-
   useFocusEffect(
     useCallback(() => {
       loadHotel();
-      loadReviews();
-    }, [loadHotel, loadReviews])
+    }, [loadHotel])
   );
-
-  const handleSubmitReview = async () => {
-    if (!reviewRating) return setReviewError('Please select a rating.');
-    try {
-      setSubmitting(true);
-      setReviewError('');
-      await createReviewApi({
-        targetType: 'hotel',
-        targetId: initial._id,
-        rating: reviewRating,
-        comment: reviewComment,
-      });
-      setShowReviewForm(false);
-      setReviewComment('');
-      setReviewRating(5);
-      loadReviews();
-    } catch (err) {
-      setReviewError(getApiErrorMessage(err, 'Failed to submit review'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const meta = getHotelMeta(hotel);
   const nightlyPrice = getHotelNightlyPriceLkr(hotel);
-  const avgRating = reviews.length
-    ? (reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / reviews.length).toFixed(1)
-    : null;
+  const avgRating = (Number(hotel.rating || 0) > 0 && Number(hotel.review_count || 0) > 0) ? Number(hotel.rating).toFixed(1) : null;
 
   const handleCall = () => {
     if (hotel.contact?.phone) Linking.openURL(`tel:${hotel.contact.phone}`);
@@ -367,7 +283,10 @@ const HotelDetailsScreen = ({ route, navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={ds.content}
+          contentContainerStyle={[
+            ds.content,
+            { paddingBottom: insets.bottom + (isPlannerMode ? 140 : 60) }
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -399,10 +318,11 @@ const HotelDetailsScreen = ({ route, navigation }) => {
             </View>
 
             {/* Rating badge */}
-            {Number(hotel.rating) > 0 && (
+            {avgRating && (
               <View style={ds.heroRating}>
                 <Ionicons name="star" size={13} color={colors.warning} />
-                <Text style={ds.heroRatingText}>{Number(hotel.rating).toFixed(1)}</Text>
+                <Text style={ds.heroRatingText}>{avgRating}</Text>
+                <Text style={ds.heroRatingCount}>({hotel.review_count})</Text>
               </View>
             )}
 
@@ -441,11 +361,11 @@ const HotelDetailsScreen = ({ route, navigation }) => {
               value={hotel.star_class ? `${hotel.star_class} ★` : 'N/A'}
             />
             <InfoCard
-              icon="chatbubbles-outline"
-              iconBg={colors.info}
-              label="Reviews"
-              value={String(reviews.length)}
-              sub={avgRating ? `Avg ${avgRating}` : null}
+              icon="star"
+              iconBg={colors.warning}
+              label="User Rating"
+              value={avgRating ? `${avgRating} / 5` : 'No reviews'}
+              sub={hotel.review_count > 0 ? `${hotel.review_count} verified reviews` : 'Be the first to review'}
             />
           </View>
 
@@ -604,84 +524,11 @@ const HotelDetailsScreen = ({ route, navigation }) => {
 
           {/* ── Reviews ── */}
           <View style={ds.section}>
-            {/* Header */}
-            <View style={ds.reviewsTitleRow}>
-              <View style={ds.sectionHeader}>
-                <View style={[ds.sectionIconBox, { backgroundColor: colors.warning + '20' }]}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.warning} />
-                </View>
-                <Text style={ds.sectionTitle}>
-                  Reviews {reviews.length > 0 ? `(${reviews.length})` : ''}
-                </Text>
-              </View>
-              <Pressable
-                style={ds.writeReviewBtn}
-                onPress={() => setShowReviewForm((v) => !v)}
-              >
-                <Ionicons
-                  name={showReviewForm ? 'close' : 'create-outline'}
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text style={ds.writeReviewText}>
-                  {showReviewForm ? 'Cancel' : 'Write Review'}
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Rating summary */}
-            {avgRating && (
-              <View style={ds.ratingSummary}>
-                <Text style={ds.ratingSummaryNum}>{avgRating}</Text>
-                <View>
-                  <StarRow rating={Math.round(Number(avgRating))} size={15} />
-                  <Text style={ds.ratingSummaryLbl}>
-                    Based on {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Review form */}
-            {showReviewForm && (
-              <View style={ds.reviewForm}>
-                <Text style={ds.reviewFormTitle}>Your Rating</Text>
-                <StarRow
-                  rating={reviewRating}
-                  size={34}
-                  interactive
-                  onPress={setReviewRating}
-                />
-                <View style={{ marginTop: 14 }}>
-                  <AppInput
-                    label="Comment (optional)"
-                    value={reviewComment}
-                    onChangeText={setReviewComment}
-                    placeholder="Share your experience..."
-                    multiline
-                    style={{ height: 80 }}
-                  />
-                </View>
-                <ErrorText message={reviewError} />
-                <AppButton
-                  title="Submit Review"
-                  onPress={handleSubmitReview}
-                  loading={submitting}
-                />
-              </View>
-            )}
-
-            {loadingReviews ? (
-              <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
-            ) : reviews.length === 0 ? (
-              <EmptyState
-                title="No reviews yet"
-                subtitle="Be the first to share your experience."
-                icon="chatbubble-outline"
-              />
-            ) : (
-              reviews.map((r) => <ReviewCard key={r._id} review={r} />)
-            )}
+            <ReviewSection 
+              targetType="hotel" 
+              targetId={initial._id} 
+              targetName={hotel.name} 
+            />
           </View>
         </ScrollView>
 
@@ -932,6 +779,7 @@ const ds = StyleSheet.create({
     borderRadius: 12,
   },
   heroRatingText: { color: colors.textPrimary, fontSize: 13, fontWeight: '900' },
+  heroRatingCount: { color: colors.textMuted, fontSize: 11, fontWeight: '700', marginLeft: 1 },
   heroBottom: {
     position: 'absolute',
     left: 18,
