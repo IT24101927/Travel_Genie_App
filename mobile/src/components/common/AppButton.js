@@ -1,8 +1,28 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text } from 'react-native';
 import colors from '../../constants/colors';
 
-const AppButton = ({ title, onPress, variant = 'primary', disabled = false }) => {
+const AppButton = ({ title, onPress, variant = 'primary', disabled = false, loading = false, allowPressWhenKeyboardOpen = false }) => {
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const handlePress = () => {
+    if (loading) return;
+    if (!allowPressWhenKeyboardOpen && isKeyboardVisible) {
+      Keyboard.dismiss();
+    }
+    onPress?.();
+  };
+
   const getVariantStyles = () => {
     switch (variant) {
       case 'secondary':
@@ -35,10 +55,13 @@ const AppButton = ({ title, onPress, variant = 'primary', disabled = false }) =>
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed
       ]}
-      onPress={onPress}
-      disabled={disabled}
+      onPress={handlePress}
+      disabled={disabled || loading}
     >
-      <Text style={[styles.text, getTextStyle()]}>{title}</Text>
+      {loading
+        ? <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? colors.primary : colors.white} />
+        : <Text style={[styles.text, getTextStyle()]}>{title}</Text>
+      }
     </Pressable>
   );
 };

@@ -7,8 +7,9 @@ import AppButton from '../../components/common/AppButton';
 import ErrorText from '../../components/common/ErrorText';
 import { useAuth } from '../../context/AuthContext';
 import colors from '../../constants/colors';
-import { getMyProfileApi } from '../../api/userApi';
+import { getMyProfileApi, deleteAccountApi } from '../../api/userApi';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { Alert } from 'react-native';
 
 const ProfileScreen = ({ navigation }) => {
   const { logout } = useAuth();
@@ -41,6 +42,23 @@ const ProfileScreen = ({ navigation }) => {
     } catch (err) {
       setError(getApiErrorMessage(err, 'Logout failed'));
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.prompt(
+      'Delete Account',
+      'Enter your password to confirm. This action cannot be undone.',
+      async (password) => {
+        if (!password) return;
+        try {
+          await deleteAccountApi({ password });
+          await logout();
+        } catch (err) {
+          setError(getApiErrorMessage(err, 'Failed to delete account'));
+        }
+      },
+      'secure-text'
+    );
   };
 
   if (loading && !profile) {
@@ -85,19 +103,24 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.section}>
         <View style={styles.menuItem}>
           <View style={styles.menuIconSecurity}>
-             <Ionicons name="shield-checkmark-outline" size={24} color={colors.success} />
+            <Ionicons name="shield-checkmark-outline" size={24} color={colors.success} />
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>Privacy & Security</Text>
-            <Text style={styles.menuSubtitle}>Connected devices, password</Text>
+            <Text style={styles.menuSubtitle}>Change your password</Text>
           </View>
         </View>
+        <AppButton
+          title="Change Password"
+          variant="secondary"
+          onPress={() => navigation.navigate('ChangePassword')}
+        />
       </View>
 
       <View style={styles.section}>
         <View style={styles.menuItem}>
           <View style={styles.menuIconDanger}>
-             <Ionicons name="log-out-outline" size={24} color={colors.danger} />
+            <Ionicons name="log-out-outline" size={24} color={colors.danger} />
           </View>
           <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>Sign Out</Text>
@@ -105,6 +128,19 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </View>
         <AppButton title="Sign Out" variant="danger" onPress={handleLogout} />
+      </View>
+
+      <View style={[styles.section, { borderColor: colors.danger + '40', borderWidth: 1 }]}>
+        <View style={styles.menuItem}>
+          <View style={[styles.menuIconDanger, { backgroundColor: colors.danger + '15' }]}>
+            <Ionicons name="trash-outline" size={24} color={colors.danger} />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={[styles.menuTitle, { color: colors.danger }]}>Delete Account</Text>
+            <Text style={styles.menuSubtitle}>Permanently remove your data</Text>
+          </View>
+        </View>
+        <AppButton title="Delete My Account" variant="danger" onPress={handleDeleteAccount} />
       </View>
     </ScrollView>
   );

@@ -1,0 +1,306 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+
+import colors from '../../constants/colors';
+import { adminListUsersApi, adminDeleteUserApi, adminResetUserPasswordApi } from '../../api/adminApi';
+import { getApiErrorMessage } from '../../utils/apiError';
+
+const AdminUsersScreen = ({ navigation }) => {
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        u.fullName?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.includes(q)
+    );
+  }, [users, search]);
+
+  const load = useCallback(async () => {
+    try {
+      setError('');
+      const res = await adminListUsersApi();
+      setUsers(res?.data?.users || []);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to load users'));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    load();
+  };
+
+  const confirmResetPassword = (user) => {
+    Alert.prompt(
+      'Reset Password',
+      `Set a new password for "${user.fullName}". Min. 8 characters.`,
+      async (newPassword) => {
+        if (!newPassword) return;
+        if (newPassword.length < 8) {
+          Alert.alert('Error', 'Password must be at least 8 characters.');
+          return;
+        }
+        try {
+          await adminResetUserPasswordApi(user._id, { newPassword });
+          Alert.alert('Done', `Password for ${user.fullName} has been reset.`);
+        } catch (err) {
+          Alert.alert('Error', getApiErrorMessage(err, 'Failed to reset password'));
+        }
+      },
+      'secure-text'
+    );
+  };
+
+  const confirmDelete = (user) => {
+    Alert.alert(
+      'Delete User',
+      `Remove "${user.fullName}" (${user.email})? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await adminDeleteUserApi(user._id);
+              setUsers((prev) => prev.filter((u) => u._id !== user._id));
+            } catch (err) {
+              Alert.alert('Error', getApiErrorMessage(err, 'Failed to delete user'));
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      <View style={[styles.avatar, { backgroundColor: item.isActive ? colors.primary : colors.textMuted }]}>
+        <Text style={styles.avatarText}>{(item.fullName || '?').charAt(0).toUpperCase()}</Text>
+      </View>
+
+      <View style={styles.info}>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>{item.fullName}</Text>
+          {item.role === 'admin' && (
+            <View style={styles.adminBadge}>
+              <Text style={styles.adminBadgeText}>ADMIN</Text>
+            </View>
+          )}
+          {!item.isActive && (
+            <View style={styles.inactiveBadge}>
+              <Text style={styles.inactiveBadgeText}>INACTIVE</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.email} numberOfLines={1}>{item.email}</Text>
+        {item.phone ? <Text style={styles.meta}>{item.phone}</Text> : null}
+        <Text style={styles.meta}>
+          Joined {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—'}
+        </Text>
+      </View>
+
+      <View style={styles.actions}>
+        <Pressable
+          onPress={() => navigation.navigate('AdminUserForm', { user: item })}
+          style={styles.editBtn}
+        >
+          <Ionicons name="pencil-outline" size={17} color={colors.primary} />
+        </Pressable>
+
+        <Pressable onPress={() => confirmResetPassword(item)} style={styles.resetBtn}>
+          <Ionicons name="key-outline" size={17} color={colors.warning} />
+        </Pressable>
+
+        {item.role !== 'admin' && (
+          <Pressable onPress={() => confirmDelete(item)} style={styles.deleteBtn}>
+            <Ionicons name="trash-outline" size={17} color={colors.danger} />
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+        </Pressable>
+        <Text style={styles.title}>All Users</Text>
+        <View style={{ width: 42 }} />
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by name, email or phone..."
+          placeholderTextColor={colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          returnKeyType="search"
+        />
+        {search ? (
+          <Pressable onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      {loading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item._id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          ListEmptyComponent={<Text style={styles.empty}>No users yet.</Text>}
+        />
+      )}
+
+      <Pressable
+        onPress={() => navigation.navigate('AdminUserForm', {})}
+        style={styles.fab}
+      >
+        <Ionicons name="person-add-outline" size={24} color={colors.white} />
+      </Pressable>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10
+  },
+  backBtn: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border
+  },
+  title: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
+  errorText: { color: colors.danger, fontSize: 13, paddingHorizontal: 20, marginBottom: 6 },
+  list: { paddingHorizontal: 16, paddingBottom: 100 },
+  card: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center'
+  },
+  avatar: {
+    width: 46, height: 46, borderRadius: 23,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 12
+  },
+  avatarText: { color: colors.white, fontWeight: '800', fontSize: 18 },
+  info: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+  name: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, flexShrink: 1 },
+  adminBadge: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  adminBadgeText: { color: colors.white, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  inactiveBadge: {
+    backgroundColor: colors.surface3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  inactiveBadgeText: { color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  email: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
+  meta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  searchContainer: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.border,
+    marginHorizontal: 16, marginBottom: 10,
+    paddingHorizontal: 12, paddingVertical: 8
+  },
+  searchIcon: { marginRight: 8 },
+  searchInput: {
+    flex: 1, fontSize: 14, color: colors.textPrimary, height: 32
+  },
+  actions: { flexDirection: 'column', gap: 6, marginLeft: 6 },
+  editBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: '#EAF4F1',
+    alignItems: 'center', justifyContent: 'center'
+  },
+  resetBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: '#FEF6E4',
+    alignItems: 'center', justifyContent: 'center'
+  },
+  deleteBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: '#FCE9E6',
+    alignItems: 'center', justifyContent: 'center'
+  },
+  empty: { textAlign: 'center', color: colors.textMuted, marginTop: 40 },
+  fab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 24,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8
+  }
+});
+
+export default AdminUsersScreen;

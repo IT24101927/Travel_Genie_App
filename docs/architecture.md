@@ -5,7 +5,6 @@
 - Mobile frontend: React Native + Expo (`mobile/`)
 - Backend API: Node.js + Express + Mongoose (`Backend/src/`)
 - Database: MongoDB Atlas
-- Optional service: Python Flask AI (`Aiml/` or separate `ai-service/`)
 
 ## Request Flow
 

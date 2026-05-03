@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppInput from '../../components/common/AppInput';
 import EmptyState from '../../components/common/EmptyState';
@@ -11,7 +12,7 @@ import { getHotelsApi } from '../../api/hotelApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { Pressable } from 'react-native';
 
-const HotelListScreen = () => {
+const HotelListScreen = ({ navigation }) => {
   const [location, setLocation] = useState('');
   const [hotels, setHotels] = useState([]);
   const [error, setError] = useState('');
@@ -54,10 +55,11 @@ const HotelListScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerTitle}>Find Stays</Text>
-      
-      <View style={styles.searchContainer}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <Text style={styles.headerTitle}>Find Stays</Text>
+        
+        <View style={styles.searchContainer}>
         <AppInput 
           label="" 
           value={location} 
@@ -76,26 +78,35 @@ const HotelListScreen = () => {
         data={hotels}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <Pressable
+            style={styles.card}
+            onPress={() => navigation.navigate('HotelDetails', { hotel: item })}
+          >
             <View style={styles.cardHeader}>
               <Text style={styles.title} numberOfLines={1}>{item.name}</Text>
               <View style={styles.priceChip}>
-                 <Text style={styles.priceText}>{item.priceRange || 'Contact'}</Text>
+                 <Text style={styles.priceText}>{item.priceRange ? `$${item.priceRange}` : 'Contact'}</Text>
               </View>
             </View>
-            
+
             <View style={styles.locationRow}>
               <Ionicons name="location" size={14} color={colors.accent} />
               <Text style={styles.location}>{item.location}</Text>
             </View>
-            
+
             {renderStars(item.rating)}
-          </View>
+
+            <View style={styles.tapHint}>
+              <Text style={styles.tapHintText}>Tap to view details & reviews</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+            </View>
+          </Pressable>
         )}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={<EmptyState title="No hotels found" subtitle="Try another location for stays." icon="bed-outline" />}
       />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -185,6 +196,21 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '700',
     fontSize: 12
+  },
+  tapHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    gap: 2
+  },
+  tapHintText: {
+    color: colors.textMuted,
+    fontSize: 11
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background
   }
 });
 

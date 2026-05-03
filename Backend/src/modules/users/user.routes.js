@@ -4,7 +4,7 @@ const { protect } = require('../../middleware/authMiddleware');
 const validateRequest = require('../../middleware/validateMiddleware');
 const { createUploader } = require('../../middleware/uploadMiddleware');
 const { updateProfileValidation } = require('./user.validation');
-const { getMyProfile, updateMyProfile } = require('./user.controller');
+const { getMyProfile, updateMyProfile, changeMyPassword, deleteMyAccount } = require('./user.controller');
 
 const router = express.Router();
 const upload = createUploader('profiles');
@@ -18,5 +18,7 @@ router.put(
   validateRequest,
   updateMyProfile
 );
+router.post('/me/change-password', protect, changeMyPassword);
+router.delete('/me', protect, deleteMyAccount);
 
 module.exports = router;
