@@ -21,21 +21,21 @@ const GUIDE_STORAGE_KEY = 'HAS_SEEN_WELCOME_GUIDE_V1';
 const STEPS = [
   {
     title: "Welcome to TravelGenie",
-    description: "Your ultimate companion for exploring the wonders of Sri Lanka. Let's get you started with a quick tour!",
+    description: "Your ultimate companion for exploring the wonders of Sri Lanka. Discover hidden gems with ease.",
     icon: "sparkles",
     image: require('../../../assets/onboarding/welcome_hero.png'),
     color: colors.primary
   },
   {
     title: "Plan Your Perfect Trip",
-    description: "Use our multi-step planner to pick a district, select must-visit places, find the best hotels, and set your budget—all in one flow.",
+    description: "Use our multi-step planner to pick a district, select must-visit places, and find the best hotels.",
     icon: "trail-sign",
     image: require('../../../assets/onboarding/planner_demo.png'),
     color: "#0E7C5F"
   },
   {
     title: "Smart Expense Tracking",
-    description: "Keep your budget on track with live market price benchmarks. Compare your spending with local trends and travel smarter.",
+    description: "Keep your budget on track with live market price benchmarks and travel smarter than ever.",
     icon: "wallet",
     image: require('../../../assets/onboarding/expense_demo.png'),
     color: "#4F46E5"
@@ -83,11 +83,17 @@ const WelcomeGuide = ({ forceShow = false, onComplete }) => {
       <View style={styles.overlay}>
         <View style={styles.container}>
           <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-            <Image source={step.image} style={styles.image} resizeMode="cover" />
+            <View style={styles.imageContainer}>
+              <Image source={step.image} style={styles.image} resizeMode="cover" />
+              <LinearGradient
+                colors={['transparent', 'rgba(255,255,255,1)']}
+                style={styles.imageGradient}
+              />
+            </View>
             
             <View style={styles.textContainer}>
               <View style={[styles.iconBox, { backgroundColor: step.color + '15' }]}>
-                <Ionicons name={step.icon} size={28} color={step.color} />
+                <Ionicons name={step.icon} size={32} color={step.color} />
               </View>
               <Text style={styles.title}>{step.title}</Text>
               <Text style={styles.description}>{step.description}</Text>
@@ -101,7 +107,7 @@ const WelcomeGuide = ({ forceShow = false, onComplete }) => {
                   key={i} 
                   style={[
                     styles.dot, 
-                    i === currentStep && { backgroundColor: step.color, width: 24 }
+                    i === currentStep && { backgroundColor: step.color, width: 20 }
                   ]} 
                 />
               ))}
@@ -109,11 +115,13 @@ const WelcomeGuide = ({ forceShow = false, onComplete }) => {
 
             <Pressable onPress={handleNext} style={styles.nextBtn}>
               <LinearGradient
-                colors={[step.color, step.color + 'CC']}
+                colors={[step.color, step.color + 'DD']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
                 style={styles.nextBtnGrad}
               >
                 <Text style={styles.nextBtnText}>
-                  {currentStep === STEPS.length - 1 ? "Let's Go!" : "Next"}
+                  {currentStep === STEPS.length - 1 ? "Get Started" : "Continue"}
                 </Text>
                 <Ionicons name="arrow-forward" size={18} color={colors.white} />
               </LinearGradient>
@@ -132,65 +140,81 @@ const WelcomeGuide = ({ forceShow = false, onComplete }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(0,0,0,0.88)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    padding: 24
   },
   container: {
     width: '100%',
     backgroundColor: colors.surface,
-    borderRadius: 32,
+    borderRadius: 36,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 12
   },
   content: {
     width: '100%'
   },
+  imageContainer: {
+    width: '100%',
+    height: height * 0.32,
+    position: 'relative'
+  },
   image: {
     width: '100%',
-    height: height * 0.35,
+    height: '100%',
+  },
+  imageGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80
   },
   textContainer: {
-    padding: 30,
-    alignItems: 'center',
-    textAlign: 'center'
+    paddingHorizontal: 30,
+    paddingTop: 10,
+    paddingBottom: 20,
+    alignItems: 'center'
   },
   iconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 22,
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)'
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
     color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 12
+    marginBottom: 12,
+    letterSpacing: -0.5
   },
   description: {
-    fontSize: 15,
+    fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: 10
+    paddingHorizontal: 5
   },
   footer: {
     padding: 30,
-    paddingTop: 0,
+    paddingTop: 10,
     alignItems: 'center'
   },
   pagination: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 25
+    gap: 8,
+    marginBottom: 32
   },
   dot: {
     width: 8,
@@ -200,29 +224,35 @@ const styles = StyleSheet.create({
   },
   nextBtn: {
     width: '100%',
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 15
+    marginBottom: 18,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8
   },
   nextBtnGrad: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 8
+    paddingVertical: 20,
+    gap: 10
   },
   nextBtnText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900'
   },
   skipBtn: {
-    paddingVertical: 5
+    paddingVertical: 8
   },
   skipText: {
     color: colors.textMuted,
     fontSize: 14,
-    fontWeight: '700'
+    fontWeight: '700',
+    letterSpacing: 0.5
   }
 });
 

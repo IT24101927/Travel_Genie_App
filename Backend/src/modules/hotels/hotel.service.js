@@ -19,9 +19,8 @@ const getHotels = async (query) => {
     const regex = new RegExp(escapeRegExp(query.location || query.search), 'i');
     filter.$or = [
       { name: regex },
-      { location: regex },
-      { district: regex },
-      { address_text: regex }
+      { address_text: regex },
+      { district: regex }
     ];
   }
 
@@ -111,9 +110,12 @@ const normalizeHotelPayload = async (payload = {}) => {
 
   const placeId = normalized.nearby_place_id || normalized.place_id;
   if (placeId) {
-    const place = await Place.findOne({ place_id: Number(placeId) }).select('district_id district lat lng').lean();
+    const place = await Place.findOne({ place_id: Number(placeId) }).select('district_id district lat lng address_text').lean();
     if (!normalized.district_id && place?.district_id) normalized.district_id = place.district_id;
     if (!normalized.district && place?.district) normalized.district = place.district;
+    // Copy address_text from place if missing
+    if (!normalized.address_text && place?.address_text) normalized.address_text = place.address_text;
+    
     // Fall back to place coordinates when hotel has no valid lat/lng
     if (!hasValidLat && place?.lat !== undefined) {
       normalized.lat = place.lat;
@@ -122,6 +124,8 @@ const normalizeHotelPayload = async (payload = {}) => {
       normalized.lng = place.lng;
     }
   }
+
+
 
   return normalized;
 };

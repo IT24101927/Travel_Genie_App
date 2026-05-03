@@ -80,7 +80,7 @@ const normalizeHotelForTrip = (hotel) => hotel ? ({
   id: getHotelId(hotel), hotel_id: hotel?.hotel_id || null, name: hotel?.name || '',
   type: hotel?.hotel_type || '', image: hotel?.image_url || '',
   rating: Number(hotel?.rating || 0), starClass: Number(hotel?.star_class || 0),
-  pricePerNight: getHotelNightlyPriceLkr(hotel), address: hotel?.address_text || hotel?.location || '',
+  pricePerNight: getHotelNightlyPriceLkr(hotel), address: hotel?.address_text || '',
   lat: hotel?.lat ?? null, lng: hotel?.lng ?? null,
 }) : null;
 

@@ -113,10 +113,6 @@ const AddToTripSheet = ({ visible, schedule, onClose, onPick }) => {
             </ScrollView>
           )}
 
-          <Pressable style={styles.skipBtn} onPress={() => onPick({ tripId: null })}>
-            <Ionicons name="bookmark-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.skipText}>Skip — just log this route</Text>
-          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
@@ -198,19 +194,6 @@ const styles = StyleSheet.create({
   },
   tripTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '900' },
   tripMeta: { color: colors.textMuted, fontSize: 11, fontWeight: '700', marginTop: 2 },
-  skipBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface
-  },
-  skipText: { color: colors.textSecondary, fontSize: 13, fontWeight: '800' }
 });
 
 export default AddToTripSheet;

@@ -11,7 +11,7 @@ import TripFormScreen from '../screens/trips/TripFormScreen';
 import TripPlannerScreen from '../screens/trips/TripPlannerScreen';
 import TripPlannerPreferencesScreen from '../screens/trips/TripPlannerPreferencesScreen';
 import TripPlannerBudgetScreen from '../screens/trips/TripPlannerBudgetScreen';
-import { TripPlannerProvider } from '../context/TripPlannerContext';
+import { TripPlannerProvider, useTripPlanner } from '../context/TripPlannerContext';
 
 import DistrictListScreen from '../screens/places/DistrictListScreen';
 import PlaceListScreen from '../screens/places/PlaceListScreen';
@@ -70,7 +70,7 @@ const TripStackNavigator = () => (
     <TripStack.Screen name="PlannerPreferences" component={TripPlannerPreferencesScreen} />
     <TripStack.Screen
       name="PlannerHotelPicker"
-      component={HotelListScreen}
+      component={HotelDistrictListScreen}
       initialParams={{ plannerMode: true }}
     />
     <TripStack.Screen name="PlannerBudget" component={TripPlannerBudgetScreen} />
@@ -130,6 +130,7 @@ const CustomAnimatedTabBar = ({ state, descriptors, navigation, insets }) => {
   // Full width minus margin on left and right (10 each)
   const tabWidth = (width - 20) / state.routes.length;
   
+  const { isPlanning } = useTripPlanner();
   const translateX = useRef(new Animated.Value(state.index * tabWidth)).current;
 
   useEffect(() => {
@@ -160,6 +161,8 @@ const CustomAnimatedTabBar = ({ state, descriptors, navigation, insets }) => {
         const isFocused = state.index === index;
 
         const onPress = () => {
+          if (isPlanning) return; // Lock navigation during trip planning
+
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
@@ -179,9 +182,9 @@ const CustomAnimatedTabBar = ({ state, descriptors, navigation, insets }) => {
         return (
           <TouchableOpacity
             key={route.key}
-            activeOpacity={0.8}
+            activeOpacity={isPlanning ? 1 : 0.8}
             onPress={onPress}
-            style={styles.tabItem}
+            style={[styles.tabItem, isPlanning && !isFocused && { opacity: 0.4 }]}
           >
             <View style={[styles.iconWrapper, isFocused && styles.iconWrapperActive]}>
               {getTabBarIcon(route.name, isFocused, iconColor, iconSize)}

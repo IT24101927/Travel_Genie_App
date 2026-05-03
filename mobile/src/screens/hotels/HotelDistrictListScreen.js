@@ -49,7 +49,7 @@ const normalizeText = (value) => String(value || '').trim().toLowerCase();
 const getDistrictName = (hotel = {}) => {
   const nestedName = hotel.place?.district?.name || hotel.districtData?.name || hotel.districtInfo?.name;
   const directName = typeof hotel.district === 'string' ? hotel.district : hotel.district?.name;
-  return String(nestedName || directName || hotel.location || '').trim();
+  return String(nestedName || directName || '').trim();
 };
 
 const getHotelDistrictKey = (hotel = {}) => {
@@ -149,7 +149,8 @@ const StayDistrictCard = ({ item, onPress, compact = false }) => {
   );
 };
 
-const HotelDistrictListScreen = ({ navigation }) => {
+const HotelDistrictListScreen = ({ navigation, route }) => {
+  const { plannerMode } = route.params || {};
   const [districts, setDistricts] = useState([]);
   const [hotels, setHotels] = useState([]);
   const [province, setProvince] = useState('All');
@@ -244,8 +245,9 @@ const HotelDistrictListScreen = ({ navigation }) => {
     navigation.navigate('HotelList', {
       districtId: district.district_id,
       districtName: district.name,
+      plannerMode: !!plannerMode,
     });
-  }, [navigation]);
+  }, [navigation, plannerMode]);
 
   const renderItem = useCallback(({ item }) => (
     <StayDistrictCard item={item} compact onPress={handleOpenDistrict} />
@@ -253,6 +255,18 @@ const HotelDistrictListScreen = ({ navigation }) => {
 
   const renderHeader = () => (
     <View>
+      {plannerMode && (
+        <View style={plannerStyles.banner}>
+          <Pressable style={plannerStyles.bannerBack} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.white} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={plannerStyles.bannerEyebrow}>Trip planner · Step 4</Text>
+            <Text style={plannerStyles.bannerTitle}>Where would you like to stay?</Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.intro}>
         <View style={styles.introCopy}>
           <Text style={styles.eyebrow}>Hotel Districts</Text>
@@ -549,6 +563,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-end',
+  },
+});
+
+const plannerStyles = StyleSheet.create({
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  bannerBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerEyebrow: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  bannerTitle: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 2,
   },
 });
 

@@ -79,7 +79,7 @@ const PlaceLocationMap = ({ place, coords, onOpenInMaps }) => {
           <Marker
             coordinate={coords}
             title={place.name || 'Place'}
-            description={place.address_text || place.location || place.district || 'Place location'}
+            description={place.address_text || place.district || 'Place location'}
             tracksViewChanges={false}
             anchor={{ x: 0.5, y: 1 }}
           >
@@ -94,7 +94,7 @@ const PlaceLocationMap = ({ place, coords, onOpenInMaps }) => {
           <Marker
             coordinate={coords}
             title={place.name || 'Place'}
-            description={place.address_text || place.location || place.district || 'Place location'}
+            description={place.address_text || place.district || 'Place location'}
             pinColor={meta.color}
           />
         )}
@@ -164,7 +164,7 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
       <ScrollView 
         contentContainerStyle={[
           styles.content, 
-          { paddingBottom: insets.bottom + (isPlannerMode ? 140 : 60) }
+          { paddingBottom: Math.max(insets.bottom, 15) + 160 }
         ]} 
         keyboardShouldPersistTaps="handled"
       >
@@ -279,7 +279,7 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
             <Text style={styles.sectionTitle}>Location</Text>
             <PlaceLocationMap place={place} coords={coords} onOpenInMaps={handleOpenInMaps} />
             <Text style={styles.addressText}>
-              {place.address_text || place.location || `${place.district || 'Sri Lanka'}`}
+              {place.address_text || `${place.district || 'Sri Lanka'}`}
             </Text>
           </View>
         ) : null}
@@ -296,27 +296,44 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
         </View>
       </ScrollView>
 
-      {isPlannerMode ? (
-        <View style={styles.tripBottomBar}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.tripBottomTitle}>
-              {planner.selectedPlaces.length} place{planner.selectedPlaces.length === 1 ? '' : 's'} selected
-            </Text>
-            <Text style={styles.tripBottomHint}>Back to keep choosing or continue to preferences.</Text>
+      {isPlannerMode && (
+        <View style={[styles.plannerBottomBar, { bottom: Math.max(insets.bottom, 15) + 75 }]}>
+          <View style={styles.plannerTopRow}>
+            <View style={styles.plannerCountPill}>
+              <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
+              <Text style={styles.plannerCountText}>
+                {planner?.selectedPlaces?.length || 0} selected
+              </Text>
+            </View>
+            <View style={{ flex: 1 }} />
+            <Pressable
+              style={[styles.plannerNextBtn, !(planner?.selectedPlaces?.length > 0) && styles.plannerNextBtnDisabled]}
+              disabled={!(planner?.selectedPlaces?.length > 0)}
+              onPress={() => navigateToPlannerPreferences(navigation)}
+            >
+              <Text style={styles.plannerNextText}>Next</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.white} />
+            </Pressable>
           </View>
-          <Pressable
-            style={[
-              styles.tripNextBtn,
-              planner.selectedPlaces.length === 0 && styles.tripNextBtnDisabled,
-            ]}
-            disabled={planner.selectedPlaces.length === 0}
-            onPress={() => navigateToPlannerPreferences(navigation)}
-          >
-            <Text style={styles.tripNextBtnText}>Next</Text>
-            <Ionicons name="arrow-forward" size={17} color={colors.white} />
-          </Pressable>
+
+          {selectedForTrip ? (
+            <View style={styles.plannerActiveChip}>
+              <Ionicons name="pin" size={12} color={colors.primary} />
+              <Text style={styles.plannerActiveText} numberOfLines={1}>
+                Added to your trip
+              </Text>
+              <Pressable onPress={() => planner.togglePlace(place)} style={styles.plannerEditBtn}>
+                <Text style={styles.plannerEditText}>Remove</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable style={styles.plannerSelectBtn} onPress={() => planner.togglePlace(place)}>
+              <Ionicons name="add-circle-outline" size={16} color={colors.white} />
+              <Text style={styles.plannerSelectText}>Select this place</Text>
+            </Pressable>
+          )}
         </View>
-      ) : null}
+      )}
     </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -691,55 +708,72 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  tripBottomBar: {
+  // Planner Bar Styles
+  plannerBottomBar: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    left: 12,
+    right: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 12,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    zIndex: 90,
+  },
+  plannerTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  plannerCountPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 14,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    gap: 6,
+    backgroundColor: colors.primary + '10',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  tripBottomTitle: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  tripBottomHint: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  tripNextBtn: {
+  plannerCountText: { fontSize: 12, fontWeight: '800', color: colors.primary },
+  plannerNextBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: colors.primary,
-    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
-  tripNextBtnDisabled: {
-    backgroundColor: colors.textMuted,
-    opacity: 0.6,
+  plannerNextBtnDisabled: { opacity: 0.5 },
+  plannerNextText: { color: colors.white, fontSize: 13, fontWeight: '900' },
+  plannerActiveChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary + '10',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: colors.primary + '25',
   },
-  tripNextBtnText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '900',
+  plannerActiveText: { flex: 1, fontSize: 12, fontWeight: '800', color: colors.primary },
+  plannerEditBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
   },
+  plannerEditText: { color: colors.white, fontSize: 11, fontWeight: '900' },
+  plannerSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  plannerSelectText: { color: colors.white, fontSize: 13, fontWeight: '900' },
 });
 
 export default PlaceDetailsScreen;

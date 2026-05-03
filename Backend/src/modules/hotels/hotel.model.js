@@ -8,7 +8,7 @@ const hotelSchema = new mongoose.Schema(
     district_id: { type: Number, index: true },
     district: { type: String, trim: true, index: true, default: '' },
     name: { type: String, required: true, trim: true },
-    location: { type: String, required: false, trim: true, index: true },
+
     address_text: { type: String, trim: true },
     price_per_night: { type: Number, required: false, min: 0, index: true },
     rating: { type: Number, required: false, default: 0, min: 0, max: 5, index: true },

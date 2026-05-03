@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
 
 import colors from '../../constants/colors';
 import { adminStatsApi } from '../../api/adminApi';
@@ -45,6 +46,37 @@ const QUICK_ACTIONS = [
   { label: 'Manage Reviews',  icon: 'star',   color: colors.success,         screen: 'AdminReviews',
     hint: 'Moderation & Responses' }
 ];
+
+/* ── Animated Stat Value ── */
+const StatValue = ({ value, style }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const end = parseInt(value);
+    if (isNaN(end) || end <= 0) {
+      setDisplayValue(value || 0);
+      return;
+    }
+
+    const duration = 1200; // 1.2 seconds
+    const increment = Math.ceil(end / (duration / 16)); 
+    
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        setDisplayValue(end);
+        clearInterval(timer);
+      } else {
+        setDisplayValue(start);
+      }
+    }, 16);
+
+    return () => clearInterval(timer);
+  }, [value]);
+
+  return <Text style={style}>{displayValue.toLocaleString()}</Text>;
+};
 
 const AdminDashboardScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
@@ -126,12 +158,13 @@ const AdminDashboardScreen = ({ navigation }) => {
                   <View style={[styles.iconBox, { backgroundColor: `${r.color}18` }]}>
                     <Ionicons name={r.icon} size={20} color={r.color} />
                   </View>
-                  <Text style={styles.count}>{count}</Text>
+                  <StatValue value={count} style={styles.count} />
                   <Text style={styles.label}>{r.label}</Text>
                   {subCount !== null && (
                     <View style={styles.subRow}>
                       <Ionicons name="globe-outline" size={10} color={colors.textMuted} />
-                      <Text style={styles.subText}>{subCount} districts</Text>
+                      <StatValue value={subCount} style={styles.subText} />
+                      <Text style={styles.subText}>districts</Text>
                     </View>
                   )}
                 </Pressable>

@@ -92,7 +92,7 @@ const seedAll = async () => {
         fs.createReadStream(placesCsv)
         .pipe(csv())
         .on('data', (data) => {
-            if (!data.type || data.type.trim() === '') return;
+            // if (!data.type || data.type.trim() === '') return;
 
             const districtIdNum = parseInt(data.district_id);
             const placeIdNum = parseInt(data.place_id);
@@ -100,7 +100,7 @@ const seedAll = async () => {
             const websiteType = deriveWebsitePlaceType(data, tags);
 
             // Exclude rows that correspond to hotels/non-destinations (missing type)
-            if (!websiteType) return;
+            // if (!websiteType) return;
 
             places.push({
                 place_id:     placeIdNum,
@@ -180,7 +180,6 @@ const seedAll = async () => {
                 hotel_id: parseInt(data.hotel_id),
                 place_id: placeId,
                 name: data.name || 'Unknown',
-                location: data.address_text || data.location || 'Unknown Location',
                 address_text: data.address_text,
                 description: data.description,
                 hotel_type: data.hotel_type,
