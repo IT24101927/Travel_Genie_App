@@ -10,6 +10,7 @@ import {
   Text,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -129,11 +130,20 @@ const HotelDetailsScreen = ({ route, navigation }) => {
       : hotel.rating || 0;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Header & Back Button */}
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Hotel Details</Text>
+          <View style={{ width: 36 }} />
+        </View>
         {/* Header */}
         <View style={styles.heroCard}>
           <View style={styles.hotelIconBox}>
@@ -255,17 +265,40 @@ const HotelDetailsScreen = ({ route, navigation }) => {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
   content: {
     padding: 16,
-    paddingBottom: 40
+    paddingBottom: 120
   },
   heroCard: {
     backgroundColor: colors.surface,

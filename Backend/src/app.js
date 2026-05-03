@@ -13,9 +13,13 @@ const app = express();
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || env.corsOrigins.includes(origin)) {
+      const isAllowedOrigin =
+        !origin || env.corsOrigins.includes('*') || env.corsOrigins.includes(origin);
+
+      if (isAllowedOrigin) {
         return callback(null, true);
       }
+
       return callback(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true

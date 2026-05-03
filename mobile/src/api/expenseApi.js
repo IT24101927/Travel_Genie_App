@@ -5,6 +5,11 @@ export const getExpensesApi = async (params = {}) => {
   return res.data;
 };
 
+export const getExpenseApi = async (id) => {
+  const res = await client.get(`/expenses/${id}`);
+  return res.data;
+};
+
 export const createExpenseApi = async (payload) => {
   const res = await client.post('/expenses', payload);
   return res.data;

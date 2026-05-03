@@ -4,14 +4,21 @@ Base URL: `https://<your-backend-domain>/api/v1`
 
 ## 🔐 Auth
 
-- `POST /auth/register` - Register user
+- `POST /auth/register/send-code` - Send email verification code
+- `POST /auth/register/verify-code` - Verify email code
+- `POST /auth/register` - Register verified user
 - `POST /auth/login` - Login user
+- `POST /auth/password-reset/request` - Request password reset code
+- `POST /auth/password-reset/verify-code` - Verify password reset code
+- `POST /auth/password-reset/reset` - Set a new password
 - `GET /auth/me` - Get authenticated user (protected)
 
 ## 👤 Users
 
 - `GET /users/me` - View profile (protected)
 - `PUT /users/me` - Update profile + optional image upload (protected)
+- `POST /users/me/change-password` - Change password (protected)
+- `DELETE /users/me` - Delete account (protected)
 
 ## 🧳 Trips
 
@@ -70,11 +77,11 @@ Base URL: `https://<your-backend-domain>/api/v1`
 
 ## 🚌 Transport
 
-- `POST /transport` - Create transit schedule (admin)
-- `GET /transport` - List all transit schedules
-- `GET /transport/:id` - Get schedule by id
-- `PUT /transport/:id` - Update schedule (admin)
-- `DELETE /transport/:id` - Delete schedule (admin)
+- `POST /transport` - Create transport booking (protected)
+- `GET /transport` - List own transport bookings (protected)
+- `GET /transport/:id` - Get booking by id (protected)
+- `PUT /transport/:id` - Update booking (protected)
+- `DELETE /transport/:id` - Delete booking (protected)
 
 ## 👑 Admin
 

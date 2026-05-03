@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -70,6 +71,7 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
          <View style={styles.avatar}>
@@ -143,10 +145,15 @@ const ProfileScreen = ({ navigation }) => {
         <AppButton title="Delete My Account" variant="danger" onPress={handleDeleteAccount} />
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background
@@ -157,7 +164,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingBottom: 40
+    paddingBottom: 120
   },
   header: {
     alignItems: 'center',

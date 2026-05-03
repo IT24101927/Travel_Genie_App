@@ -4,6 +4,7 @@ const authRoutes = require('../modules/auth/auth.routes');
 const userRoutes = require('../modules/users/user.routes');
 const tripRoutes = require('../modules/trips/trip.routes');
 const placeRoutes = require('../modules/places/place.routes');
+const districtRoutes = require('../modules/places/district.routes');
 const hotelRoutes = require('../modules/hotels/hotel.routes');
 const expenseRoutes = require('../modules/expenses/expense.routes');
 const reviewRoutes = require('../modules/reviews/review.routes');
@@ -13,7 +14,6 @@ const adminRoutes = require('../modules/admin/admin.routes');
 
 const router = express.Router();
 
-// Module routes will be mounted here in upcoming phases.
 router.get('/health', (req, res) => {
   return res.status(200).json({
     success: true,
@@ -38,6 +38,7 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/trips', tripRoutes);
 router.use('/places', placeRoutes);
+router.use('/districts', districtRoutes);
 router.use('/hotels', hotelRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/reviews', reviewRoutes);

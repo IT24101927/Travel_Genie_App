@@ -10,6 +10,7 @@ const {
   getPlacesHandler,
   getPlaceHandler,
   updatePlaceHandler,
+  uploadPlaceImageHandler,
   deletePlaceHandler
 } = require('./place.controller');
 
@@ -18,6 +19,8 @@ const upload = createUploader('places');
 
 router.get('/', getPlacesHandler);
 router.get('/:id', getPlaceHandler);
+
+router.post('/upload', protect, authorize('admin'), upload.single('image'), uploadPlaceImageHandler);
 
 router.post(
   '/',

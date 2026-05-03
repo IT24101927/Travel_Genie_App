@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Text, Pressable, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -59,7 +60,9 @@ const EditProfileScreen = ({ navigation, route }) => {
     preferred_weather: profile?.preferences?.preferred_weather || 'Any',
     photo: profile?.profileImage || null
   });
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [photoError, setPhotoError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const toggleInterest = (interest) => {
@@ -85,11 +88,17 @@ const EditProfileScreen = ({ navigation, route }) => {
     });
   };
 
+  const setField = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => ({ ...prev, [key]: '' }));
+    setApiError('');
+  };
+
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permission.status !== 'granted') {
-      setError('Please allow gallery access to upload a profile photo.');
+      setPhotoError('Please allow gallery access to upload a profile photo.');
       return;
     }
 
@@ -101,29 +110,27 @@ const EditProfileScreen = ({ navigation, route }) => {
     });
 
     if (!result.canceled) {
-      setError('');
+      setPhotoError('');
       setForm(prev => ({ ...prev, photo: result.assets[0].uri }));
     }
   };
 
   const onSave = async () => {
+    const next = {};
     const nameCheck = validateName(form.fullName);
-    if (!nameCheck.valid) {
-      setError(nameCheck.message);
-      return;
-    }
+    if (!nameCheck.valid) next.fullName = nameCheck.message;
 
     if (form.phone) {
-       const phoneCheck = validatePhone(form.phone);
-       if (!phoneCheck.valid) {
-          setError(phoneCheck.message);
-          return;
-       }
+      const phoneCheck = validatePhone(form.phone);
+      if (!phoneCheck.valid) next.phone = phoneCheck.message;
     }
+
+    if (Object.keys(next).length > 0) { setErrors(next); return; }
 
     try {
       setSaving(true);
-      setError('');
+      setErrors({});
+      setApiError('');
       const parsedInterests = form.interests.filter(Boolean);
 
       const payload = {
@@ -146,18 +153,27 @@ const EditProfileScreen = ({ navigation, route }) => {
       await updateMyProfileApi(payload);
       navigation.goBack();
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to update profile'));
+      setApiError(getApiErrorMessage(err, 'Failed to update profile'));
     } finally {
       setSaving(false);
     }
   };
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Header & Back Button */}
+        <View style={styles.headerRow}>
+          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </Pressable>
+          <Text style={styles.headerRowTitle}>Edit Profile</Text>
+          <View style={{ width: 36 }} />
+        </View>
         <View style={styles.header}>
           <Text style={styles.title}>Update Profile</Text>
           <Text style={styles.subtitle}>Edit your personal information below.</Text>
@@ -183,15 +199,18 @@ const EditProfileScreen = ({ navigation, route }) => {
         <AppInput
           label="Full Name"
           value={form.fullName}
-          onChangeText={(text) => setForm((p) => ({ ...p, fullName: text }))}
+          error={errors.fullName}
+          onChangeText={(text) => setField('fullName', text)}
           placeholder="Jane Doe"
         />
 
         <AppInput
           label="Phone"
           value={form.phone}
-          onChangeText={(text) => setForm((p) => ({ ...p, phone: text }))}
+          error={errors.phone}
+          onChangeText={(text) => setField('phone', text)}
           placeholder="+94xxxxxxxxx"
+          helperText={errors.phone ? undefined : '10 digits starting with 0 (e.g. 0771234567)'}
         />
 
         <View style={styles.section}>
@@ -269,24 +288,48 @@ const EditProfileScreen = ({ navigation, route }) => {
           <Text style={styles.hintText}>Email cannot be changed at this time.</Text>
         </View>
 
-        <ErrorText message={error} />
-        
+        {photoError ? <Text style={styles.photoErrorText}>{photoError}</Text> : null}
+        <ErrorText message={apiError} />
+
         <View style={styles.btnWrapper}>
            <AppButton title={saving ? 'Saving...' : 'Save Changes'} onPress={onSave} disabled={saving} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
+  },
+  headerRowTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
   content: {
     padding: 24,
-    paddingBottom: 40
+    paddingBottom: 120
   },
   header: {
     marginBottom: 32
@@ -329,6 +372,12 @@ const styles = StyleSheet.create({
   },
   btnWrapper: {
     marginTop: 24
+  },
+  photoErrorText: {
+    color: colors.danger,
+    fontSize: 12,
+    marginBottom: 8,
+    marginLeft: 4
   },
   photoCard: {
     flexDirection: 'row',

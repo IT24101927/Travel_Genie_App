@@ -29,7 +29,7 @@ const getPlaceHandler = asyncHandler(async (req, res) => {
 const updatePlaceHandler = asyncHandler(async (req, res) => {
   const payload = {
     ...req.body,
-    tags: Array.isArray(req.body.tags) ? req.body.tags : req.body.tags ? [req.body.tags] : req.body.tags
+    tags: Array.isArray(req.body.tags) ? req.body.tags : req.body.tags ? [req.body.tags] : []
   };
 
   if (req.file) {
@@ -38,6 +38,18 @@ const updatePlaceHandler = asyncHandler(async (req, res) => {
 
   const place = await updatePlace(req.params.id, payload);
   return sendSuccess(res, 200, 'Place updated successfully', { place });
+});
+
+const uploadPlaceImageHandler = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: 'No image file provided'
+    });
+  }
+
+  const imageUrl = `/uploads/places/${req.file.filename}`;
+  return sendSuccess(res, 200, 'Image uploaded successfully', { imageUrl });
 });
 
 const deletePlaceHandler = asyncHandler(async (req, res) => {
@@ -50,5 +62,6 @@ module.exports = {
   getPlacesHandler,
   getPlaceHandler,
   updatePlaceHandler,
+  uploadPlaceImageHandler,
   deletePlaceHandler
 };

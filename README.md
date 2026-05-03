@@ -6,7 +6,7 @@
 
 [![MongoDB](https://img.shields.io/badge/MongoDB-6+-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com/)
 [![Express](https://img.shields.io/badge/Express-4.18-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
-[![React Native](https://img.shields.io/badge/React_Native-0.76-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactnative.dev/)
+[![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-54-000020?style=flat-square&logo=expo&logoColor=white)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-ISC-blue?style=flat-square)](LICENSE)
 
@@ -109,7 +109,7 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 ```
 ┌──────────────────────────────────────────────────┐
 │                 React Native App                 │
-│             Expo · Express Navigation            │
+│              Expo · React Navigation             │
 │                    Port 8081                     │
 └─────────────────────┬────────────────────────────┘
                       │  REST API  ·  JWT Auth
@@ -136,7 +136,7 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
  ② Select District          ──  Browse all 25 districts on a map
         │
         ▼
- ③ Explore Places            ──  Interactive Leaflet map + place cards
+ ③ Explore Places            ──  React Native map + place cards
         │
         ▼
  ④ Set Preferences           ──  Dates · people count · travel style
@@ -148,7 +148,7 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
  ⑥ Set Budget                ──  Per-category breakdown (LKR / USD / EUR)
         │
         ▼
- ⑦ Confirm & Save Itinerary  ──  Stored to trip_itineraries table
+ ⑦ Confirm & Save Itinerary  ──  Stored to MongoDB trips collection
         │
         ▼
  ⑧ Track Expenses            ──  Real spend vs. budget with alerts
@@ -162,14 +162,13 @@ Data models managed by Mongoose:
 
 | Category | Collections |
 |---|---|
-| 👤 Users | `users`, `user_preferences`, `privacy_settings` |
-| 🗺️ Geography | `districts`, `places`, `place_tags`, `tags` |
-| 🏨 Hotels | `hotels`, `hotel_stats` |
-| 🧳 Trips | `trip_itineraries`, `expenses`, `expense_categories` |
+| 👤 Users | `users` |
+| 🗺️ Geography | `districts`, `places` |
+| 🚌 Transport | `transports` |
+| 🏨 Hotels | `hotels` |
+| 🧳 Trips & Budget | `trips`, `expenses` |
 | ⭐ Reviews | `reviews` |
-| 📍 Destinations | `destinations`, `destination_images` |
 | 🔔 Notifications | `notifications` |
-| 💰 Prices | `price_records` |
 
 ---
 
@@ -177,6 +176,7 @@ Data models managed by Mongoose:
 
 ```
 Travelgenie/
+├── docs/                   # Architecture, API, deployment, and testing notes
 ├── Backend/                # Express API & MongoDB Logic
 │   └── src/
 │       ├── config/
@@ -219,11 +219,20 @@ NODE_ENV=development
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/travelgenie
 JWT_SECRET=your_jwt_secret
-CORS_ORIGIN=*
+JWT_EXPIRES_IN=7d
+CORS_ORIGINS=*
 ```
 
 ```bash
 npm run dev   # → http://localhost:5000
+```
+
+Seed the database (optional, first run):
+
+```bash
+node src/scripts/seedAdmin.js       # creates admin account
+node src/scripts/seedDestinations.js # seeds 25 Sri Lanka districts
+node src/scripts/seedPlaces.js      # seeds places per district
 ```
 
 ### 2 — Mobile App
@@ -238,6 +247,8 @@ Create a `.env` file:
 ```env
 EXPO_PUBLIC_API_BASE_URL=http://<YOUR_LAN_IP>:5000/api/v1
 ```
+
+> **Android emulator**: use `http://10.0.2.2:5000/api/v1` (no `.env` file needed — it is the default fallback in `src/constants/apiConfig.js`).
 
 ```bash
 npm start     # Opens the Expo Metro Bundler
@@ -255,8 +266,9 @@ npm start     # Opens the Expo Metro Bundler
 | Authentication | JWT + bcryptjs | 9.0 / 2.4 |
 | File uploads | multer | 2.0 |
 | Email | nodemailer | 8.0 |
-| Mobile App | React Native + Expo | 0.76 / ~54.0.0 |
-| Maps | react-leaflet + @react-google-maps/api | 5 / 2.20 |
+| Mobile App | React Native + Expo | 0.81 / ~54.0.0 |
+| Navigation | React Navigation | 6.x |
+| Maps | react-native-maps | 1.20 |
 
 ---
 
