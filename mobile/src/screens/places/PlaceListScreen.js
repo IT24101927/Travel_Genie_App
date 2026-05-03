@@ -27,6 +27,8 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { getPlaceImageCandidates } from '../../utils/placeImages';
 import { getPlaceType, getPlaceTypeMeta } from '../../utils/placeTypes';
 import { useTripPlanner } from '../../context/TripPlannerContext';
+import { useAuth } from '../../context/AuthContext';
+import { getUserInterests, scorePlaceMatch } from '../../utils/interestMatch';
 import {
   navigateToPlannerDistrictPicker,
   navigateToPlannerPreferences,
@@ -110,6 +112,8 @@ const PlaceCard = memo(({ item, isSelected, plannerSelected, onPress, onToggleTr
   const cat = getPlaceType(item);
   const meta = getPlaceTypeMeta(item);
   const hasPlannerAction = plannerSelected !== undefined;
+  const matchScore = Number(item?.matchScore || 0);
+  const matchReason = item?.matchReason || '';
 
   return (
     <TouchableOpacity
@@ -155,8 +159,12 @@ const PlaceCard = memo(({ item, isSelected, plannerSelected, onPress, onToggleTr
         </View>
       ) : null}
 
+
       {/* Bottom info — always visible */}
       <View style={[styles.cardContent, hasPlannerAction && styles.cardContentPlanner]}>
+        {matchScore > 0 && matchReason ? (
+          <Text style={styles.cardMatchReason} numberOfLines={1}>🎯 {matchReason}</Text>
+        ) : null}
         <View style={styles.nameRow}>
           <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
           {!hasPlannerAction ? (
@@ -165,7 +173,7 @@ const PlaceCard = memo(({ item, isSelected, plannerSelected, onPress, onToggleTr
             </View>
           ) : null}
         </View>
-        {item.description ? (
+        {matchScore > 0 ? null : item.description ? (
           <Text style={styles.cardSub} numberOfLines={1}>{item.description}</Text>
         ) : null}
         {hasPlannerAction ? (
@@ -484,17 +492,17 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
     </Text>
 
     <View style={styles.filterContainer}>
-      <Pressable 
-        style={[styles.filterBtn, activeRatingFilter !== 'all' && styles.filterBtnActive]} 
+      <Pressable
+        style={[styles.filterBtn, activeRatingFilter !== 'all' && styles.filterBtnActive]}
         onPress={onOpenFilter}
       >
-        <Ionicons 
-          name="options-outline" 
-          size={18} 
-          color={activeRatingFilter !== 'all' ? colors.white : colors.primary} 
+        <Ionicons
+          name="options-outline"
+          size={18}
+          color={activeRatingFilter !== 'all' ? colors.white : colors.primary}
         />
       </Pressable>
-      
+
       {categories.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {categories.map((cat) => (
@@ -518,6 +526,7 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
         </ScrollView>
       )}
     </View>
+
   </>
 ));
 
@@ -534,6 +543,10 @@ export default function PlaceListScreen({ navigation, route }) {
     ? planner?.selectedDistrict?.name || routeDistrictName
     : routeDistrictName;
 
+  const { user } = useAuth();
+  const userInterests = useMemo(() => getUserInterests(user), [user]);
+  const hasInterestSignals = userInterests.length > 0;
+
   const [allPlaces, setAllPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -542,6 +555,7 @@ export default function PlaceListScreen({ navigation, route }) {
   const [showToTop, setShowToTop] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
   const [ratingFilter, setRatingFilter] = useState('all');
+  const [matchesOnly, setMatchesOnly] = useState(false);
 
   const listRef = useRef(null);
 
@@ -569,15 +583,33 @@ export default function PlaceListScreen({ navigation, route }) {
   }, [allPlaces]);
 
   const filtered = useMemo(() => {
-    let list = allPlaces;
+    let list = allPlaces.map((p) => {
+      if (!hasInterestSignals) return { ...p, matchScore: 0, matchReason: '' };
+      const { score, reason } = scorePlaceMatch(p, userInterests);
+      return { ...p, matchScore: score, matchReason: reason };
+    });
     if (selectedCat !== 'All') {
       list = list.filter((p) => p.type === selectedCat);
     }
     if (ratingFilter !== 'all') {
       list = list.filter((p) => Number(p.rating) >= Number(ratingFilter));
     }
+    if (matchesOnly && hasInterestSignals) {
+      list = list.filter((p) => p.matchScore > 0);
+    }
+    if (hasInterestSignals) {
+      list = list.slice().sort((a, b) =>
+        (b.matchScore - a.matchScore) ||
+        ((b.rating || 0) - (a.rating || 0))
+      );
+    }
     return list;
-  }, [allPlaces, selectedCat, ratingFilter]);
+  }, [allPlaces, selectedCat, ratingFilter, matchesOnly, hasInterestSignals, userInterests]);
+
+  const matchedCount = useMemo(
+    () => filtered.filter((p) => Number(p.matchScore) > 0).length,
+    [filtered]
+  );
 
   const selectedPlace = useMemo(
     () => filtered.find((place) => getPlaceId(place) === selectedPlaceId) || null,
@@ -687,12 +719,13 @@ export default function PlaceListScreen({ navigation, route }) {
       onViewDetails={handleCardPress}
       onScrollToTop={handleScrollToTop}
       onOpenFilter={() => setFilterVisible(true)}
-      activeRatingFilter={ratingFilter}
+      activeRatingFilter={ratingFilter !== 'all' || matchesOnly ? 'on' : 'all'}
       compact={isPlannerMode}
     />
   ), [districtName, search, handleSearchChange, handleSearchSubmit,
     categories, selectedCat, handleCatChange, filtered, selectedPlaceId,
-    selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop, isPlannerMode, ratingFilter]);
+    selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop,
+    isPlannerMode, ratingFilter, matchesOnly]);
 
   if (loading) {
     return (
@@ -845,6 +878,20 @@ export default function PlaceListScreen({ navigation, route }) {
             </View>
 
             <ScrollView style={styles.modalBody}>
+              {hasInterestSignals ? (
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterLabel}>Match your interests</Text>
+                  <Pressable
+                    style={[styles.matchesToggle, matchesOnly && styles.matchesToggleActive]}
+                    onPress={() => setMatchesOnly((v) => !v)}
+                  >
+                    <Text style={styles.matchesToggleEmoji}>🎯</Text>
+                    <Text style={[styles.matchesToggleText, matchesOnly && styles.matchesToggleTextActive]}>
+                      {matchesOnly ? `Matches only (${matchedCount})` : `Show matches (${matchedCount})`}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
               <View style={styles.filterSection}>
                 <Text style={styles.filterLabel}>Minimum Rating</Text>
                 <View style={styles.ratingPills}>
@@ -969,7 +1016,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, gap: 10,
+    paddingHorizontal: 18, paddingTop: 10, paddingBottom: 10, gap: 10,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 10,
@@ -1185,7 +1232,7 @@ const styles = StyleSheet.create({
 
   searchRow: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 10, paddingHorizontal: 16, marginBottom: 8,
+    gap: 10, paddingHorizontal: 20, marginBottom: 12,
   },
   searchBox: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
@@ -1200,14 +1247,42 @@ const styles = StyleSheet.create({
 
   resultCount: {
     fontSize: 12, color: colors.textMuted, fontWeight: '600',
-    paddingHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 20, marginBottom: 10,
   },
+  matchesAboveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  matchesToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.primary + '55',
+    backgroundColor: colors.primary + '12',
+  },
+  matchesToggleActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  matchesToggleEmoji: { fontSize: 12 },
+  matchesToggleText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  matchesToggleTextActive: { color: colors.white },
 
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -1390,6 +1465,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   ratingBadgeText: { color: colors.textPrimary, fontSize: 10, fontWeight: '800' },
+  matchBadge: {
+    position: 'absolute',
+    top: 38,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  matchBadgeEmoji: { fontSize: 10 },
+  matchBadgeText: { color: colors.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.3 },
+  cardMatchReason: { fontSize: 9, color: '#FFE08A', fontWeight: '700', marginBottom: 3 },
 
   cardContent: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -1457,6 +1549,7 @@ const plannerStyles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    marginHorizontal: -16, // Offset parent grid padding
   },
   bannerBack: {
     width: 36,
@@ -1499,6 +1592,7 @@ const plannerStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 11,
+    marginHorizontal: -16, // Offset parent grid padding
   },
   selectionHeader: {
     flexDirection: 'row',

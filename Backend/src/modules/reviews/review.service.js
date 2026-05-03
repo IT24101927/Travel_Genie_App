@@ -7,7 +7,7 @@ const NotificationService = require('../notifications/notification.service');
 
 const createReview = async (user, payload) => {
   const review = await Review.create({ ...payload, userId: user.userId });
-  // Since default status is 'approved', sync immediately
+  // Instant sync as per user preference
   await syncResourceRating(review.targetType, review.targetId);
   return review;
 };

@@ -300,6 +300,10 @@ export const RouteResultCard = React.memo(({ item, onDetails, onLog, onAddToTrip
         <Pressable style={styles.actionSecondary} onPress={onDetails}>
           <Text style={styles.actionSecondaryText}>More details</Text>
         </Pressable>
+        
+        {/* Spacer to push the next item to the right */}
+        <View style={{ flex: 1 }} />
+
         {onAddToTrip ? (
           <Pressable
             style={[styles.actionPrimary, { backgroundColor: meta.color }]}
@@ -335,8 +339,11 @@ const SearchBox = React.memo(({ onSearchChange }) => {
 
   const handleSwap = () => {
     const f = fromText;
-    setFromText(toText);
+    const t = toText;
+    setFromText(t);
     setToText(f);
+    // Trigger immediate search on swap
+    onSearchChange(t, f);
   };
 
   const isSearching = !!(fromText.trim() || toText.trim());
@@ -397,12 +404,12 @@ const TransportListScreen = ({ navigation }) => {
   const [schedules, setSchedules] = useState([]);
   const [personalLogs, setPersonalLogs] = useState([]);
   const [popularSchedules, setPopularSchedules] = useState([]);
-  
+
   // Filters
   const [selectedType, setSelectedType] = useState('all');
   const [searchFrom, setSearchFrom] = useState('');
   const [searchTo, setSearchTo] = useState('');
-  
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -425,7 +432,7 @@ const TransportListScreen = ({ navigation }) => {
       ? { schedule, tripId, tripTitle, lockTrip: true }
       : { schedule });
   }, [navigation, tripPickerSchedule]);
-  
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -444,7 +451,7 @@ const TransportListScreen = ({ navigation }) => {
       if (!silent && !append) setLoading(true);
       if (append) setLoadingMore(true);
       setError('');
-      
+
       const params = { page: pageNum, limit: PAGE_SIZE };
       if (selectedType !== 'all') params.type = selectedType;
       if (searchFrom.trim()) params.from = searchFrom.trim();
@@ -454,15 +461,15 @@ const TransportListScreen = ({ navigation }) => {
         getTransportSchedulesApi(params),
         pageNum === 1 ? getTransportsApi().catch(() => null) : Promise.resolve(null)
       ]);
-      
+
       const data = scheduleRes?.data || {};
       const newSchedules = data.schedules || [];
-      
+
       setSchedules(prev => append ? [...prev, ...newSchedules] : newSchedules);
       setPage(data.page || pageNum);
       setTotalPages(data.totalPages || 1);
       setTotal(data.total || newSchedules.length);
-      
+
       if (logRes) {
         setPersonalLogs(logRes.data?.transports || []);
       }

@@ -78,7 +78,7 @@ const seedReviews = async () => {
           wouldRecommend: rating >= 4,
           pros: [PROS[Math.floor(Math.random() * PROS.length)], PROS[Math.floor(Math.random() * PROS.length)]],
           cons: rating < 4 ? [CONS[Math.floor(Math.random() * CONS.length)]] : [],
-          status: Math.random() > 0.2 ? 'approved' : 'pending',
+          status: 'approved',
           helpfulCount: Math.floor(Math.random() * 10),
           createdAt: new Date(Date.now() - Math.floor(Math.random() * 5000000000))
         });
@@ -105,7 +105,7 @@ const seedReviews = async () => {
           wouldRecommend: rating >= 4,
           pros: [PROS[Math.floor(Math.random() * PROS.length)], PROS[Math.floor(Math.random() * PROS.length)]],
           cons: rating < 4 ? [CONS[Math.floor(Math.random() * CONS.length)]] : [],
-          status: Math.random() > 0.1 ? 'approved' : 'pending',
+          status: 'approved',
           helpfulCount: Math.floor(Math.random() * 15),
           createdAt: new Date(Date.now() - Math.floor(Math.random() * 5000000000))
         });
@@ -114,6 +114,18 @@ const seedReviews = async () => {
 
     await Review.insertMany(reviews);
     console.log(`Successfully seeded ${reviews.length} reviews!`);
+
+    // Manually sync ratings since insertMany skips middleware
+    const { syncResourceRating } = require('../modules/reviews/review.service');
+    console.log('Syncing ratings...');
+    
+    for (const place of places) {
+      await syncResourceRating('place', place._id);
+    }
+    for (const hotel of hotels) {
+      await syncResourceRating('hotel', hotel._id);
+    }
+    console.log('Ratings synced.');
 
     process.exit(0);
   } catch (error) {

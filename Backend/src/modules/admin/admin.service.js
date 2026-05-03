@@ -20,10 +20,10 @@ const Notification = loadOptionalModel('../notifications/notification.model');
 const Transport = loadOptionalModel('../transport/models/Transport');
 const TransportSchedule = loadOptionalModel('../transport/models/TransportSchedule');
 
-const safeCount = async (Model) => {
+const safeCount = async (Model, filter = {}) => {
   if (!Model) return 0;
   try {
-    return await Model.countDocuments();
+    return await Model.countDocuments(filter);
   } catch (err) {
     return 0;
   }
@@ -73,7 +73,7 @@ const getDashboardStats = async () => {
     User.countDocuments({ role: 'admin' }),
     safeCount(Trip),
     mongoose.connection.db.collection('districts').countDocuments().catch(() => 0),
-    safeCount(Place),
+    safeCount(Place, { $or: [{ type: { $ne: '', $exists: true } }, { category: { $ne: '', $exists: true } }] }),
     safeCount(Hotel),
     safeCount(Expense),
     safeCount(Review),
@@ -248,7 +248,11 @@ const getResourceList = async (resource) => {
     throw new AppError('Unknown resource', 400);
   }
 
-  return safeList(Model, { limit: 100 });
+  const filter = resource === 'places' 
+    ? { $or: [{ type: { $ne: '', $exists: true } }, { category: { $ne: '', $exists: true } }] }
+    : {};
+
+  return safeList(Model, filter);
 };
 
 const getTransportInsights = async () => {

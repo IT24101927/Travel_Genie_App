@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import AppButton from '../../components/common/AppButton';
 import colors from '../../constants/colors';
@@ -12,27 +13,68 @@ const GuestSignInPromptScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-      </Pressable>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="close" size={24} color={colors.textPrimary} />
+        </Pressable>
+      </View>
 
       <View style={styles.content}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="lock-closed" size={40} color={colors.primary} />
+        <View style={styles.mainVisual}>
+          <LinearGradient
+            colors={[colors.primary + '20', colors.primary + '05']}
+            style={styles.visualCircle}
+          >
+            <View style={styles.iconContainer}>
+              <Ionicons name="sparkles" size={42} color={colors.primary} />
+            </View>
+          </LinearGradient>
+          <View style={styles.floatingBadge}>
+            <Ionicons name="lock-closed" size={14} color={colors.white} />
+          </View>
         </View>
 
-        <Text style={styles.title}>Sign in to continue</Text>
+        <Text style={styles.title}>Unlock Premium Features</Text>
         <Text style={styles.sub}>
-          Create a free account or sign in to view full details, write reviews, plan trips and more.
+          Join the TravelGenie community to save your favorite spots, write reviews, and plan smart itineraries.
         </Text>
 
+        <View style={styles.featuresList}>
+          <View style={styles.featureItem}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+            <Text style={styles.featureText}>Unlimited Trip Planning</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+            <Text style={styles.featureText}>Smart Budget Tracking</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+            <Text style={styles.featureText}>Verified Reviews & Ratings</Text>
+          </View>
+        </View>
+
         <View style={styles.btnGroup}>
-          <AppButton title="Sign In" onPress={exitGuest} />
-          <AppButton title="Create Account" variant="secondary" onPress={exitGuest} />
+          <Pressable style={styles.primaryBtn} onPress={exitGuest}>
+            <LinearGradient
+              colors={[colors.primary, colors.primaryDark]}
+              style={styles.primaryBtnGrad}
+            >
+              <Text style={styles.primaryBtnText}>Get Started Now</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.white} />
+            </LinearGradient>
+          </Pressable>
+
+          <AppButton 
+            title="Already have an account? Sign In" 
+            variant="ghost" 
+            onPress={exitGuest} 
+            textStyle={styles.secondaryBtnText}
+          />
         </View>
 
         <Pressable onPress={() => navigation.goBack()} style={styles.stayLink}>
-          <Text style={styles.stayText}>Keep browsing as guest</Text>
+          <Text style={styles.stayText}>Maybe later, keep browsing</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -41,30 +83,54 @@ const GuestSignInPromptScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
+  header: { padding: 16 },
   backBtn: {
-    width: 42, height: 42, borderRadius: 21,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border,
-    margin: 16
   },
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingTop: 20,
     paddingBottom: 40
   },
-  iconWrap: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: '#EAF4F1',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 24,
-    borderWidth: 1, borderColor: '#DDE6E1'
+  mainVisual: {
+    marginBottom: 40,
+    position: 'relative'
   },
-  title: { fontSize: 24, fontWeight: '900', color: colors.textPrimary, textAlign: 'center', marginBottom: 12 },
+  visualCircle: {
+    width: 120, height: 120, borderRadius: 60,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.primary + '15'
+  },
+  iconContainer: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: colors.white,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 10, shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12
+  },
+  floatingBadge: {
+    position: 'absolute', bottom: 4, right: 4,
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: colors.white,
+    elevation: 4
+  },
+  title: { fontSize: 26, fontWeight: '900', color: colors.textPrimary, textAlign: 'center', marginBottom: 12, letterSpacing: -0.5 },
   sub: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+  featuresList: { alignSelf: 'stretch', gap: 12, marginBottom: 40 },
+  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  featureText: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   btnGroup: { width: '100%', gap: 12, marginBottom: 20 },
+  primaryBtn: { borderRadius: 18, overflow: 'hidden', elevation: 8, shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10 },
+  primaryBtnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 10 },
+  primaryBtnText: { color: colors.white, fontSize: 17, fontWeight: '900' },
+  secondaryBtnText: { fontWeight: '800', color: colors.primary },
   stayLink: { paddingVertical: 10 },
   stayText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' }
 });

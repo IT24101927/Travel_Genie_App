@@ -67,12 +67,18 @@ const getSearchText = (row = {}, tagNames = []) => [
 ].join(' ').toLowerCase();
 
 const inferWebsiteType = (row = {}, tagNames = []) => {
+  const text = getSearchText(row, tagNames);
+
+  // EXCLUSION: If it looks like a hotel, resort, or lodging, it's NOT a tourist place
+  if (/\b(hotel|resort|villa|inn|hostel|guesthouse|guest house|homestay|apartment|bungalow|lodge|lodging|cottage|retreat|suites|stay|manor|bunglow)\b/.test(text)) {
+    return '';
+  }
+
   for (const tagName of tagNames) {
     const tagType = normalizePlaceType(tagName);
     if (tagType) return tagType;
   }
 
-  const text = getSearchText(row, tagNames);
   if (/\b(temple|vihara|stupa|bodhiya|dagoba|mosque|church|basilica|cathedral|shrine|kovil|devalaya|dewale)\b/.test(text)) return 'Temple';
   if (/\b(beach|bay|lagoon|coast|sea|ocean)\b/.test(text)) return 'Beach';
   if (/\b(museum|gallery)\b/.test(text)) return 'Museum';
@@ -81,9 +87,9 @@ const inferWebsiteType = (row = {}, tagNames = []) => {
   if (/\b(garden|botanical|arboretum)\b/.test(text)) return 'Garden';
   if (/\b(lake|tank|reservoir)\b/.test(text)) return 'Lake';
   if (/\b(market|bazaar)\b/.test(text)) return 'Market';
-  if (/\b(viewpoint|view point|lookout|summit|peak|rock)\b/.test(text)) return 'Viewpoint';
+  if (/\b(viewpoint|view point|lookout|summit|peak|rock|climb)\b/.test(text)) return 'Viewpoint';
   if (/\b(adventure|hike|hiking|trek|climb|rafting|surf)\b/.test(text)) return 'Adventure';
-  if (/\b(park|reserve|sanctuary|forest|wetland|waterfall)\b/.test(text)) return 'Nature';
+  if (/\b(park|reserve|sanctuary|forest|wetland|waterfall|nature)\b/.test(text)) return 'Nature';
   if (/\b(shopping|mall|precinct)\b/.test(text)) return 'Shopping';
   if (/\b(theme park|amusement)\b/.test(text)) return 'Theme Park';
   if (/\b(culture|cultural|festival|art|dance|craft)\b/.test(text)) return 'Culture';

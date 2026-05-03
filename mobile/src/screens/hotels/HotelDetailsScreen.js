@@ -32,6 +32,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { getHotelImageCandidates } from '../../utils/hotelImages';
 import { HOTEL_CURRENCIES, formatHotelPrice, getHotelNightlyPriceLkr } from '../../utils/currencyFormat';
 import ReviewSection from '../../components/reviews/ReviewSection';
+import { navigateToPlannerBudget } from '../../navigation/tripPlannerFlow';
 
 const { width } = Dimensions.get('window');
 const HERO_H = Math.floor(width * 0.85);
@@ -104,9 +105,6 @@ const getHotelMapRegion = (coords) => ({
   longitudeDelta: 0.018,
 });
 
-// Removed old StarRow and ReviewCard components as they are now part of ReviewSection
-
-// ─── Info Stat Card ──────────────────────────────────────────────────────────
 const InfoCard = ({ icon, iconBg, label, value, sub }) => (
   <View style={ds.infoCard}>
     <View style={[ds.infoIconBox, { backgroundColor: iconBg }]}>
@@ -185,7 +183,6 @@ const HotelLocationMap = ({ hotel, coords, onOpenInMaps }) => {
   );
 };
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
 const HotelDetailsScreen = ({ route, navigation }) => {
   const { hotel: initial } = route.params;
   const insets = useSafeAreaInsets();
@@ -285,7 +282,7 @@ const HotelDetailsScreen = ({ route, navigation }) => {
         <ScrollView
           contentContainerStyle={[
             ds.content,
-            { paddingBottom: insets.bottom + (isPlannerMode ? 140 : 60) }
+            { paddingBottom: Math.max(insets.bottom, 15) + (isPlannerMode ? 250 : 160) }
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -340,7 +337,7 @@ const HotelDetailsScreen = ({ route, navigation }) => {
               <View style={ds.heroLocRow}>
                 <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
                 <Text style={ds.heroLoc} numberOfLines={2}>
-                  {hotel.address_text || hotel.location || 'Sri Lanka'}
+                  {hotel.address_text || 'Sri Lanka'}
                 </Text>
               </View>
             </View>
@@ -532,29 +529,85 @@ const HotelDetailsScreen = ({ route, navigation }) => {
           </View>
         </ScrollView>
 
-        {/* ── Bottom action bar ── */}
-        <View style={ds.bottomBar}>
-          {nightlyPrice ? (
-            <View style={ds.bottomPriceBlock}>
-              <Text style={ds.bottomPriceLabel}>From</Text>
-              <Text style={ds.bottomPrice}>{formatHotelPrice(nightlyPrice, displayCurrency)}</Text>
-              <Text style={ds.bottomPriceSub}>/night</Text>
+        {/* ── Sticky Planner Bottom Bar (if in planner mode) ── */}
+        {isPlannerMode && (
+          <View style={[ds.plannerBottomBar, { bottom: Math.max(insets.bottom, 15) + 75 }]}>
+            <View style={ds.plannerTopRow}>
+              <View style={ds.plannerCountPill}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
+                <Text style={ds.plannerCountText}>
+                  {planner?.selectedHotels?.length || 0} selected
+                </Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              <Pressable
+                style={[ds.plannerNextBtn, !(planner?.selectedHotels?.length > 0) && ds.plannerNextBtnDisabled]}
+                disabled={!(planner?.selectedHotels?.length > 0)}
+                onPress={() => navigateToPlannerBudget(navigation)}
+              >
+                <Text style={ds.plannerNextText}>Next</Text>
+                <Ionicons name="arrow-forward" size={16} color={colors.white} />
+              </Pressable>
             </View>
-          ) : (
-            <View style={ds.bottomPriceBlock}>
-              <Text style={ds.bottomPriceLabel}>Price</Text>
-              <Text style={[ds.bottomPrice, { fontSize: 14 }]}>Contact for price</Text>
-            </View>
-          )}
+
+            {plannerSelectedHotel ? (
+              <View style={ds.plannerActiveChip}>
+                <Ionicons name="bed" size={12} color={colors.primary} />
+                <Text style={ds.plannerActiveText} numberOfLines={1}>
+                  Staying {plannerSelectedHotel.nights || 1} nt here
+                </Text>
+                <Pressable onPress={() => setShowPlannerModal(true)} style={ds.plannerEditBtn}>
+                  <Text style={ds.plannerEditText}>Edit</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable style={ds.plannerSelectBtn} onPress={() => setShowPlannerModal(true)}>
+                <Ionicons name="add-circle-outline" size={16} color={colors.white} />
+                <Text style={ds.plannerSelectText}>Select this hotel</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* ── Floating Contact FAB ── */}
+        <View 
+          style={{ 
+            position: 'absolute',
+            bottom: Math.max(insets.bottom, 15) + (isPlannerMode ? 210 : 95),
+            left: 0,
+            right: 0,
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            paddingRight: 22,
+            zIndex: 99,
+          }}
+          pointerEvents="box-none"
+        >
           <Pressable
-            style={[ds.bookBtn, !hasContact && ds.bookBtnDisabled]}
+            style={({ pressed }) => [
+              { 
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+                elevation: 8,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 6,
+              },
+              !hasContact && { backgroundColor: colors.textMuted },
+              pressed && { opacity: 0.85, transform: [{ scale: 0.9 }] }
+            ]}
             onPress={handleBook}
             disabled={!hasContact}
           >
-            <Ionicons name="call-outline" size={17} color={colors.white} />
-            <Text style={ds.bookBtnText}>Contact Hotel</Text>
+            <Ionicons name="call" size={26} color={colors.white} />
           </Pressable>
         </View>
+
         <Modal
           visible={showPlannerModal}
           transparent
@@ -565,20 +618,29 @@ const HotelDetailsScreen = ({ route, navigation }) => {
         >
           <View style={ds.modalOverlay}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowPlannerModal(false)} />
-            <View style={[ds.filterSheet, { maxHeight: '85%', paddingBottom: Math.max(34, 24) }]}>
+            <View style={[ds.filterSheet, { maxHeight: '85%', paddingBottom: Math.max(insets.bottom, 24) + (Platform.OS === 'android' ? 16 : 0) }]}>
               <View style={ds.filterSheetHandle} />
               {(() => {
                 const tripNightsCap = planner?.preferences?.nights ? Math.max(1, Number(planner?.preferences?.nights)) : null;
+                const usedOthers = planner?.selectedHotels?.reduce((sum, h) => {
+                  if (getHotelId(h) === getHotelId(hotel)) return sum;
+                  return sum + (h.nights || 1);
+                }, 0) || 0;
+
+                const maxNightsAllowed = tripNightsCap ? Math.max(1, tripNightsCap - usedOthers) : null;
+
                 let currentNights = Math.max(1, Math.ceil((checkOutDate - checkInDate) / 86400000));
-                if (tripNightsCap && currentNights > tripNightsCap) {
-                  currentNights = tripNightsCap;
+                // Automatically adjust if it exceeds cap
+                if (maxNightsAllowed && currentNights > maxNightsAllowed) {
+                  currentNights = maxNightsAllowed;
                 }
 
+                const totalUsed = usedOthers + currentNights;
                 const nightlyPriceValue = getHotelNightlyPriceLkr(hotel);
                 const totalEstimatedCost = nightlyPriceValue * currentNights;
 
                 const handleIncrement = () => {
-                  if (tripNightsCap && currentNights >= tripNightsCap) return;
+                  if (maxNightsAllowed && currentNights >= maxNightsAllowed) return;
                   const newOut = new Date(checkInDate);
                   newOut.setDate(newOut.getDate() + currentNights + 1);
                   setCheckOutDate(newOut);
@@ -602,43 +664,56 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                       </View>
 
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                        <Pressable style={ds.filterOption} onPress={() => setDatePickerMode('checkIn')}>
+                        <Pressable style={ds.dateBox} onPress={() => setDatePickerMode('checkIn')}>
                           <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-                          <View style={{ marginLeft: 6 }}>
-                            <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '700' }}>Check-in</Text>
-                            <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: '800' }}>{checkInDate.toLocaleDateString()}</Text>
+                          <View>
+                            <Text style={ds.dateLabel}>Check-in</Text>
+                            <Text style={ds.dateValue}>{checkInDate.toLocaleDateString()}</Text>
                           </View>
                         </Pressable>
                         <Ionicons name="arrow-forward" size={16} color={colors.textMuted} />
-                        <Pressable style={ds.filterOption} onPress={() => setDatePickerMode('checkOut')}>
+                        <Pressable style={ds.dateBox} onPress={() => setDatePickerMode('checkOut')}>
                           <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-                          <View style={{ marginLeft: 6 }}>
-                            <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '700' }}>Check-out</Text>
-                            <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: '800' }}>{checkOutDate.toLocaleDateString()}</Text>
+                          <View>
+                            <Text style={ds.dateLabel}>Check-out</Text>
+                            <Text style={ds.dateValue}>{checkOutDate.toLocaleDateString()}</Text>
                           </View>
                         </Pressable>
                       </View>
 
-                      <View style={{ backgroundColor: colors.surface2, padding: 12, borderRadius: 12, marginBottom: 20 }}>
+                      <View style={ds.nightControlBox}>
                         <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 12 }}>
-                          <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '800' }}>
+                          <Text style={ds.nightSummaryText}>
                             🌙 {currentNights} night{currentNights !== 1 ? 's' : ''} · {checkInDate.toLocaleDateString()} – {checkOutDate.toLocaleDateString()}
                           </Text>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 }}>
+                        
+                        {tripNightsCap && (
+                          <View style={{ marginBottom: 16 }}>
+                            <View style={ds.progressBarTrack}>
+                              {usedOthers > 0 && <View style={{ width: `${Math.min(100, (usedOthers / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.border }} />}
+                              <View style={{ width: `${Math.min(100, (currentNights / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.primary, borderLeftWidth: usedOthers > 0 ? 1 : 0, borderLeftColor: colors.background }} />
+                            </View>
+                            <Text style={ds.progressText}>
+                              {totalUsed} / {tripNightsCap} nights used
+                            </Text>
+                          </View>
+                        )}
+
+                        <View style={ds.counterRow}>
                           <Pressable
                             onPress={handleDecrement}
-                            style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary + '14', alignItems: 'center', justifyContent: 'center', opacity: currentNights <= 1 ? 0.4 : 1 }}
+                            style={[ds.counterBtn, currentNights <= 1 && ds.counterBtnDisabled]}
                           >
-                            <Ionicons name="remove" size={20} color={colors.primary} />
+                            <Ionicons name="remove" size={20} color={colors.textPrimary} />
                           </Pressable>
                           <View style={{ alignItems: 'center' }}>
-                            <Text style={{ fontSize: 22, fontWeight: '900', color: colors.textPrimary }}>{currentNights}</Text>
-                            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase' }}>Night{currentNights !== 1 ? 's' : ''}</Text>
+                            <Text style={ds.counterValue}>{currentNights}</Text>
+                            <Text style={ds.counterLabel}>Nights</Text>
                           </View>
                           <Pressable
                             onPress={handleIncrement}
-                            style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary + '14', alignItems: 'center', justifyContent: 'center', opacity: (tripNightsCap && currentNights >= tripNightsCap) ? 0.4 : 1 }}
+                            style={[ds.counterBtn, (maxNightsAllowed && currentNights >= maxNightsAllowed) && ds.counterBtnDisabled]}
                           >
                             <Ionicons name="add" size={20} color={colors.primary} />
                           </Pressable>
@@ -646,33 +721,34 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                       </View>
 
                       {nightlyPriceValue > 0 && (
-                        <View style={{ backgroundColor: colors.success + '14', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 20 }}>
-                          <Text style={{ fontSize: 12, color: colors.success, fontWeight: '800' }}>
+                        <View style={ds.costPreview}>
+                          <Text style={ds.costPreviewText}>
                             Estimated cost: {formatHotelPrice(totalEstimatedCost, displayCurrency)}
                           </Text>
-                          <Text style={{ fontSize: 10, color: colors.textSecondary, marginTop: 2 }}>
+                          <Text style={ds.costPreviewSub}>
                             ({currentNights} × {formatHotelPrice(nightlyPriceValue, displayCurrency)}/night)
                           </Text>
                         </View>
                       )}
                     </ScrollView>
 
-                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                    <View style={ds.modalActionRow}>
                       <Pressable
-                        style={[ds.heroCancelBtn, { flex: 1, backgroundColor: colors.surface2, borderColor: colors.border, alignItems: 'center', paddingVertical: 14 }]}
+                        style={ds.modalCancelBtn}
                         onPress={() => {
-                          if (plannerSelectedHotel) {
+                          const existing = planner?.selectedHotels?.some(h => getHotelId(h) === getHotelId(hotel));
+                          if (existing) {
                             planner?.removeSelectedHotel?.(getHotelId(hotel));
                           }
                           setShowPlannerModal(false);
                         }}
                       >
-                        <Text style={[ds.heroCancelText, { color: colors.textPrimary, fontSize: 14 }]}>
-                          {plannerSelectedHotel ? 'Remove' : 'Cancel'}
+                        <Text style={ds.modalCancelText}>
+                          {planner?.selectedHotels?.some(h => getHotelId(h) === getHotelId(hotel)) ? 'Remove' : 'Cancel'}
                         </Text>
                       </Pressable>
                       <Pressable
-                        style={[ds.filterApplyBtn, { flex: 2, marginBottom: 0 }]}
+                        style={ds.modalConfirmBtn}
                         onPress={() => {
                           planner?.addOrUpdateSelectedHotel?.(hotel, {
                             checkIn: checkInDate.toISOString().slice(0, 10),
@@ -682,8 +758,8 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                           setShowPlannerModal(false);
                         }}
                       >
-                        <Text style={ds.filterApplyText}>
-                          {plannerSelectedHotel ? 'Update Selection' : 'Confirm Selection'}
+                        <Text style={ds.modalConfirmText}>
+                          {planner?.selectedHotels?.some(h => getHotelId(h) === getHotelId(hotel)) ? 'Update Selection' : 'Confirm Selection'}
                         </Text>
                       </Pressable>
                     </View>
@@ -701,18 +777,24 @@ const HotelDetailsScreen = ({ route, navigation }) => {
           minimumDate={datePickerMode === 'checkOut' ? new Date(checkInDate.getTime() + 86400000) : new Date()}
           onConfirm={(date) => {
             const tripNightsCap = planner?.preferences?.nights ? Math.max(1, Number(planner?.preferences?.nights)) : null;
+            const usedOthers = planner?.selectedHotels?.reduce((sum, h) => {
+              if (getHotelId(h) === getHotelId(hotel)) return sum;
+              return sum + (h.nights || 1);
+            }, 0) || 0;
+            const maxNightsAllowed = tripNightsCap ? Math.max(1, tripNightsCap - usedOthers) : null;
+
             if (datePickerMode === 'checkIn') {
               setCheckInDate(date);
               let newDiff = Math.ceil((checkOutDate - date) / 86400000);
               if (newDiff < 1) newDiff = 1;
-              if (tripNightsCap && newDiff > tripNightsCap) newDiff = tripNightsCap;
+              if (maxNightsAllowed && newDiff > maxNightsAllowed) newDiff = maxNightsAllowed;
               const nextOut = new Date(date);
               nextOut.setDate(nextOut.getDate() + newDiff);
               setCheckOutDate(nextOut);
             } else {
               let diff = Math.ceil((date - checkInDate) / 86400000);
               if (diff < 1) diff = 1;
-              if (tripNightsCap && diff > tripNightsCap) diff = tripNightsCap;
+              if (maxNightsAllowed && diff > maxNightsAllowed) diff = maxNightsAllowed;
               const nextOut = new Date(checkInDate);
               nextOut.setDate(nextOut.getDate() + diff);
               setCheckOutDate(nextOut);
@@ -931,80 +1013,6 @@ const ds = StyleSheet.create({
   },
   contactBtnText: { fontSize: 14, fontWeight: '700', flex: 1 },
 
-  // Reviews
-  reviewsTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 0,
-  },
-  writeReviewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: colors.primary + '14',
-    marginTop: 2,
-  },
-  writeReviewText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
-  ratingSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: colors.warning + '10',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: colors.warning + '25',
-  },
-  ratingSummaryNum: { fontSize: 38, fontWeight: '900', color: colors.textPrimary },
-  ratingSummaryLbl: { color: colors.textMuted, fontSize: 11, fontWeight: '600', marginTop: 4 },
-  reviewForm: {
-    backgroundColor: colors.surface2,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-  },
-  reviewFormTitle: { color: colors.textPrimary, fontWeight: '800', fontSize: 14, marginBottom: 10 },
-  reviewCard: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 14,
-    marginTop: 10,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  reviewAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.primary + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reviewAvatarText: { color: colors.primary, fontWeight: '900', fontSize: 15 },
-  reviewName: { color: colors.textPrimary, fontWeight: '800', fontSize: 14, marginBottom: 3 },
-  reviewRatingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.warning + '18',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.warning + '30',
-  },
-  reviewRatingPillText: { color: colors.textPrimary, fontSize: 11, fontWeight: '900' },
-  reviewComment: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
-
   // Star row
   starRow: { flexDirection: 'row', alignItems: 'center' },
 
@@ -1099,50 +1107,68 @@ const ds = StyleSheet.create({
     marginTop: -2,
   },
 
-  // Bottom bar
-  bottomBar: {
+  // Planner Bar Styles
+  plannerBottomBar: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    left: 12,
+    right: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 12,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    zIndex: 90,
+  },
+  plannerTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  plannerCountPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 14,
-    elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    gap: 6,
+    backgroundColor: colors.primary + '10',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  bottomPriceBlock: { flex: 1 },
-  bottomPriceLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
-  bottomPrice: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
-  bottomPriceSub: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  bookBtn: {
+  plannerCountText: { fontSize: 12, fontWeight: '800', color: colors.primary },
+  plannerNextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  plannerNextBtnDisabled: { opacity: 0.5 },
+  plannerNextText: { color: colors.white, fontSize: 13, fontWeight: '900' },
+  plannerActiveChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 16,
-    elevation: 3,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    backgroundColor: colors.surface2,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  bookBtnDisabled: { backgroundColor: colors.textMuted },
-  bookBtnText: { color: colors.white, fontSize: 14, fontWeight: '900' },
+  plannerActiveText: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  plannerEditBtn: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  plannerEditText: { color: colors.white, fontSize: 11, fontWeight: '800' },
+  plannerSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.accent,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  plannerSelectText: { color: colors.white, fontSize: 14, fontWeight: '900' },
 
-  // Modal styles
+  // Modal UI Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -1166,37 +1192,66 @@ const ds = StyleSheet.create({
     marginBottom: 16,
   },
   filterSheetTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary },
-  filterOption: {
+  dateBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
+    gap: 8,
     backgroundColor: colors.surface2,
+    padding: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  heroCancelBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  dateLabel: { fontSize: 10, color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase' },
+  dateValue: { fontSize: 13, color: colors.textPrimary, fontWeight: '800' },
+  nightControlBox: {
+    backgroundColor: colors.surface2,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderColor: colors.border,
   },
-  heroCancelText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: '900',
+  nightSummaryText: { fontSize: 12, color: colors.primary, fontWeight: '800' },
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+    flexDirection: 'row',
   },
-  filterApplyBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
+  progressText: { fontSize: 10, color: colors.textSecondary, textAlign: 'right', marginTop: 4, fontWeight: '700' },
+  counterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
+  counterBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '10',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  filterApplyText: { color: colors.white, fontSize: 15, fontWeight: '900' },
+  counterBtnDisabled: { opacity: 0.3, borderColor: colors.border, backgroundColor: 'transparent' },
+  counterValue: { fontSize: 26, fontWeight: '900', color: colors.textPrimary },
+  counterLabel: { fontSize: 10, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase' },
+  costPreview: {
+    backgroundColor: colors.success + '10',
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.success + '30',
+  },
+  costPreviewText: { fontSize: 13, color: colors.success, fontWeight: '800' },
+  costPreviewSub: { fontSize: 10, color: colors.textSecondary, marginTop: 2, fontWeight: '600' },
+  modalActionRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  modalCancelBtn: { flex: 1, backgroundColor: colors.surface2, paddingVertical: 14, borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  modalCancelText: { color: colors.textPrimary, fontSize: 14, fontWeight: '800' },
+  modalConfirmBtn: { flex: 2, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  modalConfirmText: { color: colors.white, fontSize: 14, fontWeight: '900' },
 
   // Trip action card styles
   tripActionCard: {
@@ -1211,38 +1266,12 @@ const ds = StyleSheet.create({
     marginBottom: 16,
     marginHorizontal: 16,
   },
-  tripActionCopy: {
-    flex: 1,
-  },
-  tripActionTitle: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  tripActionSub: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-    lineHeight: 17,
-  },
-  tripAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-  },
-  tripAddBtnActive: {
-    backgroundColor: colors.success,
-  },
-  tripAddBtnText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: '900',
-  },
+  tripActionCopy: { flex: 1 },
+  tripActionTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '900' },
+  tripActionSub: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginTop: 3, lineHeight: 17 },
+  tripAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 13, paddingVertical: 11 },
+  tripAddBtnActive: { backgroundColor: colors.success },
+  tripAddBtnText: { color: colors.white, fontSize: 13, fontWeight: '900' },
 });
 
 export default HotelDetailsScreen;

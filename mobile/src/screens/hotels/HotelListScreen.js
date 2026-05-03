@@ -32,6 +32,8 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { getHotelImageCandidates } from '../../utils/hotelImages';
 import { HOTEL_CURRENCIES, formatHotelPrice, getHotelNightlyPriceLkr } from '../../utils/currencyFormat';
 import { useTripPlanner } from '../../context/TripPlannerContext';
+import { useAuth } from '../../context/AuthContext';
+import { getUserInterests, getUserTravelStyle, scoreHotelMatch } from '../../utils/interestMatch';
 import {
   navigateToPlannerPreferences,
   navigateToPlannerBudget,
@@ -194,7 +196,7 @@ const getPinnedRegion = (coordinates = []) => {
 const getDistrictName = (hotel = {}) => {
   const nestedName = hotel.place?.district?.name || hotel.districtData?.name || hotel.districtInfo?.name;
   const directName = typeof hotel.district === 'string' ? hotel.district : hotel.district?.name;
-  const fallback = hotel.location || hotel.address_text;
+  const fallback = hotel.address_text || '';
   return String(nestedName || directName || fallback || 'Other').trim() || 'Other';
 };
 
@@ -233,13 +235,7 @@ const getHotelCoords = (hotel) => {
   if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
     return { latitude: lat, longitude: lng };
   }
-  const c = hotel?.location?.coordinates;
-  if (Array.isArray(c) && c.length === 2) {
-    const [lo, la] = c;
-    if (Number.isFinite(la) && Number.isFinite(lo) && la !== 0 && lo !== 0) {
-      return { latitude: la, longitude: lo };
-    }
-  }
+
   return null;
 };
 
@@ -365,6 +361,8 @@ const HotelGridCard = memo(({ item, isSelected, onPress, displayCurrency, select
   const meta = getHotelMeta(item);
   const price = getHotelNightlyPriceLkr(item);
   const hasPlannerAction = selectionMode;
+  const matchScore = Number(item?.matchScore || 0);
+  const matchReason = item?.matchReason || '';
 
   return (
     <TouchableOpacity
@@ -411,6 +409,9 @@ const HotelGridCard = memo(({ item, isSelected, onPress, displayCurrency, select
       )}
 
       <View style={[ls.hotelContent, hasPlannerAction && ls.hotelContentPlanner]}>
+        {matchScore > 0 && matchReason ? (
+          <Text style={ls.hotelMatchReason} numberOfLines={1}>🎯 {matchReason}</Text>
+        ) : null}
         <Text style={ls.hotelName} numberOfLines={1}>{item.name}</Text>
         <View style={ls.hotelLocRow}>
           <Ionicons name="location" size={10} color="rgba(255,255,255,0.85)" />
@@ -767,6 +768,12 @@ const HotelListScreen = ({ route, navigation }) => {
   const [ratingFilter, setRatingFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [showToTop, setShowToTop] = useState(false);
+  const [matchesOnly, setMatchesOnly] = useState(false);
+
+  const { user } = useAuth();
+  const userInterests = useMemo(() => getUserInterests(user), [user]);
+  const userTravelStyle = useMemo(() => getUserTravelStyle(user), [user]);
+  const hasInterestSignals = userInterests.length > 0 || !!userTravelStyle;
 
   const [nightsModalHotel, setNightsModalHotel] = useState(null);
   const [checkInDate, setCheckInDate] = useState(() => {
@@ -887,16 +894,9 @@ const HotelListScreen = ({ route, navigation }) => {
       navigateToPlannerPreferences(navigation);
       return;
     }
-    if (hasRouteDistrict) {
-      navigation.goBack();
-    } else {
-      setSelectedDistrict(null);
-      setSearch('');
-      setSelectedProvince('All');
-      setTypeFilter('all');
-      setSelectedHotelId(null);
-    }
-  }, [navigation, hasRouteDistrict, isPlannerMode]);
+    // Always go back to the dedicated District List screen
+    navigation.goBack();
+  }, [navigation, isPlannerMode]);
 
   const districtList = useMemo(() => {
     const map = new Map();
@@ -924,7 +924,11 @@ const HotelListScreen = ({ route, navigation }) => {
   }, [hotels]);
 
   const filteredHotels = useMemo(() => {
-    let list = hotels.slice();
+    let list = hotels.map((h) => {
+      if (!hasInterestSignals) return { ...h, matchScore: 0, matchReason: '' };
+      const { score, reason } = scoreHotelMatch(h, userInterests, userTravelStyle);
+      return { ...h, matchScore: score, matchReason: reason };
+    });
     if (selectedDistrict) {
       list = list.filter((h) => hotelMatchesDistrict(h, selectedDistrict));
     }
@@ -963,8 +967,23 @@ const HotelListScreen = ({ route, navigation }) => {
     } else if (sortKey === 'rating') list.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
     else if (sortKey === 'priceAsc') list.sort((a, b) => getHotelNightlyPriceLkr(a) - getHotelNightlyPriceLkr(b));
     else if (sortKey === 'priceDesc') list.sort((a, b) => getHotelNightlyPriceLkr(b) - getHotelNightlyPriceLkr(a));
+
+    if (matchesOnly && hasInterestSignals) {
+      list = list.filter((h) => Number(h.matchScore) > 0);
+    }
+    if (hasInterestSignals && sortKey === 'rating' && !isPlannerMode) {
+      list = list.slice().sort((a, b) =>
+        (Number(b.matchScore) - Number(a.matchScore)) ||
+        ((Number(b.rating) || 0) - (Number(a.rating) || 0))
+      );
+    }
     return list;
-  }, [hotels, selectedDistrict, typeFilter, search, sortKey, isPlannerMode, placeCentroid, plannerSelectedPlaceIds]);
+  }, [hotels, selectedDistrict, typeFilter, search, sortKey, isPlannerMode, placeCentroid, plannerSelectedPlaceIds, matchesOnly, hasInterestSignals, userInterests, userTravelStyle, ratingFilter]);
+
+  const matchedHotelCount = useMemo(
+    () => filteredHotels.filter((h) => Number(h.matchScore) > 0).length,
+    [filteredHotels]
+  );
 
   const selectedHotel = useMemo(
     () => filteredHotels.find((hotel) => getHotelId(hotel) === selectedHotelId) || null,
@@ -1021,7 +1040,7 @@ const HotelListScreen = ({ route, navigation }) => {
   const isDefaultFilter = isPlannerMode
     ? typeFilter === 'all' || typeFilter === getPrefFilterKey(planner?.preferences?.hotelType)
     : typeFilter === 'all';
-  const activeFilterCount = [!isDefaultFilter, sortKey !== 'rating', displayCurrency !== 'LKR', ratingFilter !== 'all'].filter(Boolean).length;
+  const activeFilterCount = [!isDefaultFilter, sortKey !== 'rating', displayCurrency !== 'LKR', ratingFilter !== 'all', matchesOnly].filter(Boolean).length;
   const selectedDistrictName = selectedDistrict?.name || '';
 
   const filteredDistrictList = useMemo(() => {
@@ -1067,152 +1086,7 @@ const HotelListScreen = ({ route, navigation }) => {
   }, [displayCurrency, handleDistrictSelect, handleHotelPress, handleToggleTripHotel, isPlannerMode, planner?.selectedHotels, selectedHotelId, showDistrictPicker]);
 
   const renderHeader = () => {
-    if (showDistrictPicker) {
-      return (
-        <View style={{ paddingTop: 16, paddingHorizontal: 16 }}>
-          {/* Main Green Card */}
-          <View style={ls.greenCard}>
-            <View style={ls.greenCardTop}>
-              <View style={ls.greenCardIconWrap}>
-                <Ionicons name="bed" size={24} color={colors.white} />
-              </View>
-              <View style={ls.greenCardTextWrap}>
-                <Text style={ls.greenCardEyebrow}>HOTEL FINDER</Text>
-                <Text style={ls.greenCardTitle}>Choose where to stay</Text>
-                <Text style={ls.greenCardSub}>Pick a district and browse hotels nearby.</Text>
-              </View>
-            </View>
-            <View style={ls.greenCardBottom}>
-              <View style={ls.greenCardPill}>
-                <Ionicons name="map-outline" size={14} color={colors.white} />
-                <View>
-                  <Text style={ls.greenCardPillValue}>{districtList.length}</Text>
-                  <Text style={ls.greenCardPillLabel}>Districts</Text>
-                </View>
-              </View>
-              <View style={ls.greenCardPill}>
-                <Ionicons name="bed-outline" size={14} color={colors.white} />
-                <View>
-                  <Text style={ls.greenCardPillValue}>{hotels.length}</Text>
-                  <Text style={ls.greenCardPillLabel}>Hotels</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Search Box */}
-          <View style={ls.searchBoxOut}>
-            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              style={ls.searchInputOut}
-              placeholder="Search hotel districts..."
-              placeholderTextColor={colors.textMuted}
-            />
-          </View>
-
-          {/* Provinces Scroll */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={ls.provinceScroll}
-            contentContainerStyle={ls.provinceScrollContent}
-          >
-            {PROVINCES.map((p) => {
-              const active = selectedProvince === p;
-              return (
-                <Pressable
-                  key={p}
-                  style={[ls.provinceChip, active && ls.provinceChipActive]}
-                  onPress={() => setSelectedProvince(p)}
-                >
-                  <Text style={[ls.provinceChipText, active && ls.provinceChipTextActive]}>{p}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />}
-
-          {/* Popular Stay Districts */}
-          {!loading && popularDistricts.length > 0 && !search && selectedProvince === 'All' && (
-            <View style={ls.popularSection}>
-              <View style={ls.popHeader}>
-                <View style={ls.popHeaderTitleWrap}>
-                  <Ionicons name="star" size={16} color={colors.warning} />
-                  <Text style={ls.popHeaderTitle}>Popular Stay Districts</Text>
-                </View>
-                <Text style={ls.popHeaderSub}>Most hotels</Text>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={ls.popScrollContent}
-              >
-                {popularDistricts.map((d, i) => {
-                  const cover = d.cover ? getHotelImageCandidates(d.cover) : null;
-                  const accent = DISTRICT_ACCENTS[i % DISTRICT_ACCENTS.length];
-                  return (
-                    <TouchableOpacity
-                      key={d.id || d.name}
-                      style={ls.popCard}
-                      onPress={() => handleDistrictSelect(d)}
-                      activeOpacity={0.88}
-                    >
-                      {cover ? (
-                        <FallbackImage
-                          uri={cover}
-                          style={StyleSheet.absoluteFill}
-                          iconName="bed-outline"
-                          iconSize={32}
-                          placeholderColor={accent + '30'}
-                          placeholderIconColor={accent}
-                        />
-                      ) : (
-                        <View style={[StyleSheet.absoluteFill, { backgroundColor: accent }]} />
-                      )}
-                      <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.8)']}
-                        style={StyleSheet.absoluteFill}
-                      />
-                      <View style={ls.popCardTop}>
-                        <View style={[ls.popCardPillLeft, { backgroundColor: accent }]}>
-                          <Text style={ls.popCardPillLeftText}>{d.province.toUpperCase()}</Text>
-                        </View>
-                        <View style={ls.popCardPillRight}>
-                          <Ionicons name="bed" size={10} color={colors.white} />
-                          <Text style={ls.popCardPillRightText}>{d.count}</Text>
-                        </View>
-                      </View>
-                      <View style={ls.popCardBottom}>
-                        <Text style={ls.popCardName} numberOfLines={1}>{d.name}</Text>
-                        <Text style={ls.popCardCount}>{d.count} stays available</Text>
-                        <View style={ls.popCardBtn}>
-                          <Text style={ls.popCardBtnText}>Find hotels</Text>
-                          <Ionicons name="arrow-forward" size={12} color={colors.white} />
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Grid Title Row */}
-          {!loading && (
-            <View style={ls.gridTitleRowOut}>
-              <View style={ls.popHeaderTitleWrap}>
-                <Ionicons name="business-outline" size={16} color={colors.primary} />
-                <Text style={ls.popHeaderTitle}>All Hotel Districts</Text>
-              </View>
-              <Text style={ls.popHeaderSub}>{filteredDistrictList.length} found</Text>
-            </View>
-          )}
-        </View>
-      );
-    }
+    if (!selectedDistrict) return null;
 
     return (
       <View>
@@ -1420,6 +1294,20 @@ const HotelListScreen = ({ route, navigation }) => {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+            {hasInterestSignals ? (
+              <>
+                <Text style={ls.filterSectionLabel}>Match your interests</Text>
+                <Pressable
+                  style={[ls.matchesOnlyPill, matchesOnly && ls.matchesOnlyPillActive, { alignSelf: 'flex-start', marginBottom: 16 }]}
+                  onPress={() => setMatchesOnly((v) => !v)}
+                >
+                  <Text style={ls.matchesOnlyEmoji}>🎯</Text>
+                  <Text style={[ls.matchesOnlyText, matchesOnly && ls.matchesOnlyTextActive]}>
+                    {matchesOnly ? `Matches only (${matchedHotelCount})` : `Show matches (${matchedHotelCount})`}
+                  </Text>
+                </Pressable>
+              </>
+            ) : null}
             <Text style={ls.filterSectionLabel}>Sort By</Text>
             <View style={ls.filterOptionRow}>
               {SORT_OPTIONS.map((opt) => {
@@ -2291,6 +2179,12 @@ const ls = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
   },
+  matchesAboveRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 4,
+  },
   clearBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2756,6 +2650,46 @@ const ls = StyleSheet.create({
   },
   hotelRatingText: { color: colors.textPrimary, fontSize: 10, fontWeight: '900' },
   hotelRatingCount: { color: colors.textMuted, fontSize: 9, fontWeight: '700', marginLeft: 1 },
+  hotelMatchBadge: {
+    position: 'absolute',
+    top: 38,
+    right: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  hotelMatchEmoji: { fontSize: 10 },
+  hotelMatchText: { color: colors.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.3 },
+  hotelMatchReason: {
+    color: '#FFE08A',
+    fontSize: 9,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  matchesOnlyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.primary + '55',
+    backgroundColor: colors.primary + '12',
+  },
+  matchesOnlyPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  matchesOnlyEmoji: { fontSize: 12 },
+  matchesOnlyText: { fontSize: 11, fontWeight: '800', color: colors.primary },
+  matchesOnlyTextActive: { color: colors.white },
   hotelSelectBadge: {
     position: 'absolute',
     bottom: 54,

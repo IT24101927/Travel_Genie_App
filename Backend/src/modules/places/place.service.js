@@ -37,6 +37,13 @@ const getPlaces = async (query) => {
   }
 
   const base = query.includeInactive === 'true' ? {} : { isActive: true };
+  
+  // Destination-Only Logic: Exclude hotels/lodging by requiring a valid type or category
+  and.push({ $or: [
+    { type: { $ne: '', $exists: true } }, 
+    { category: { $ne: '', $exists: true } }
+  ]});
+
   const filter = and.length ? { ...base, $and: and } : base;
   return Place.find(filter).sort({ rating: -1, createdAt: -1 });
 };
