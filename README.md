@@ -40,9 +40,10 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <br>
 
 - Full Create / Read / Update / Delete on transit bookings
-- Integrated schedules for flights, trains, and buses
-- Transit cost tracking with link to expenses module
-- Notifications and reminders for departure times
+- Admin-side transport schedule management for buses, trains, flights, ferries, taxis, and vans
+- User-side route board with search, mode filters, popular route cards, and district-based schedule browsing
+- Popular transport routes ranked by `popularityScore`, with fast indexes for route discovery
+- Personal transport log management with estimated/actual costs, booking details, trip links, and route status
 
 </details>
 
@@ -168,7 +169,7 @@ Data models managed by Mongoose:
 |---|---|
 | 👤 Users | `users` |
 | 🗺️ Geography | `districts`, `places` |
-| 🚌 Transport | `transports` |
+| 🚌 Transport | `transports`, `transportschedules` |
 | 🏨 Hotels | `hotels` |
 | 🧳 Trips & Budget | `trips`, `expenses` |
 | ⭐ Reviews | `reviews` |
@@ -237,6 +238,7 @@ Seed the database (optional, first run):
 node src/scripts/seedAdmin.js       # creates admin account
 node src/scripts/seedDestinations.js # seeds 25 Sri Lanka districts
 node src/scripts/seedPlaces.js      # seeds places per district
+node src/scripts/seedTransports.js  # seeds transport schedules
 ```
 
 ### 2 — Mobile App

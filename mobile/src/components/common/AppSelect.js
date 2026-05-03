@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../../constants/colors';
 
-const AppSelect = ({ label, value, options, onChange, placeholder = 'Select an option', leftIcon }) => {
+const AppSelect = ({ label, value, options, onChange, placeholder = 'Select an option', leftIcon, disabled = false }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -14,14 +14,15 @@ const AppSelect = ({ label, value, options, onChange, placeholder = 'Select an o
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
       <Pressable
-        style={styles.selectBox}
+        style={[styles.selectBox, disabled && styles.selectBoxDisabled]}
+        disabled={disabled}
         onPress={() => setModalVisible(true)}
       >
         {leftIcon && <Ionicons name={leftIcon} size={18} color={colors.textMuted} style={styles.leftIcon} />}
         <Text style={[styles.valueText, !selectedOption && styles.placeholderText]}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+        <Ionicons name={disabled ? 'checkmark-circle-outline' : 'chevron-down'} size={18} color={colors.textMuted} />
       </Pressable>
 
       <Modal visible={modalVisible} transparent={true} animationType="fade">
@@ -80,6 +81,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
+  },
+  selectBoxDisabled: {
+    opacity: 0.72
   },
   leftIcon: { marginRight: 10 },
   valueText: {

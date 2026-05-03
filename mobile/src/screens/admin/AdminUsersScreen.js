@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +29,9 @@ const AdminUsersScreen = ({ navigation }) => {
   const [newPassword, setNewPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [showToTop, setShowToTop] = useState(false);
+
+  const listRef = useRef(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -64,6 +67,11 @@ const AdminUsersScreen = ({ navigation }) => {
     setRefreshing(true);
     load();
   };
+
+  const handleListScroll = useCallback((e) => {
+    const next = e.nativeEvent.contentOffset.y > 400;
+    setShowToTop((prev) => (prev === next ? prev : next));
+  }, []);
 
   const confirmResetPassword = (user) => {
     setResetTarget(user);
@@ -199,8 +207,11 @@ const AdminUsersScreen = ({ navigation }) => {
         <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
+          ref={listRef}
           data={filtered}
           keyExtractor={(item) => item._id}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -214,6 +225,15 @@ const AdminUsersScreen = ({ navigation }) => {
       >
         <Ionicons name="person-add-outline" size={24} color={colors.white} />
       </Pressable>
+
+      {showToTop && (
+        <Pressable
+          style={styles.toTopBtn}
+          onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
+        >
+          <Ionicons name="arrow-up" size={24} color={colors.white} />
+        </Pressable>
+      )}
 
       {/* Password reset modal */}
       <Modal visible={!!resetTarget} transparent animationType="fade" onRequestClose={() => setResetTarget(null)}>
@@ -377,6 +397,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 8
+  },
+  toTopBtn: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 999
   }
 });
 

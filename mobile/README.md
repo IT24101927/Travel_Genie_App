@@ -5,8 +5,15 @@ An integrated multi-role mobile application supporting User, Guest, and Admin wo
 ## 📱 App Navigation Flow
 
 - 🌍 **Guest Mode (`GuestNavigator`)**: Open exploration of destinations, places, and hotels without requiring registration.
-- 🎒 **User Mode (`MainTabNavigator`)**: Full access to trip planning, budgeting, reviews, and profile management after logging in.
-- 👑 **Admin Dashboard (`AdminNavigator`)**: Privileged access route for moderation, user management, and viewing system-wide analytics.
+- 🎒 **User Mode (`MainTabNavigator`)**: Full access to trip planning, transport route browsing, budgeting, reviews, and profile management after logging in.
+- 👑 **Admin Dashboard (`AdminNavigator`)**: Privileged access route for moderation, user management, transport schedule management, and system-wide analytics.
+
+## 🚌 Transportation & Transit
+
+- User transport route board with search, horizontal mode filters, popular route cards, and district-aware schedule browsing.
+- User route cards share the same polished route style used across the transit screens, including price, provider, timing, booking, and service badges.
+- Personal transport logs support add, edit, delete, trip linking, booking references, costs, and status tracking.
+- Admin transport screens support schedule CRUD, filters, active/inactive state, `popularityScore`, booking channels, operating days, and route metadata.
 
 ---
 
@@ -39,6 +46,7 @@ npm start
 | `npm start` | Start the Expo dev server |
 | `npm run android` | Open on Android emulator/device |
 | `npm run ios` | Open on iOS simulator/device |
+| `npm run lint` | Run ESLint checks |
 | `npm run web` | Start Expo web |
 
 ## Notes

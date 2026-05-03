@@ -16,7 +16,20 @@ const transportSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['flight', 'bus', 'train', 'car', 'ferry', 'other'],
+      enum: [
+        'tuk-tuk', 
+        'pickme', 
+        'uber', 
+        'public-bus', 
+        'express-bus', 
+        'intercity-train', 
+        'private-van', 
+        'scooter-rent', 
+        'domestic-flight',
+        'ferry',
+        'taxi',
+        'other'
+      ],
       required: true
     },
     fromLocation: {
@@ -52,10 +65,24 @@ const transportSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
-    cost: {
+    bookingMethod: {
+      type: String,
+      enum: ['app', 'counter', 'direct', 'website', 'negotiated'],
+      default: 'direct'
+    },
+    estimatedCost: {
       type: Number,
       default: 0,
       min: 0
+    },
+    actualCost: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: 'LKR'
     },
     notes: {
       type: String,
