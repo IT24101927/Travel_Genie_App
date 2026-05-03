@@ -9,6 +9,7 @@ const {
   createHotelHandler,
   getHotelsHandler,
   getHotelHandler,
+  uploadHotelImageHandler,
   updateHotelHandler,
   deleteHotelHandler
 } = require('./hotel.controller');
@@ -18,6 +19,8 @@ const upload = createUploader('hotels');
 
 router.get('/', getHotelsHandler);
 router.get('/:id', getHotelHandler);
+
+router.post('/upload', protect, authorize('admin'), upload.single('image'), uploadHotelImageHandler);
 
 router.post(
   '/',

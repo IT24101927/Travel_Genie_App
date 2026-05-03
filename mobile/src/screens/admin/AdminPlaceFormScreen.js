@@ -23,35 +23,26 @@ import FallbackImage from '../../components/common/FallbackImage';
 import colors from '../../constants/colors';
 import { createPlaceApi, updatePlaceApi, uploadPlaceImageApi } from '../../api/placeApi';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { PLACE_TYPE_OPTIONS, getKnownPlaceType } from '../../utils/placeTypes';
 
-const PLACE_TYPES = [
-  { id: 'Attraction',          emoji: '⭐', color: '#E91E63' },
-  { id: 'Museum',              emoji: '🏛️', color: '#9C27B0' },
-  { id: 'Viewpoint',           emoji: '🔭', color: '#3498DB' },
-  { id: 'Heritage',            emoji: '🏯', color: '#795548' },
-  { id: 'Religious Site',      emoji: '🕌', color: '#FF9800' },
-  { id: 'Beach',               emoji: '🏖️', color: '#2196F3' },
-  { id: 'Nature',              emoji: '🌿', color: '#4CAF50' },
-  { id: 'Park',                emoji: '🌳', color: '#388E3C' },
-  { id: 'Nature Reserve',      emoji: '🦋', color: '#00897B' },
-  { id: 'Garden',              emoji: '🌸', color: '#E91E63' },
-  { id: 'Monument',            emoji: '🗿', color: '#607D8B' },
-  { id: 'Archaeological Site', emoji: '⛏️', color: '#8D6E63' },
-  { id: 'Memorial',            emoji: '🕊️', color: '#78909C' },
-  { id: 'Artwork',             emoji: '🎨', color: '#AB47BC' },
-  { id: 'Gallery',             emoji: '🖼️', color: '#7B1FA2' },
-  { id: 'Zoo',                 emoji: '🦁', color: '#F57C00' },
-  { id: 'Theme Park',          emoji: '🎡', color: '#D32F2F' },
-  { id: 'Aquarium',            emoji: '🐠', color: '#0288D1' },
-  { id: 'Adventure',           emoji: '🧗', color: '#FF5722' },
-  { id: 'Culture',             emoji: '🎭', color: '#673AB7' },
-  { id: 'Lake',                emoji: '🛶', color: '#00BCD4' },
-  { id: 'Market',              emoji: '🛍️', color: '#FFC107' },
-  { id: 'Shopping',            emoji: '🛒', color: '#E91E63' },
-  { id: 'Safari',              emoji: '🚙', color: '#8BC34A' },
-  { id: 'Temple',              emoji: '🛕', color: '#FF9800' },
-  { id: 'Wildlife',            emoji: '🐘', color: '#795548' },
-];
+const PLACE_TYPES = PLACE_TYPE_OPTIONS;
+const normalizePlaceType = (value) => getKnownPlaceType(value, 'Temple');
+
+// ─── Section header component ────────────────────────────────────────────────
+
+const SectionHeader = ({ icon, title, subtitle, color = colors.primary }) => (
+  <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeaderIcon, { backgroundColor: color + '16' }]}>
+      <Ionicons name={icon} size={18} color={color} />
+    </View>
+    <View style={styles.sectionHeaderText}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+    </View>
+  </View>
+);
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
 
 const AdminPlaceFormScreen = ({ route, navigation }) => {
   const existing = route.params?.place || null;
@@ -70,7 +61,7 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
     address_text: existing?.address_text || '',
     lat:          existing?.lat?.toString() || '',
     lng:          existing?.lng?.toString() || '',
-    type:         existing?.type || 'Attraction',
+    type:         normalizePlaceType(existing?.type || existing?.category),
     duration:     existing?.duration || '',
     image_url:    existing?.image_url || '',
     isActive:     existing?.isActive !== false
@@ -260,7 +251,7 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
               address_text: existing?.address_text || '',
               lat:          existing?.lat?.toString() || '',
               lng:          existing?.lng?.toString() || '',
-              type:         existing?.type || 'Attraction',
+              type:         normalizePlaceType(existing?.type || existing?.category),
               duration:     existing?.duration || '',
               image_url:    existing?.image_url || '',
               isActive:     existing?.isActive !== false,
@@ -279,6 +270,8 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+
+        {/* ── Header ── */}
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
@@ -301,8 +294,9 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+
           {/* ── Cover Photo ── */}
-          <Text style={styles.sectionTitle}>Cover Photo</Text>
+          <SectionHeader icon="image-outline" title="Cover Photo" subtitle="16:9 recommended" />
 
           <Pressable onPress={pickImage} style={styles.photoCard} disabled={uploading}>
             <FallbackImage
@@ -312,27 +306,22 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
               iconName="image-outline"
               iconSize={48}
             />
-
-            {/* Overlay */}
             <View style={styles.photoOverlay}>
               {uploading ? (
-                <View style={styles.uploadingBadge}>
-                  <ActivityIndicator size="small" color={colors.white} />
-                  <Text style={styles.uploadingText}>Uploading...</Text>
-                </View>
+                <ActivityIndicator color={colors.white} size="small" />
               ) : (
-                <View style={styles.changePhotoBadge}>
-                  <Ionicons name="camera" size={16} color={colors.white} />
-                  <Text style={styles.changePhotoText}>
-                    {form.image_url ? 'Change Photo' : 'Add Photo'}
-                  </Text>
+                <View style={styles.photoCameraBtn}>
+                  <Ionicons name="camera" size={18} color={colors.white} />
                 </View>
               )}
+              <Text style={styles.photoOverlayText}>
+                {uploading ? 'Uploading...' : form.image_url ? 'Tap to change photo' : 'Tap to add cover photo'}
+              </Text>
             </View>
           </Pressable>
 
           <AppInput
-            label="Or paste image URL"
+            label="Image URL (or pick above)"
             leftIcon="link-outline"
             value={form.image_url}
             onChangeText={(t) => set('image_url', t)}
@@ -342,11 +331,11 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
           />
 
           {/* ── Identification ── */}
-          <Text style={styles.sectionTitle}>Identification</Text>
+          <SectionHeader icon="bookmark-outline" title="Identification" subtitle="IDs must be unique numbers" />
 
           {!isEdit && (
             <AppInput
-              label="Place ID"
+              label="Place ID *"
               leftIcon="bookmark-outline"
               value={form.place_id}
               onChangeText={(t) => set('place_id', t)}
@@ -368,7 +357,7 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
             </View>
           ) : (
             <AppInput
-              label="District ID"
+              label="District ID *"
               leftIcon="grid-outline"
               value={form.district_id}
               onChangeText={(t) => set('district_id', t)}
@@ -378,11 +367,11 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
             />
           )}
 
-          {/* ── Basic Info ── */}
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+          {/* ── Basic Information ── */}
+          <SectionHeader icon="location-outline" title="Basic Information" />
 
           <AppInput
-            label="Place Name"
+            label="Place Name *"
             leftIcon="location-outline"
             value={form.name}
             onChangeText={(t) => set('name', t)}
@@ -418,7 +407,8 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
           />
 
           {/* ── Place Type ── */}
-          <Text style={styles.sectionTitle}>Place Type</Text>
+          <SectionHeader icon="apps-outline" title="Place Type" />
+
           <View style={styles.typeGrid}>
             {PLACE_TYPES.map((pt) => {
               const active = form.type === pt.id;
@@ -428,29 +418,37 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
                   onPress={() => set('type', pt.id)}
                   style={[
                     styles.typeChip,
-                    active && { borderColor: pt.color, backgroundColor: `${pt.color}18` }
+                    active && { borderColor: pt.color, backgroundColor: pt.color + '18' }
                   ]}
                 >
                   <Text style={styles.typeEmoji}>{pt.emoji}</Text>
-                  <Text style={[styles.typeChipText, active && { color: pt.color, fontWeight: '700' }]}>
+                  <Text style={[styles.typeChipText, active && { color: pt.color, fontWeight: '800' }]}>
                     {pt.id}
                   </Text>
+                  {active && (
+                    <View style={[styles.typeCheckmark, { backgroundColor: pt.color }]}>
+                      <Ionicons name="checkmark" size={10} color={colors.white} />
+                    </View>
+                  )}
                 </Pressable>
               );
             })}
           </View>
 
           {selectedType && (
-            <View style={[styles.selectedTypeBanner, { backgroundColor: `${selectedType.color}15`, borderColor: `${selectedType.color}40` }]}>
+            <View style={[styles.selectedTypeBanner, { backgroundColor: selectedType.color + '12', borderColor: selectedType.color + '35' }]}>
               <Text style={styles.selectedTypeEmoji}>{selectedType.emoji}</Text>
               <Text style={[styles.selectedTypeText, { color: selectedType.color }]}>
                 {selectedType.id} selected
               </Text>
+              <View style={{ flex: 1 }} />
+              <Ionicons name="checkmark-circle" size={18} color={selectedType.color} />
             </View>
           )}
 
           {/* ── Coordinates ── */}
-          <Text style={styles.sectionTitle}>Coordinates (optional)</Text>
+          <SectionHeader icon="map-outline" title="Coordinates" subtitle="Optional — tap map to pin location" color={colors.info} />
+
           <View style={styles.coordRow}>
             <View style={{ flex: 1 }}>
               <AppInput
@@ -477,16 +475,15 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
             </View>
           </View>
 
-          {/* ── Map picker ── */}
           <View style={styles.mapCard}>
             <View style={styles.mapHint}>
               <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
               <Text style={styles.mapHintText}>
-                {markerCoord ? 'Tap map to reposition · drag pin to adjust' : 'Tap the map to set a location'}
+                {markerCoord ? 'Tap map to reposition · drag pin to adjust' : 'Tap the map to pin a location'}
               </Text>
               {markerCoord && (
                 <Pressable onPress={() => { set('lat', ''); set('lng', ''); }} style={styles.clearPin}>
-                  <Text style={styles.clearPinText}>Clear</Text>
+                  <Text style={styles.clearPinText}>Clear pin</Text>
                 </Pressable>
               )}
             </View>
@@ -499,7 +496,8 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
                   : SRI_LANKA
                 }
                 onPress={handleMapPress}
-               scrollEnabled={true} zoomEnabled={true} pitchEnabled={false} rotateEnabled={false}>
+                scrollEnabled zoomEnabled pitchEnabled={false} rotateEnabled={false}
+              >
                 {markerCoord && (
                   <Marker
                     coordinate={markerCoord}
@@ -510,7 +508,6 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
                 )}
               </MapView>
 
-              {/* Zoom controls */}
               <View style={styles.mapZoomControls}>
                 <Pressable style={styles.mapZoomBtn} onPress={zoomIn}>
                   <Ionicons name="add" size={18} color={colors.textPrimary} />
@@ -520,28 +517,49 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
                 </Pressable>
               </View>
 
-              {/* Reset view */}
               <Pressable style={styles.mapResetBtn} onPress={resetMapView}>
-                <Ionicons name="scan-outline" size={14} color={colors.textPrimary} />
-                <Text style={styles.mapResetText}>Reset</Text>
+                <Ionicons name="scan-outline" size={13} color={colors.textPrimary} />
+                <Text style={styles.mapResetText}>Reset view</Text>
               </Pressable>
             </View>
           </View>
 
           {/* ── Status ── */}
-          <Text style={styles.sectionTitle}>Status</Text>
-          <View style={styles.switchRow}>
-            <View>
-              <Text style={styles.switchLabel}>Active</Text>
-              <Text style={styles.switchHint}>Inactive places are hidden from users</Text>
+          <SectionHeader
+            icon="toggle-outline"
+            title="Visibility Status"
+            color={form.isActive ? colors.success : colors.textMuted}
+          />
+
+          <Pressable
+            onPress={() => set('isActive', !form.isActive)}
+            style={[
+              styles.statusCard,
+              form.isActive
+                ? { borderColor: colors.success + '45', backgroundColor: colors.success + '08' }
+                : { borderColor: colors.border, backgroundColor: colors.surface2 }
+            ]}
+          >
+            <View style={[styles.statusCardIcon, { backgroundColor: form.isActive ? colors.success + '18' : colors.surface3 }]}>
+              <Ionicons
+                name={form.isActive ? 'eye-outline' : 'eye-off-outline'}
+                size={22}
+                color={form.isActive ? colors.success : colors.textMuted}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.statusCardTitle, { color: form.isActive ? colors.success : colors.textMuted }]}>
+                {form.isActive ? 'Active — visible to travelers' : 'Inactive — hidden from travelers'}
+              </Text>
+              <Text style={styles.statusCardHint}>Tap to toggle</Text>
             </View>
             <Switch
               value={form.isActive}
               onValueChange={(v) => set('isActive', v)}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.white}
+              trackColor={{ false: colors.border, true: colors.success + '80' }}
+              thumbColor={form.isActive ? colors.success : colors.textMuted}
             />
-          </View>
+          </Pressable>
 
           <ErrorText message={apiError} />
 
@@ -554,181 +572,158 @@ const AdminPlaceFormScreen = ({ route, navigation }) => {
               disabled={loading || uploading}
             />
           </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
+
+  // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   backBtn: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
   },
   resetBtn: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: colors.warning + '15',
-    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.warning + '15', alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.warning + '40',
   },
-  headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
-  headerSub: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginTop: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 50, paddingTop: 8 },
+  headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 10 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, textAlign: 'center' },
+  headerSub: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginTop: 1, textAlign: 'center' },
+  content: { paddingHorizontal: 20, paddingBottom: 60, paddingTop: 6 },
 
-  sectionTitle: {
-    fontSize: 16, fontWeight: '800', color: colors.textPrimary,
-    marginTop: 16, marginBottom: 14
+  // Section header
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginTop: 22, marginBottom: 14,
   },
+  sectionHeaderIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sectionHeaderText: { flex: 1, minWidth: 0 },
+  sectionTitle: { fontSize: 15, fontWeight: '900', color: colors.textPrimary },
+  sectionSubtitle: { fontSize: 11, color: colors.textMuted, fontWeight: '600', marginTop: 1 },
 
-  /* Photo picker */
+  // Photo picker
   photoCard: {
-    height: 180,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed'
+    height: 190, borderRadius: 16, overflow: 'hidden', marginBottom: 12,
+    borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed',
+    position: 'relative',
   },
   photoPreview: { width: '100%', height: '100%' },
   photoOverlay: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: 12, alignItems: 'center', justifyContent: 'flex-end'
+    paddingVertical: 10, paddingHorizontal: 14,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  changePhotoBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20
+  photoCameraBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  changePhotoText: { color: colors.white, fontSize: 13, fontWeight: '700' },
-  uploadingBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20
-  },
-  uploadingText: { color: colors.white, fontSize: 13, fontWeight: '600' },
+  photoOverlayText: { color: colors.white, fontSize: 13, fontWeight: '700' },
 
-  /* Locked district field */
+  // Locked district field
   lockedField: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface2, borderRadius: 12,
     borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 14, paddingVertical: 12,
-    marginBottom: 14
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: 14,
   },
   lockedLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8 },
   lockedValue: { fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginTop: 2 },
 
-  /* Type grid */
+  // Place type grid
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   typeChip: {
-    width: '30%',
-    backgroundColor: colors.surface, borderRadius: 12,
-    borderWidth: 1.5, borderColor: colors.border,
-    paddingVertical: 9, paddingHorizontal: 4, alignItems: 'center', gap: 4
+    width: '30%', backgroundColor: colors.surface,
+    borderRadius: 14, borderWidth: 1.5, borderColor: colors.border,
+    paddingVertical: 12, paddingHorizontal: 4,
+    alignItems: 'center', gap: 5, position: 'relative',
   },
-  typeEmoji: { fontSize: 22 },
+  typeEmoji: { fontSize: 24 },
   typeChipText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
+  typeCheckmark: {
+    position: 'absolute', top: 6, right: 6,
+    width: 16, height: 16, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
   selectedTypeBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    marginBottom: 6
+    paddingHorizontal: 14, paddingVertical: 10, marginBottom: 6,
   },
   selectedTypeEmoji: { fontSize: 18 },
   selectedTypeText: { fontSize: 14, fontWeight: '700' },
 
-  /* Coords */
-  coordRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  // Coords
+  coordRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+
+  // Map
   mapCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 16,
+    borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.border, marginBottom: 16,
   },
   mapHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 9,
     backgroundColor: colors.surface2,
   },
   mapHintText: { flex: 1, fontSize: 12, color: colors.textMuted },
   clearPin: {
-    backgroundColor: colors.danger + '18',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: colors.danger + '18', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
   },
   clearPinText: { fontSize: 12, color: colors.danger, fontWeight: '700' },
   mapOuter: { position: 'relative' },
   map: { width: '100%', height: 220 },
-  mapZoomControls: {
-    position: 'absolute',
-    right: 8,
-    top: 8,
-    gap: 6,
-  },
+  mapZoomControls: { position: 'absolute', right: 8, top: 8, gap: 6 },
   mapZoomBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: 34, height: 34, borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 3, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3,
   },
   mapResetBtn: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    position: 'absolute', bottom: 8, left: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(255,255,255,0.92)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10,
+    elevation: 3, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3,
   },
-  mapResetText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
+  mapResetText: { fontSize: 11, fontWeight: '700', color: colors.textPrimary },
 
-  /* Status switch */
-  switchRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderWidth: 1, borderColor: colors.border, marginBottom: 20
+  // Status card
+  statusCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 14, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 14, marginBottom: 20,
   },
-  switchLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  switchHint: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  statusCardIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  statusCardTitle: { fontSize: 14, fontWeight: '700' },
+  statusCardHint: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 
-  btnContainer: { marginTop: 4 }
+  btnContainer: { marginTop: 8 },
 });
 
 export default AdminPlaceFormScreen;

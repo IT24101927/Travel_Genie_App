@@ -9,6 +9,8 @@ import AdminDistrictsScreen from '../screens/admin/AdminDistrictsScreen';
 import AdminDistrictFormScreen from '../screens/admin/AdminDistrictFormScreen';
 import AdminPlacesScreen from '../screens/admin/AdminPlacesScreen';
 import AdminPlaceFormScreen from '../screens/admin/AdminPlaceFormScreen';
+import AdminHotelsScreen from '../screens/admin/AdminHotelsScreen';
+import AdminHotelFormScreen from '../screens/admin/AdminHotelFormScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +25,8 @@ const AdminNavigator = () => {
       <Stack.Screen name="AdminDistrictForm"  component={AdminDistrictFormScreen} />
       <Stack.Screen name="AdminPlaces"        component={AdminPlacesScreen} />
       <Stack.Screen name="AdminPlaceForm"     component={AdminPlaceFormScreen} />
+      <Stack.Screen name="AdminHotels"        component={AdminHotelsScreen} />
+      <Stack.Screen name="AdminHotelForm"     component={AdminHotelFormScreen} />
     </Stack.Navigator>
   );
 };
