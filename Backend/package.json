@@ -1,0 +1,46 @@
+{
+  "name": "travelgenie-backend",
+  "version": "1.0.0",
+  "description": "TravelGenie Backend API - Travel Management System",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:seed-all": "node src/scripts/seedAll.js",
+    "db:seed-districts": "node src/scripts/seedDistrictsFromCsv.js",
+    "db:seed-transports": "node src/scripts/seedTransports.js",
+    "db:seed-expenses": "node src/scripts/seedExpenses.js",
+    "db:seed-price-trends": "node src/scripts/seedPriceTrends.js",
+    "db:seed-admin": "node src/scripts/seedAdmin.js",
+    "db:seed-test-users": "node src/scripts/seedTestUsers.js",
+    "db:seed-trips": "node src/scripts/seedTrips.js",
+    "db:fetch-images": "node src/scripts/fetchPlaceImages.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "travel",
+    "management",
+    "api",
+    "nodejs",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.15.2",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.1",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
