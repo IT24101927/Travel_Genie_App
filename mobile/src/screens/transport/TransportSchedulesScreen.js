@@ -30,6 +30,7 @@ import {
   getTransportTypeMeta
 } from '../../utils/transportOptions';
 import { RouteResultCard, RouteDetailModal } from './TransportListScreen';
+import AddToTripSheet from '../../components/transport/AddToTripSheet';
 
 const TYPE_FILTERS = ['all', ...SCHEDULE_TYPES];
 
@@ -61,6 +62,21 @@ const TransportSchedulesScreen = ({ navigation, route }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
   const [error, setError] = useState('');
+  const [tripPickerSchedule, setTripPickerSchedule] = useState(null);
+
+  const openTripPicker = useCallback((schedule) => {
+    setDetailItem(null);
+    setTripPickerSchedule(schedule);
+  }, []);
+
+  const handleTripPicked = useCallback(({ tripId, tripTitle }) => {
+    const schedule = tripPickerSchedule;
+    setTripPickerSchedule(null);
+    if (!schedule) return;
+    navigation.navigate('AddTransport', tripId
+      ? { schedule, tripId, tripTitle, lockTrip: true }
+      : { schedule });
+  }, [navigation, tripPickerSchedule]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -213,7 +229,7 @@ const TransportSchedulesScreen = ({ navigation, route }) => {
           <RouteResultCard
             item={item}
             onDetails={() => setDetailItem(item)}
-            onLog={() => navigation.navigate('AddTransport', { schedule: item })}
+            onAddToTrip={openTripPicker}
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -236,7 +252,17 @@ const TransportSchedulesScreen = ({ navigation, route }) => {
         }
         showsVerticalScrollIndicator={false}
       />
-      <RouteDetailModal item={detailItem} onClose={() => setDetailItem(null)} />
+      <RouteDetailModal
+        item={detailItem}
+        onClose={() => setDetailItem(null)}
+        onAddToTrip={openTripPicker}
+      />
+      <AddToTripSheet
+        visible={!!tripPickerSchedule}
+        schedule={tripPickerSchedule}
+        onClose={() => setTripPickerSchedule(null)}
+        onPick={handleTripPicked}
+      />
     </SafeAreaView>
   );
 };
