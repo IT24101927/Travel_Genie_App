@@ -33,7 +33,9 @@ const STAT_CARDS = [
 const QUICK_ACTIONS = [
   { label: 'Manage Users',  icon: 'people',   color: colors.primary,       screen: 'AdminUsers' },
   { label: 'Manage Places', icon: 'location', color: colors.statusOngoing, screen: 'AdminDistricts',
-    hint: 'Districts → Places' }
+    hint: 'Districts → Places' },
+  { label: 'Manage Hotels', icon: 'bed',      color: colors.primaryDark,   screen: 'AdminHotels',
+    hint: 'Manage accommodations' }
 ];
 
 const AdminDashboardScreen = ({ navigation }) => {
@@ -61,6 +63,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   const openStatCard = (key) => {
     if (key === 'users')  { navigation.navigate('AdminUsers');     return; }
     if (key === 'places') { navigation.navigate('AdminDistricts'); return; }
+    if (key === 'hotels') { navigation.navigate('AdminHotels'); return; }
     if (key === 'admins') { return; }
     navigation.navigate('AdminResource', {
       resource: key,

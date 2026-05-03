@@ -1,12 +1,25 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const { sendSuccess } = require('../../utils/apiResponse');
 const { createPlace, getPlaces, getPlaceById, updatePlace, deletePlace } = require('./place.service');
+const { normalizePlaceType } = require('./placeTaxonomy');
+
+const toTagArray = (value) => (Array.isArray(value) ? value : value ? [value] : []);
+
+const normalizePlacePayload = (payload) => {
+  const requestedType = payload.type || payload.category;
+  const normalizedType = normalizePlaceType(requestedType);
+  if (normalizedType) {
+    payload.type = normalizedType;
+    payload.category = normalizedType;
+  }
+  return payload;
+};
 
 const createPlaceHandler = asyncHandler(async (req, res) => {
-  const payload = {
+  const payload = normalizePlacePayload({
     ...req.body,
-    tags: Array.isArray(req.body.tags) ? req.body.tags : req.body.tags ? [req.body.tags] : []
-  };
+    tags: toTagArray(req.body.tags)
+  });
 
   if (req.file) {
     payload.image = `/uploads/places/${req.file.filename}`;
@@ -27,10 +40,13 @@ const getPlaceHandler = asyncHandler(async (req, res) => {
 });
 
 const updatePlaceHandler = asyncHandler(async (req, res) => {
-  const payload = {
-    ...req.body,
-    tags: Array.isArray(req.body.tags) ? req.body.tags : req.body.tags ? [req.body.tags] : []
-  };
+  const payload = normalizePlacePayload({ ...req.body });
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'tags')) {
+    payload.tags = toTagArray(req.body.tags);
+  } else {
+    delete payload.tags;
+  }
 
   if (req.file) {
     payload.image = `/uploads/places/${req.file.filename}`;

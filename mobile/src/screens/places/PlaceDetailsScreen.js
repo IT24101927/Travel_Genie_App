@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -24,6 +25,7 @@ import { getPlaceApi } from '../../api/placeApi';
 import { getReviewsApi, createReviewApi } from '../../api/reviewApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getPlaceImageCandidates } from '../../utils/placeImages';
+import { getPlaceType, getPlaceTypeMeta } from '../../utils/placeTypes';
 
 const StarRow = ({ rating, size = 16 }) => {
   const num = Number(rating) || 0;
@@ -59,6 +61,84 @@ const ReviewCard = ({ review }) => (
     ) : null}
   </View>
 );
+
+const getPlaceCoordinate = (place = {}) => {
+  const latitude = Number(place.lat);
+  const longitude = Number(place.lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return { latitude, longitude };
+};
+
+const getPlaceMapRegion = (coords) => ({
+  latitude: coords.latitude,
+  longitude: coords.longitude,
+  latitudeDelta: 0.045,
+  longitudeDelta: 0.045,
+});
+
+const DetailPill = ({ icon, emoji, label, value, color = colors.primary }) => (
+  <View style={styles.detailPill}>
+    <View style={[styles.detailPillIcon, { backgroundColor: color + '16' }]}>
+      {emoji ? (
+        <Text style={styles.detailPillEmoji}>{emoji}</Text>
+      ) : (
+        <Ionicons name={icon} size={17} color={color} />
+      )}
+    </View>
+    <Text style={styles.detailPillLabel}>{label}</Text>
+    <Text style={styles.detailPillValue} numberOfLines={1}>{value}</Text>
+  </View>
+);
+
+const PlaceLocationMap = ({ place, coords, onOpenInMaps }) => {
+  const meta = getPlaceTypeMeta(place);
+  const region = getPlaceMapRegion(coords);
+
+  return (
+    <View style={styles.mapContainer}>
+      <MapView
+        style={StyleSheet.absoluteFill}
+        initialRegion={region}
+        scrollEnabled={false}
+        zoomEnabled={false}
+        pitchEnabled={false}
+        rotateEnabled={false}
+        toolbarEnabled={false}
+      >
+        {Platform.OS === 'ios' ? (
+          <Marker
+            coordinate={coords}
+            title={place.name || 'Place'}
+            description={place.address_text || place.location || place.district || 'Place location'}
+            tracksViewChanges={false}
+            anchor={{ x: 0.5, y: 1 }}
+          >
+            <View style={styles.markerWrap}>
+              <View style={[styles.markerBubble, { backgroundColor: meta.color }]}>
+                <Text style={styles.markerEmoji}>{meta.emoji}</Text>
+              </View>
+              <View style={[styles.markerStem, { borderTopColor: meta.color }]} />
+            </View>
+          </Marker>
+        ) : (
+          <Marker
+            coordinate={coords}
+            title={place.name || 'Place'}
+            description={place.address_text || place.location || place.district || 'Place location'}
+            pinColor={meta.color}
+          />
+        )}
+      </MapView>
+
+      <Pressable style={styles.mapTapOverlay} onPress={onOpenInMaps}>
+        <View style={styles.mapTapHint}>
+          <Ionicons name="open-outline" size={13} color={colors.white} />
+          <Text style={styles.mapTapHintText}>Open in Maps</Text>
+        </View>
+      </Pressable>
+    </View>
+  );
+};
 
 const PlaceDetailsScreen = ({ route, navigation }) => {
   const { place: initial } = route.params;
@@ -122,10 +202,28 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
     }
   };
 
-  const avgRating =
+  const displayRating =
     reviews.length > 0
       ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-      : null;
+      : Number(place.rating || 0) > 0 ? Number(place.rating).toFixed(1) : null;
+      
+  const displayReviewCount = reviews.length > 0 ? reviews.length : (place.review_count || 0);
+  const typeMeta = getPlaceTypeMeta(place);
+  const typeLabel = typeMeta.label || getPlaceType(place);
+  const coords = getPlaceCoordinate(place);
+
+  const handleOpenInMaps = () => {
+    if (!coords) return;
+    const label = encodeURIComponent(place.name || 'Place');
+    const { latitude, longitude } = coords;
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${latitude},${longitude}`,
+      android: `geo:${latitude},${longitude}?q=${latitude},${longitude}(${label})`,
+    });
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`);
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -134,72 +232,60 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Header & Back Button */}
-        <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={20} color={colors.primary} />
-          </Pressable>
-        </View>
-
         {/* Hero */}
         <View style={styles.heroCard}>
-          <View style={styles.imageWrap}>
-            <FallbackImage
-              uri={getPlaceImageCandidates(place)}
-              style={StyleSheet.absoluteFill}
-              iconName="compass-outline"
-              iconSize={40}
-            />
-          </View>
-          <View style={styles.heroContent}>
-            <Text style={styles.placeName}>{place.name}</Text>
-            
-            {place.district ? (
-              <View style={styles.locationRow}>
-                <Ionicons name="map" size={15} color={colors.accent} />
-                <Text style={styles.placeDistrict}>{place.district}</Text>
-              </View>
-            ) : null}
-            
-            {(place.category || place.type) ? (
-              <View style={styles.catRow}>
-                <View style={styles.catBadge}>
-                  <Text style={styles.catText}>{place.category || place.type}</Text>
-                </View>
-              </View>
-            ) : null}
-          {avgRating && (
-            <View style={styles.ratingRow}>
-              <StarRow rating={avgRating} size={18} />
-              <Text style={styles.ratingNum}>{avgRating}</Text>
-              <Text style={styles.reviewCount}>({reviews.length} reviews)</Text>
+          <FallbackImage
+            uri={getPlaceImageCandidates(place)}
+            style={styles.heroImage}
+            iconName="compass-outline"
+            iconSize={44}
+            placeholderColor={typeMeta.color}
+            placeholderIconColor="rgba(255,255,255,0.45)"
+          >
+            <View style={styles.heroScrim} />
+          </FallbackImage>
+
+          <View style={styles.heroTopBar}>
+            <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={20} color={colors.white} />
+            </Pressable>
+            <View style={[styles.heroTypeBadge, { backgroundColor: typeMeta.color }]}>
+              <Text style={styles.heroTypeEmoji}>{typeMeta.emoji}</Text>
+              <Text style={styles.heroTypeText}>{typeLabel}</Text>
             </View>
-          )}
+          </View>
+
+          <View style={styles.heroContent}>
+            <Text style={styles.placeName} numberOfLines={2}>{place.name}</Text>
+
+            <View style={styles.heroMetaRow}>
+              {place.district ? (
+                <View style={styles.heroMetaPill}>
+                  <Ionicons name="map" size={13} color={colors.white} />
+                  <Text style={styles.heroMetaText}>{place.district}</Text>
+                </View>
+              ) : null}
+              {displayRating ? (
+                <View style={styles.heroMetaPill}>
+                  <Ionicons name="star" size={13} color={colors.warning} />
+                  <Text style={styles.heroMetaText}>{displayRating}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
 
         {/* Info Row */}
         <View style={styles.infoRow}>
-          {place.estimatedCost > 0 && (
-            <View style={styles.infoCard}>
-              <Ionicons name="cash-outline" size={20} color={colors.primary} />
-              <Text style={styles.infoLabel}>Est. Cost</Text>
-              <Text style={styles.infoValue}>LKR {place.estimatedCost}</Text>
-            </View>
-          )}
-          {place.duration ? (
-            <View style={styles.infoCard}>
-              <Ionicons name="time-outline" size={20} color={colors.primary} />
-              <Text style={styles.infoLabel}>Duration</Text>
-              <Text style={styles.infoValue}>{place.duration}</Text>
-            </View>
+          <DetailPill emoji={typeMeta.emoji} label="Type" value={typeLabel} color={typeMeta.color} />
+          {place.district ? (
+            <DetailPill icon="map-outline" label="District" value={place.district} color={colors.primary} />
           ) : null}
-          {reviews.length > 0 && (
-            <View style={styles.infoCard}>
-              <Ionicons name="star" size={20} color={colors.warning} />
-              <Text style={styles.infoLabel}>Avg Rating</Text>
-              <Text style={styles.infoValue}>{avgRating} / 5</Text>
-            </View>
+          {place.duration ? (
+            <DetailPill icon="time-outline" label="Duration" value={place.duration} color={colors.info} />
+          ) : null}
+          {displayRating && (
+            <DetailPill icon="star" label="Rating" value={`${displayRating} / 5`} color={colors.warning} />
           )}
         </View>
 
@@ -226,27 +312,10 @@ const PlaceDetailsScreen = ({ route, navigation }) => {
         ) : null}
 
         {/* Location Map */}
-        {place.lat && place.lng ? (
+        {coords ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location</Text>
-            <View style={styles.mapContainer}>
-              <MapView
-                style={StyleSheet.absoluteFill}
-                initialRegion={{
-                  latitude: Number(place.lat),
-                  longitude: Number(place.lng),
-                  latitudeDelta: 0.05,
-                  longitudeDelta: 0.05,
-                }}
-                scrollEnabled={false}
-                zoomEnabled={false}
-              >
-                <Marker
-                  coordinate={{ latitude: Number(place.lat), longitude: Number(place.lng) }}
-                  pinColor={colors.primary}
-                />
-              </MapView>
-            </View>
+            <PlaceLocationMap place={place} coords={coords} onOpenInMaps={handleOpenInMaps} />
             <Text style={styles.addressText}>
               {place.address_text || place.location || `${place.district || 'Sri Lanka'}`}
             </Text>
@@ -332,71 +401,102 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 120
   },
-  header: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
   backBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
-    elevation: 2,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   heroCard: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
     marginBottom: 16,
-    elevation: 3,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4,
+    minHeight: 300,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
   },
-  imageWrap: {
+  heroImage: {
     width: '100%',
-    height: 180,
+    height: 300,
     backgroundColor: colors.surface2,
   },
-  heroContent: {
-    padding: 20,
-    alignItems: 'center',
+  heroScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
-  placeName: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8
-  },
-  locationRow: {
+  heroTopBar: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 10
+    justifyContent: 'space-between',
   },
-  placeDistrict: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  catRow: {
-    marginBottom: 12
-  },
-  catBadge: {
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 10,
+  heroTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 13,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderWidth: 1,
-    borderColor: colors.primary
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  catText: {
-    color: colors.primary,
-    fontWeight: '700',
+  heroTypeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  heroTypeEmoji: { fontSize: 13 },
+  heroContent: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+  },
+  placeName: {
+    fontSize: 27,
+    fontWeight: '900',
+    color: colors.white,
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 5,
+    marginBottom: 10,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  heroMetaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  heroMetaText: {
+    color: colors.white,
     fontSize: 12,
-    textTransform: 'uppercase'
+    fontWeight: '800',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -418,27 +518,44 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
     marginBottom: 16
   },
-  infoCard: {
-    flex: 1,
+  detailPill: {
+    width: '47.8%',
     backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 13,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 5,
+  },
+  detailPillIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     alignItems: 'center',
-    gap: 6,
-    elevation: 2
+    justifyContent: 'center',
+    marginBottom: 8,
   },
-  infoLabel: {
+  detailPillEmoji: { fontSize: 18 },
+  detailPillLabel: {
     color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600'
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  infoValue: {
+  detailPillValue: {
     color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '800'
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 3,
   },
   section: {
     backgroundColor: colors.surface,
@@ -475,11 +592,52 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   mapContainer: {
-    height: 150,
-    borderRadius: 14,
+    height: 190,
+    borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 12,
     backgroundColor: colors.surface2,
+  },
+  mapTapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    padding: 10,
+  },
+  mapTapHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.58)',
+    borderRadius: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  mapTapHintText: { color: colors.white, fontSize: 11, fontWeight: '800' },
+  markerWrap: { alignItems: 'center' },
+  markerBubble: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: colors.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  markerEmoji: { fontSize: 17 },
+  markerStem: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginTop: -2,
   },
   addressText: {
     fontSize: 14,

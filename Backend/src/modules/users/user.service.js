@@ -80,6 +80,10 @@ const updateProfile = async (userId, payload) => {
     throw new AppError('User not found', 404);
   }
 
+  if (payload.email) {
+    payload.email = String(payload.email).trim().toLowerCase();
+  }
+
   if (payload.email && payload.email !== user.email) {
     const emailInUse = await User.findOne({ email: payload.email, _id: { $ne: userId } });
     if (emailInUse) {
