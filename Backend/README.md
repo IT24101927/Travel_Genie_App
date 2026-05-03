@@ -78,24 +78,6 @@ npm start       # Production
 
 ---
 
-## 🌍 Deployment (Production)
-
-The backend is designed for high availability and zero-config deployment.
-
-### 1. Recommended: Railway (Stay-Awake)
-Railway provides the most reliable experience for live demos as the server does not sleep.
-1. Connect your GitHub repository.
-2. Set the root directory to `Backend`.
-3. Add all environment variables from `.env.example`.
-
-### 2. Render (Free Tier)
-1. Create a "Web Service".
-2. Build Command: `npm install`
-3. Start Command: `npm start`
-4. Add environment variables. *Note: Server sleeps after 15 mins of inactivity.*
-
----
-
 ## 📁 Project Structure
 
 ```
@@ -272,19 +254,14 @@ All endpoints are prefixed with `/api/v1`.
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| `GET` | `/my` | 🔐 | Get own reviews history |
-| `GET` | `/` | 🔓 | List all approved reviews (global) |
-| `GET` | `/place/:placeId` | 🔓 | Get reviews for a specific destination |
-| `GET` | `/hotel/:hotelId` | 🔓 | Get reviews for a specific hotel |
-| `GET` | `/admin/all` | 🛡️ | Comprehensive list of all reviews for moderation |
-| `POST` | `/` | 🔐 | Create a new review (triggers automated parent rating sync) |
-| `PUT` | `/:id` | 🔐 | Update own review (triggers parent rating sync) |
-| `PATCH` | `/:id/status` | 🛡️ | Admin moderation: set status (approved/rejected/flagged) |
-| `POST` | `/:id/vote` | 🔐 | Cast a helpful/not-helpful vote |
-| `DELETE` | `/:id` | 🔐 | Delete own review (triggers parent rating sync) |
-
-> 🔄 **Rating Aggregator**: The backend automatically recalculates average scores and review counts for Destinations and Hotels whenever a review is added, edited, or moderated.
-
+| `GET` | `/my` | 🔐 | Own reviews |
+| `GET` | `/` | 🔓 | All reviews |
+| `GET` | `/place/:placeId` | 🔓 | Reviews for a place |
+| `GET` | `/admin/all` | 🛡️ | All reviews (admin view) |
+| `GET` | `/:id` | 🔓 | Get review |
+| `POST` | `/` | 🔐 | Create review |
+| `PUT` | `/:id` | 🔐 | Update own review |
+| `DELETE` | `/:id` | 🔐 | Delete own review |
 
 ---
 
@@ -303,8 +280,8 @@ All endpoints are prefixed with `/api/v1`.
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| `GET` | `/schedule-districts` | 🔐 | Explore transit coverage by district, ranked by popularity and route density |
-| `GET` | `/schedules` | 🔐 | Comprehensive search engine for public routes (Express Bus, Train, Flight, etc.) with From/To, Type, and District filters |
+| `GET` | `/schedule-districts` | 🔐 | Popular active transport districts, grouped from schedules |
+| `GET` | `/schedules` | 🔐 | Active public schedules with search, type, district, province, from/to, and pagination filters |
 | `POST` | `/` | 🔐 | Create transport booking |
 | `GET` | `/` | 🔐 | List own transport bookings |
 | `GET` | `/:id` | 🔐 | Get transport booking |

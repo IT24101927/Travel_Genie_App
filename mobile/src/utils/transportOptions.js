@@ -26,10 +26,6 @@ export const SCHEDULE_TYPES = [
   'other'
 ];
 
-// On-demand types — booked on the spot, no fixed schedule.
-// Used by "Quick log" flow on TripDetails so users only see relevant types.
-export const ON_DEMAND_TYPES = ['tuk-tuk', 'pickme', 'uber', 'taxi', 'scooter-rent', 'private-van', 'other'];
-
 export const BOOKING_METHODS = ['app', 'counter', 'direct', 'website', 'negotiated'];
 export const TRANSPORT_STATUSES = ['upcoming', 'completed', 'cancelled'];
 
@@ -363,11 +359,6 @@ export const transportTypeOptions = TRANSPORT_TYPES.map((value) => ({
 }));
 
 export const scheduleTypeOptions = SCHEDULE_TYPES.map((value) => ({
-  value,
-  label: getTransportTypeMeta(value).label
-}));
-
-export const onDemandTransportTypeOptions = ON_DEMAND_TYPES.map((value) => ({
   value,
   label: getTransportTypeMeta(value).label
 }));

@@ -6,9 +6,6 @@ const createNotification = async (payload) => {
     'BUDGET_100': 'Budget Exceeded 🚨',
     'BUDGET_80': 'Budget Warning ⚠️',
     'PRICE_UPDATE': 'Price Trend Update 📈',
-    'REVIEW_FLAGGED': 'Review Flagged 🚩',
-    'REVIEW_APPROVED': 'Review Approved ✅',
-    'REVIEW_REJECTED': 'Review Update ℹ️',
   };
   if (!payload.title && payload.type) {
     payload.title = titles[payload.type] || 'New Notification';

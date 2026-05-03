@@ -12,7 +12,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +19,6 @@ import MapView, { Marker } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import FallbackImage from '../../components/common/FallbackImage';
-import AppButton from '../../components/common/AppButton';
 import colors from '../../constants/colors';
 import { getPlacesApi } from '../../api/placeApi';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -147,8 +145,8 @@ const PlaceCard = memo(({ item, isSelected, plannerSelected, onPress, onToggleTr
         </View>
       ) : null}
 
-      {/* Rating badge — only visible if real reviews exist */}
-      {Number(item.rating) > 0 && Number(item.review_count) > 0 ? (
+      {/* Rating badge — always visible if exists */}
+      {Number(item.rating) > 0 ? (
         <View style={styles.ratingBadge}>
           <Ionicons name="star" size={10} color={colors.warning} />
           <Text style={styles.ratingBadgeText}>{Number(item.rating).toFixed(1)}</Text>
@@ -441,7 +439,6 @@ const PlacesMap = memo(({ districtName, places, selectedPlaceId, selectedPlace, 
 const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
   categories, selectedCat, onCatChange, count,
   places, selectedPlaceId, selectedPlace, onMarkerPress, onClearSelection, onViewDetails, onScrollToTop,
-  onOpenFilter, activeRatingFilter,
   compact = false }) => (
   <>
     <PlacesMap
@@ -456,6 +453,7 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
       compact={compact}
     />
 
+    {/* Search bar */}
     <View style={styles.searchRow}>
       <View style={styles.searchBox}>
         <Ionicons name="search-outline" size={18} color={colors.textMuted} style={{ marginLeft: 12 }} />
@@ -479,45 +477,34 @@ const ListHeader = memo(({ districtName, search, onSearchChange, onSearchSubmit,
       </Pressable>
     </View>
 
+    {/* Results count */}
     <Text style={styles.resultCount}>
       {count} place{count !== 1 ? 's' : ''} found
     </Text>
 
-    <View style={styles.filterContainer}>
-      <Pressable 
-        style={[styles.filterBtn, activeRatingFilter !== 'all' && styles.filterBtnActive]} 
-        onPress={onOpenFilter}
-      >
-        <Ionicons 
-          name="options-outline" 
-          size={18} 
-          color={activeRatingFilter !== 'all' ? colors.white : colors.primary} 
-        />
-      </Pressable>
-      
-      {categories.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {categories.map((cat) => (
-            (() => {
-              const active = selectedCat === cat;
-              const meta = cat === 'All'
-                ? { emoji: '🌐', icon: 'globe', color: colors.primary, label: 'All' }
-                : getPlaceTypeMeta(cat);
-              return (
-                <Pressable
-                  key={cat}
-                  style={[styles.chip, active && { backgroundColor: meta.color, borderColor: meta.color }]}
-                  onPress={() => onCatChange(cat)}
-                >
-                  <Text style={styles.chipEmoji}>{meta.emoji}</Text>
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{meta.label}</Text>
-                </Pressable>
-              );
-            })()
-          ))}
-        </ScrollView>
-      )}
-    </View>
+    {/* Category chips */}
+    {categories.length > 1 && (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {categories.map((cat) => (
+          (() => {
+            const active = selectedCat === cat;
+            const meta = cat === 'All'
+              ? { emoji: '🌐', icon: 'globe', color: colors.primary, label: 'All' }
+              : getPlaceTypeMeta(cat);
+            return (
+              <Pressable
+                key={cat}
+                style={[styles.chip, active && { backgroundColor: meta.color, borderColor: meta.color }]}
+                onPress={() => onCatChange(cat)}
+              >
+                <Text style={styles.chipEmoji}>{meta.emoji}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{meta.label}</Text>
+              </Pressable>
+            );
+          })()
+        ))}
+      </ScrollView>
+    )}
   </>
 ));
 
@@ -540,19 +527,19 @@ export default function PlaceListScreen({ navigation, route }) {
   const [selectedCat, setSelectedCat] = useState('All');
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
   const [showToTop, setShowToTop] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [ratingFilter, setRatingFilter] = useState('all');
 
   const listRef = useRef(null);
 
+  /* Fetch — prefer districtId (numeric, matches seeded data) over district name string */
   const load = useCallback(async (searchTerm = '') => {
     try {
       setLoading(true);
       const params = {};
-      if (districtId) params.districtId = districtId;
-      else if (districtName) params.district = districtName;
+      if (districtId) params.districtId = districtId;   // seeded places
+      else if (districtName) params.district = districtName; // admin-created places
       if (searchTerm.trim()) params.search = searchTerm.trim();
       const res = await getPlacesApi(params);
+      /* Response shape: { success, data: { places: [...] } } */
       setAllPlaces(res?.data?.places || res?.data || []);
     } catch (err) {
       console.error('Error fetching places:', getApiErrorMessage(err, ''));
@@ -563,21 +550,17 @@ export default function PlaceListScreen({ navigation, route }) {
 
   useEffect(() => { load(); }, [load]);
 
+  /* Categories from loaded places */
   const categories = useMemo(() => {
     const set = new Set(allPlaces.map((p) => p.type).filter(Boolean));
     return ['All', ...Array.from(set).sort()];
   }, [allPlaces]);
 
+  /* Client-side category filter */
   const filtered = useMemo(() => {
-    let list = allPlaces;
-    if (selectedCat !== 'All') {
-      list = list.filter((p) => p.type === selectedCat);
-    }
-    if (ratingFilter !== 'all') {
-      list = list.filter((p) => Number(p.rating) >= Number(ratingFilter));
-    }
-    return list;
-  }, [allPlaces, selectedCat, ratingFilter]);
+    if (selectedCat === 'All') return allPlaces;
+    return allPlaces.filter((p) => p.type === selectedCat);
+  }, [allPlaces, selectedCat]);
 
   const selectedPlace = useMemo(
     () => filtered.find((place) => getPlaceId(place) === selectedPlaceId) || null,
@@ -609,6 +592,7 @@ export default function PlaceListScreen({ navigation, route }) {
     }
   }, [selectedPlaceId, selectedPlace]);
 
+  /* Stable handlers */
   const handleCatChange = useCallback((c) => {
     setSelectedCat(c);
     setSelectedPlaceId(null);
@@ -616,7 +600,7 @@ export default function PlaceListScreen({ navigation, route }) {
   const handleSearchChange = useCallback((t) => {
     setSearch(t);
     setSelectedPlaceId(null);
-    if (t === '') load('');
+    if (t === '') load('');   // clear → reload all
   }, [load]);
   const handleSearchSubmit = useCallback(() => {
     setSelectedPlaceId(null);
@@ -669,6 +653,54 @@ export default function PlaceListScreen({ navigation, route }) {
 
   const keyExtractor = useCallback((item) => String(item._id || item.place_id || item.id), []);
 
+  const plannerSelectionHeader = isPlannerMode ? (
+    <View style={plannerStyles.selectionBar}>
+      <View style={plannerStyles.selectionHeader}>
+        <View style={plannerStyles.selectionTitleRow}>
+          <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
+          <Text style={plannerStyles.selectionTitle}>
+            {planner.selectedPlaces.length} selected
+          </Text>
+        </View>
+        {planner.selectedPlaces.length > 0 ? (
+          <Pressable onPress={() => planner.setSelectedPlaces([])}>
+            <Text style={plannerStyles.clearText}>Clear</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {planner.selectedPlaces.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={plannerStyles.selectedChipRow}
+        >
+          {planner.selectedPlaces.map((place) => (
+            <View key={getPlaceId(place)} style={plannerStyles.selectedChip}>
+              <FallbackImage
+                uri={getPlaceImageCandidates(place)}
+                style={plannerStyles.selectedChipImage}
+                iconSize={12}
+              />
+              <Text style={plannerStyles.selectedChipText} numberOfLines={1}>
+                {place.name}
+              </Text>
+              <Pressable
+                hitSlop={8}
+                onPress={() => handleToggleTripPlace(place)}
+                style={plannerStyles.selectedChipClose}
+              >
+                <Ionicons name="close" size={11} color={colors.white} />
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <Text style={plannerStyles.selectionHint}>Use Add on cards, or tap a card to read details first.</Text>
+      )}
+    </View>
+  ) : null;
+
+  /* Stable header memo */
   const listHeader = useMemo(() => (
     <ListHeader
       districtName={districtName}
@@ -686,14 +718,13 @@ export default function PlaceListScreen({ navigation, route }) {
       onClearSelection={handleClearSelection}
       onViewDetails={handleCardPress}
       onScrollToTop={handleScrollToTop}
-      onOpenFilter={() => setFilterVisible(true)}
-      activeRatingFilter={ratingFilter}
       compact={isPlannerMode}
     />
   ), [districtName, search, handleSearchChange, handleSearchSubmit,
     categories, selectedCat, handleCatChange, filtered, selectedPlaceId,
-    selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop, isPlannerMode, ratingFilter]);
+    selectedPlace, handleMarkerPress, handleClearSelection, handleCardPress, handleScrollToTop, isPlannerMode]);
 
+  /* ─── Loading state ─── */
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -743,10 +774,7 @@ export default function PlaceListScreen({ navigation, route }) {
         keyExtractor={keyExtractor}
         numColumns={NUM_COLUMNS}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={[
-          styles.grid,
-          isPlannerMode && { paddingBottom: insets.bottom + 220 }
-        ]}
+        contentContainerStyle={styles.grid}
         renderItem={renderItem}
         ListHeaderComponent={isPlannerMode ? (
           <View>
@@ -827,55 +855,6 @@ export default function PlaceListScreen({ navigation, route }) {
           </View>
         }
       />
-
-      <Modal
-        visible={filterVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setFilterVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setFilterVisible(false)} />
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 60 : 20) }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filters</Text>
-              <Pressable onPress={() => setFilterVisible(false)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Minimum Rating</Text>
-                <View style={styles.ratingPills}>
-                  <Pressable 
-                    style={[styles.ratingPill, ratingFilter === 'all' && styles.ratingPillActive]}
-                    onPress={() => setRatingFilter('all')}
-                  >
-                    <Text style={[styles.ratingPillText, ratingFilter === 'all' && styles.ratingPillTextActive]}>Any</Text>
-                  </Pressable>
-                  {[5, 4, 3, 2].map(r => (
-                    <Pressable 
-                      key={r}
-                      style={[styles.ratingPill, ratingFilter === r && styles.ratingPillActive]}
-                      onPress={() => setRatingFilter(r)}
-                    >
-                      <Ionicons name="star" size={12} color={ratingFilter === r ? colors.white : colors.warning} />
-                      <Text style={[styles.ratingPillText, ratingFilter === r && styles.ratingPillTextActive]}>{r}+</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </ScrollView>
-
-            <AppButton 
-              title="Show Results" 
-              onPress={() => setFilterVisible(false)}
-              containerStyle={styles.applyBtn}
-            />
-          </View>
-        </View>
-      </Modal>
 
       {showToTop ? (
         <Pressable
@@ -967,6 +946,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { color: colors.textMuted, fontSize: 14 },
 
+  /* Header */
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, gap: 10,
@@ -987,6 +967,7 @@ const styles = StyleSheet.create({
 
   topSection: { backgroundColor: colors.background },
 
+  /* Map */
   mapWrap: {
     height: MAP_H, marginHorizontal: 16, marginBottom: 14,
     borderRadius: 20, overflow: 'hidden', backgroundColor: colors.surface2,
@@ -1183,6 +1164,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
 
+  /* Search */
   searchRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: 10, paddingHorizontal: 16, marginBottom: 8,
@@ -1198,134 +1180,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
   },
 
+  /* Result count */
   resultCount: {
     fontSize: 12, color: colors.textMuted, fontWeight: '600',
     paddingHorizontal: 16, marginBottom: 8,
   },
 
-  filterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  filterBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: colors.primary + '14',
-    borderWidth: 1,
-    borderColor: colors.primary + '25',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  filterBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterRow: {
-    gap: 10,
-    paddingRight: 20,
-  },
+  /* Category chips */
+  filterRow: { paddingHorizontal: 12, paddingBottom: 10, gap: 8 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 5,
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
   },
-  chipEmoji: { fontSize: 15 },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  chipTextActive: {
-    color: colors.white,
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  modalContent: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    minHeight: 320,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: colors.textPrimary,
-  },
-  modalBody: {
-    padding: 24,
-  },
-  filterSection: {
-    marginBottom: 24,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  ratingPills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  ratingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  ratingPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  ratingPillText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.textSecondary,
-  },
-  ratingPillTextActive: {
-    color: colors.white,
-  },
-  applyBtn: {
-    marginHorizontal: 24,
-    marginBottom: 10,
-  },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipEmoji: { fontSize: 13 },
+  chipText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+  chipTextActive: { color: colors.white },
 
   /* Grid */
   cardList: { flex: 1 },
