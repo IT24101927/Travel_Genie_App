@@ -3,7 +3,7 @@ const env = require('../../config/env');
 const AppError = require('../../utils/appError');
 const { generateToken } = require('../../utils/jwt');
 const { sendMail } = require('../../utils/mailer');
-const { issueCode, verifyCode, consumeVerificationToken } = require('./emailVerification.store');
+const { issueCode, verifyCode, consumeVerificationToken, isTokenValid } = require('./emailVerification.store');
 const { issueResetCode, verifyResetCode, consumeResetToken } = require('./passwordReset.store');
 
 const PASSWORD_RESET_COOLDOWN_SECONDS = 60;
@@ -146,7 +146,7 @@ const registerUser = async ({
     throw new AppError('Email is already registered', 409);
   }
 
-  const isVerified = consumeVerificationToken({
+  const isVerified = isTokenValid({
     email: normalizedEmail,
     verificationToken
   });
@@ -187,6 +187,8 @@ const registerUser = async ({
     },
     role: 'user'
   });
+
+  consumeVerificationToken({ email: normalizedEmail, verificationToken });
 
   const token = generateToken({ userId: user._id, role: user.role });
 

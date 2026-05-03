@@ -212,7 +212,7 @@ All endpoints are prefixed with `/api/v1`.
 
 ---
 
-### 🧳 Trips & Itinerary Management (IT23361690) — `/api/v1/trips`
+### 🧳 Trips & Itinerary Management — `/api/v1/trips`
 
 | Method | Path | Access | Description |
 |---|---|---|---|
@@ -237,6 +237,16 @@ All endpoints are prefixed with `/api/v1`.
 | `GET` | `/:id` | 🔐 | Get expense |
 | `PUT` | `/:id` | 🔐 | Update expense |
 | `DELETE` | `/:id` | 🔐 | Delete expense |
+
+#### 📊 Admin Market Intelligence — `/api/v1/expenses/admin`
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `GET` | `/price-records` | 🛡️ | Get all platform price records (Hotels, Transport, Activity) |
+| `POST` | `/price-records` | 🛡️ | Create a new market price benchmark record |
+| `DELETE` | `/price-records/:id` | 🛡️ | Remove a market price record |
+| `GET` | `/trip-health` | 🛡️ | Get real-time financial health analytics for all active trips |
+| `GET` | `/alerts` | 🛡️ | Get history of automated financial budget alerts |
 
 ---
 

@@ -88,11 +88,11 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>05 · Expenses Management</strong> <em>(IT24101021)</em></summary>
 <br>
 
-- Full CRUD for expense records per trip
-- Estimated budget vs. actual spend comparison with visual tracking
-- Historical price data stored in database
-- Travel cost trend monitoring
-- Automated alerts and analysis for significant price changes
+- **Financial Intelligence Dashboard**: Real-time spending health tracking and visual budget-vs-actual analytics.
+- **Platform Intelligence (Market Prices)**: Global benchmark pricing database for Hotels, Transport, and Activities.
+- **Context-Aware Price Trends**: Location-based price forecasting for travelers using historical market data.
+- **Granular Admin Oversight**: High-speed intel entry with categorization (Food, Entertainment, Amenities).
+- **Multi-Currency Engine**: Real-time conversion (LKR, USD, EUR) for global financial transparency.
 
 </details>
 
@@ -235,10 +235,10 @@ npm run dev   # → http://localhost:5000
 Seed the database (optional, first run):
 
 ```bash
-node src/scripts/seedAdmin.js       # creates admin account
-node src/scripts/seedDestinations.js # seeds 25 Sri Lanka districts
-node src/scripts/seedPlaces.js      # seeds places per district
-node src/scripts/seedTransports.js  # seeds transport schedules
+npm run db:seed-all        # Consolidated seed: Districts, Places, Hotels, Tags
+npm run db:seed-transports # Seeds 10,000+ transport schedules
+npm run db:seed-admin      # Creates the initial admin account
+npm run db:seed-expenses   # Seeds market price records and trends
 ```
 
 ### 2 — Mobile App

@@ -174,8 +174,8 @@ const AdminTripDetailScreen = ({ navigation, route }) => {
                 <View style={st.listDot} />
                 <View style={{ flex: 1 }}>
                   <Text style={st.listName}>{p.name || `Place ${i + 1}`}</Text>
-                  {(p.type || p.category) ? (
-                    <Text style={st.listMeta}>{p.type || p.category}</Text>
+                  {p.type ? (
+                    <Text style={st.listMeta}>{p.type}</Text>
                   ) : null}
                 </View>
               </View>
