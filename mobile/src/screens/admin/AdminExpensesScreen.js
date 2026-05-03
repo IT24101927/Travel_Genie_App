@@ -571,7 +571,7 @@ const AdminExpensesScreen = ({ navigation }) => {
               style={styles.modalScroll} 
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 60 }}
+              contentContainerStyle={{ paddingBottom: 120 }}
             >
               {/* Mini-Flow Progress Indicator */}
               <View style={styles.flowRow}>

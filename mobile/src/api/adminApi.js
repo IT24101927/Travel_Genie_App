@@ -39,3 +39,8 @@ export const adminListResourceApi = async (resource) => {
   const res = await client.get(`/admin/resources/${resource}`);
   return res.data;
 };
+
+export const adminTransportInsightsApi = async () => {
+  const res = await client.get('/admin/insights/transports');
+  return res.data;
+};

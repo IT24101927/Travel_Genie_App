@@ -26,6 +26,7 @@ import {
   bookingMethodOptions,
   formatLkr,
   getTransportTypeMeta,
+  onDemandTransportTypeOptions,
   scheduleToTransportDraft,
   statusOptions,
   transportTypeOptions
@@ -90,7 +91,17 @@ const TripChip = ({ title, active, onPress }) => (
 
 const AddTransportScreen = ({ navigation, route }) => {
   const schedule = route.params?.schedule;
-  const [form, setForm] = useState(() => buildInitialForm(schedule));
+  const presetTripId = route.params?.tripId || '';
+  const lockTrip = !!route.params?.lockTrip;
+  const presetTripTitle = route.params?.tripTitle || '';
+  const quickLog = !!route.params?.quickLog && !schedule;
+  const typeOptions = quickLog ? onDemandTransportTypeOptions : transportTypeOptions;
+  const [form, setForm] = useState(() => {
+    const initial = buildInitialForm(schedule);
+    const next = presetTripId ? { ...initial, tripId: presetTripId } : initial;
+    if (quickLog && !schedule) next.type = 'tuk-tuk';
+    return next;
+  });
   const [trips, setTrips] = useState([]);
   const [pickerTarget, setPickerTarget] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -100,10 +111,11 @@ const AddTransportScreen = ({ navigation, route }) => {
 
   useFocusEffect(
     useCallback(() => {
+      if (lockTrip) return;
       getTripsApi()
         .then((r) => setTrips(r?.data?.trips || []))
         .catch(() => {});
-    }, [])
+    }, [lockTrip])
   );
 
   const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
@@ -176,7 +188,7 @@ const AddTransportScreen = ({ navigation, route }) => {
             <AppSelect
               label="Transport Type"
               value={form.type}
-              options={transportTypeOptions}
+              options={typeOptions}
               onChange={(value) => set('type', value)}
               leftIcon={typeMeta.icon}
             />
@@ -278,7 +290,17 @@ const AddTransportScreen = ({ navigation, route }) => {
             />
           </View>
 
-          {trips.length > 0 ? (
+          {lockTrip ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Linked Trip</Text>
+              <View style={styles.lockedTripRow}>
+                <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
+                <Text style={styles.lockedTripText} numberOfLines={1}>
+                  {presetTripTitle || 'This trip'}
+                </Text>
+              </View>
+            </View>
+          ) : trips.length > 0 ? (
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Link to Trip</Text>
               <View style={styles.tripList}>
@@ -410,7 +432,19 @@ const styles = StyleSheet.create({
   tripChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: '800' },
   tripChipTextActive: { color: colors.white },
   notesInput: { minHeight: 98, alignItems: 'flex-start' },
-  buttonGap: { height: 10 }
+  buttonGap: { height: 10 },
+  lockedTripRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary + '12',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '33'
+  },
+  lockedTripText: { color: colors.primary, fontSize: 13, fontWeight: '900', flex: 1 }
 });
 
 export default AddTransportScreen;

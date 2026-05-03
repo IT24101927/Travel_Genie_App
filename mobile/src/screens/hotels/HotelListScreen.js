@@ -273,7 +273,7 @@ const FeaturedCard = memo(({ item, onPress, displayCurrency }) => {
           <Text style={ls.typeBadgeEmoji}>{meta.emoji}</Text>
           <Text style={ls.typeBadgeLabel}>{meta.label}</Text>
         </View>
-        {Number(item.rating) > 0 && (
+        {Number(item.rating) > 0 && Number(item.review_count) > 0 && (
           <View style={ls.featRatingBadge}>
             <Ionicons name="star" size={11} color={colors.warning} />
             <Text style={ls.featRatingText}>{Number(item.rating).toFixed(1)}</Text>
@@ -402,10 +402,11 @@ const HotelGridCard = memo(({ item, isSelected, onPress, displayCurrency, select
         </View>
       ) : null}
 
-      {Number(item.rating) > 0 && (
+      {Number(item.rating) > 0 && Number(item.review_count) > 0 && (
         <View style={ls.hotelRating}>
           <Ionicons name="star" size={10} color={colors.warning} />
           <Text style={ls.hotelRatingText}>{Number(item.rating).toFixed(1)}</Text>
+          <Text style={ls.hotelRatingCount}>({item.review_count})</Text>
         </View>
       )}
 
@@ -763,6 +764,7 @@ const HotelListScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [ratingFilter, setRatingFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [showToTop, setShowToTop] = useState(false);
 
@@ -935,6 +937,9 @@ const HotelListScreen = ({ route, navigation }) => {
       // Normal browse mode: filter by exact hotel_type
       list = list.filter((h) => String(h.hotel_type || '').toLowerCase() === typeFilter);
     }
+    if (ratingFilter !== 'all') {
+      list = list.filter((h) => Number(h.rating) >= Number(ratingFilter));
+    }
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((h) =>
@@ -1016,7 +1021,7 @@ const HotelListScreen = ({ route, navigation }) => {
   const isDefaultFilter = isPlannerMode
     ? typeFilter === 'all' || typeFilter === getPrefFilterKey(planner?.preferences?.hotelType)
     : typeFilter === 'all';
-  const activeFilterCount = [!isDefaultFilter, sortKey !== 'rating', displayCurrency !== 'LKR'].filter(Boolean).length;
+  const activeFilterCount = [!isDefaultFilter, sortKey !== 'rating', displayCurrency !== 'LKR', ratingFilter !== 'all'].filter(Boolean).length;
   const selectedDistrictName = selectedDistrict?.name || '';
 
   const filteredDistrictList = useMemo(() => {
@@ -1436,6 +1441,26 @@ const HotelListScreen = ({ route, navigation }) => {
                   </Pressable>
                 );
               })}
+            </View>
+
+            <Text style={ls.filterSectionLabel}>Minimum Rating</Text>
+            <View style={ls.filterOptionRow}>
+              <Pressable 
+                style={[ls.filterOption, ratingFilter === 'all' && ls.filterOptionActive]}
+                onPress={() => setRatingFilter('all')}
+              >
+                <Text style={[ls.filterOptionText, ratingFilter === 'all' && ls.filterOptionTextActive]}>Any</Text>
+              </Pressable>
+              {[5, 4, 3, 2].map(r => (
+                <Pressable 
+                  key={r}
+                  style={[ls.filterOption, ratingFilter === r && ls.filterOptionActive]}
+                  onPress={() => setRatingFilter(r)}
+                >
+                  <Ionicons name="star" size={14} color={ratingFilter === r ? colors.white : colors.warning} />
+                  <Text style={[ls.filterOptionText, ratingFilter === r && ls.filterOptionTextActive]}>{r}+</Text>
+                </Pressable>
+              ))}
             </View>
 
             <Text style={ls.filterSectionLabel}>Currency</Text>
@@ -2730,6 +2755,7 @@ const ls = StyleSheet.create({
     borderRadius: 8,
   },
   hotelRatingText: { color: colors.textPrimary, fontSize: 10, fontWeight: '900' },
+  hotelRatingCount: { color: colors.textMuted, fontSize: 9, fontWeight: '700', marginLeft: 1 },
   hotelSelectBadge: {
     position: 'absolute',
     bottom: 54,
