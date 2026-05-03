@@ -20,7 +20,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import EmptyState from '../../components/common/EmptyState';
 import ErrorText from '../../components/common/ErrorText';
-import AddToTripSheet from '../../components/transport/AddToTripSheet';
 import colors from '../../constants/colors';
 import { getTransportSchedulesApi, getTransportsApi } from '../../api/transportApi';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -118,7 +117,7 @@ const TransportLogModal = ({ visible, logs, onClose, onEdit }) => {
 };
 
 /* ─── Route Detail Modal ─── */
-export const RouteDetailModal = ({ item, onClose, onAddToTrip }) => {
+export const RouteDetailModal = ({ item, onClose }) => {
   const insets = useSafeAreaInsets();
   if (!item) return null;
   const meta = getTransportTypeMeta(item.type);
@@ -221,15 +220,10 @@ export const RouteDetailModal = ({ item, onClose, onAddToTrip }) => {
               </Pressable>
             ) : null}
 
-            {onAddToTrip ? (
-              <Pressable
-                style={[styles.addToTripBtn, { borderColor: meta.color }]}
-                onPress={() => onAddToTrip(item)}
-              >
-                <Ionicons name="airplane-outline" size={16} color={meta.color} />
-                <Text style={[styles.addToTripBtnText, { color: meta.color }]}>Add to a trip</Text>
-              </Pressable>
-            ) : null}
+            <View style={styles.comingSoonRow}>
+              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.comingSoonText}>Add to trip — coming soon</Text>
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -238,7 +232,7 @@ export const RouteDetailModal = ({ item, onClose, onAddToTrip }) => {
 };
 
 /* ─── RouteResultCard ─── */
-export const RouteResultCard = React.memo(({ item, onDetails, onLog, onAddToTrip, style }) => {
+export const RouteResultCard = React.memo(({ item, onDetails, onLog, style }) => {
   const meta = getTransportTypeMeta(item.type);
   const bookingMeta = getBookingChannelMeta(item.bookingChannel);
   return (
@@ -300,19 +294,16 @@ export const RouteResultCard = React.memo(({ item, onDetails, onLog, onAddToTrip
         <Pressable style={styles.actionSecondary} onPress={onDetails}>
           <Text style={styles.actionSecondaryText}>More details</Text>
         </Pressable>
-        {onAddToTrip ? (
-          <Pressable
-            style={[styles.actionPrimary, { backgroundColor: meta.color }]}
-            onPress={() => onAddToTrip(item)}
-          >
-            <Ionicons name="airplane-outline" size={13} color={colors.white} />
-            <Text style={styles.actionPrimaryText}>Add to trip</Text>
-          </Pressable>
-        ) : onLog ? (
+        {onLog ? (
           <Pressable style={[styles.actionSecondary, { backgroundColor: `${meta.color}15` }]} onPress={onLog}>
             <Text style={[styles.actionSecondaryText, { color: meta.color }]}>Log route</Text>
           </Pressable>
-        ) : null}
+        ) : (
+          <View style={styles.actionComingSoon}>
+            <Ionicons name="time-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.actionComingSoonText}>Add to trip soon</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -410,21 +401,6 @@ const TransportListScreen = ({ navigation }) => {
   const [detailItem, setDetailItem] = useState(null);
   const [showLog, setShowLog] = useState(false);
   const [showToTop, setShowToTop] = useState(false);
-  const [tripPickerSchedule, setTripPickerSchedule] = useState(null);
-
-  const openTripPicker = useCallback((schedule) => {
-    setDetailItem(null);
-    setTripPickerSchedule(schedule);
-  }, []);
-
-  const handleTripPicked = useCallback(({ tripId, tripTitle }) => {
-    const schedule = tripPickerSchedule;
-    setTripPickerSchedule(null);
-    if (!schedule) return;
-    navigation.navigate('AddTransport', tripId
-      ? { schedule, tripId, tripTitle, lockTrip: true }
-      : { schedule });
-  }, [navigation, tripPickerSchedule]);
   
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -571,7 +547,6 @@ const TransportListScreen = ({ navigation }) => {
                 item={item}
                 style={styles.popularRouteCard}
                 onDetails={() => setDetailItem(item)}
-                onAddToTrip={openTripPicker}
               />
             )}
           />
@@ -613,13 +588,7 @@ const TransportListScreen = ({ navigation }) => {
         onEndReachedThreshold={0.5}
         onScroll={handleListScroll}
         scrollEventThrottle={16}
-        renderItem={({ item }) => (
-          <RouteResultCard
-            item={item}
-            onDetails={() => setDetailItem(item)}
-            onAddToTrip={openTripPicker}
-          />
-        )}
+        renderItem={({ item }) => <RouteResultCard item={item} onDetails={() => setDetailItem(item)} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load({ silent: true }); }} tintColor={colors.primary} />}
         ListEmptyComponent={
           !loading ? (
@@ -635,18 +604,8 @@ const TransportListScreen = ({ navigation }) => {
           <Ionicons name="arrow-up" size={22} color={colors.white} />
         </Pressable>
       ) : null}
-      <RouteDetailModal
-        item={detailItem}
-        onClose={() => setDetailItem(null)}
-        onAddToTrip={openTripPicker}
-      />
+      <RouteDetailModal item={detailItem} onClose={() => setDetailItem(null)} />
       <TransportLogModal visible={showLog} logs={personalLogs} onClose={() => setShowLog(false)} onEdit={(item) => { setShowLog(false); navigation.navigate('EditTransport', { transport: item }); }} />
-      <AddToTripSheet
-        visible={!!tripPickerSchedule}
-        schedule={tripPickerSchedule}
-        onClose={() => setTripPickerSchedule(null)}
-        onPick={handleTripPicked}
-      />
     </SafeAreaView>
   );
 };
@@ -773,12 +732,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center'
   },
   actionSecondaryText: { color: colors.textPrimary, fontSize: 12, fontWeight: '900' },
-  actionPrimary: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    height: 34, paddingHorizontal: 12, borderRadius: 11,
-    justifyContent: 'center'
+  actionComingSoon: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'flex-end', gap: 4
   },
-  actionPrimaryText: { color: colors.white, fontSize: 12, fontWeight: '900' },
+  actionComingSoonText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
 
   /* Detail modal */
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
@@ -845,12 +803,11 @@ const styles = StyleSheet.create({
   },
   detailBookText: { color: colors.white, fontSize: 15, fontWeight: '900' },
 
-  addToTripBtn: {
+  comingSoonRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5,
-    backgroundColor: colors.surface, marginTop: 4
+    gap: 6, paddingVertical: 12, opacity: 0.5
   },
-  addToTripBtnText: { fontSize: 14, fontWeight: '900' },
+  comingSoonText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
 
   /* Log modal */
   logModalHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16, position: 'relative' },

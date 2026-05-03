@@ -20,10 +20,10 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 
 ---
 
-## 👥 Team Members & Responsibilities
+## 👥 Team
 
 | # | Registration | Feature |
-|---|---|---|
+|:---:|:---:|---|
 | 01 | IT24100853 | Transportation & Transit Management |
 | 02 | IT24100858 | Destination Management |
 | 03 | IT23361690 | Trip Itinerary Management |
@@ -39,10 +39,11 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>01 · Transportation & Transit Management</strong> <em>(IT24100853)</em></summary>
 <br>
 
-- **Public Schedule Discovery**: District-aware board for browsing express buses, intercity trains, domestic flights, and ferries.
-- **Intelligent Search Engine**: Multi-dimensional filtering by route, mode of transport, and provider.
-- **Popularity-Driven Insights**: Real-time ranking of transit routes based on weighted demand scores.
-- **Admin Fleet Management**: Specialized dashboard for schedule CRUD and operational metadata management.
+- Full Create / Read / Update / Delete on transit bookings
+- Admin-side transport schedule management for buses, trains, flights, ferries, taxis, and vans
+- User-side route board with search, mode filters, popular route cards, and district-based schedule browsing
+- Popular transport routes ranked by `popularityScore`, with fast indexes for route discovery
+- Personal transport log management with estimated/actual costs, booking details, trip links, and route status
 
 </details>
 
@@ -50,9 +51,10 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>02 · Destination Management</strong> <em>(IT24100858)</em></summary>
 <br>
 
-- **Interactive Maps**: Full CRUD for destinations with GeoJSON-based location management.
-- **Content Filtering**: Personalized suggestions driven by user interests (Nature, Culture, Adventure).
-- **Attraction Ranking**: Context-aware ranking based on similarity scores and categories.
+- Full CRUD for destinations and place content
+- Content-based filtering driven by user preferences
+- Attraction ranking via similarity scores
+- Personalized destination suggestions on dashboard
 
 </details>
 
@@ -60,9 +62,10 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>03 · Trip Itinerary Management</strong> <em>(IT23361690)</em></summary>
 <br>
 
-- **6-Step Wizard**: Seamlessly orchestrates trip creation from District selection to final Budgeting.
-- **Itinerary Logic**: Multi-day scheduling with automated budget estimations.
-- **State Persistence**: Global state management for session-resilient planning.
+- Full CRUD for trip plans
+- Guided 6-step wizard — select best options from system suggestions
+- Time and activity scheduling across multiple days
+- Integrated budget planning with per-category breakdowns
 
 </details>
 
@@ -70,9 +73,14 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>04 · Hotel and Accommodation Management</strong> <em>(IT24100533)</em></summary>
 <br>
 
-- **Premium Interface**: Map-to-list synchronization with live pins and auto-scrolling cards.
-- **Advanced Filtering**: Ranked by budget, preferences, ratings, and proximity.
-- **Multi-Currency Support**: Dynamic pricing in LKR, USD, and EUR.
+- Full CRUD for hotel records via a modern, mobile-optimized Admin Dashboard
+- Mobile-first premium Guest Screen with interactive map integration (custom zoom, reset, and pins)
+- Interactive hotel and place cards with auto-scroll and visual highlighting upon map pin selection
+- Seamless UI/UX design featuring custom floating tab bar interactions and premium gradient layouts
+- Robust form validation and state-lock implementations for Admin inputs
+- Hotel results ranked by budget, preferences, ratings, and proximity
+- Supports 8 hotel categories across all Sri Lankan districts
+- Multi-currency pricing display (LKR / USD / EUR)
 
 </details>
 
@@ -80,9 +88,11 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>05 · Expenses Management</strong> <em>(IT24101021)</em></summary>
 <br>
 
-- **Financial Intelligence**: Real-time spending health tracking and visual budget-vs-actual analytics.
-- **Market Price Database**: Benchmarks for Hotels, Transport, and Activities across districts.
-- **Trend Forecasting**: Price predictions based on historical market data.
+- **Financial Intelligence Dashboard**: Real-time spending health tracking and visual budget-vs-actual analytics.
+- **Platform Intelligence (Market Prices)**: Global benchmark pricing database for Hotels, Transport, and Activities.
+- **Context-Aware Price Trends**: Location-based price forecasting for travelers using historical market data.
+- **Granular Admin Oversight**: High-speed intel entry with categorization (Food, Entertainment, Amenities).
+- **Multi-Currency Engine**: Real-time conversion (LKR, USD, EUR) for global financial transparency.
 
 </details>
 
@@ -90,9 +100,10 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>06 · Feedback and Review System Management</strong> <em>(IT24101927)</em></summary>
 <br>
 
-- **Unified Review Engine**: Real-time synchronization of ratings across Places and Hotels.
-- **Moderation Workflow**: Secure "Report-to-Hide" strategy with admin governance.
-- **Social Interaction**: Helpful voting, recommendation badges, and context categorization.
+- Full CRUD for reviews
+- 1–5 star ratings for places and hotels
+- Like / Dislike reactions on itinerary items
+- Admin moderation — approve, reject, and flag reviews
 
 </details>
 
@@ -109,7 +120,7 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
                       │  REST API  ·  JWT Auth
 ┌─────────────────────▼────────────────────────────┐
 │                Express Backend                   │
-│       Node.js · Mongoose ODM · Multer            │
+│       Node.js · Mongoose ODM · multer            │
 │                   Port 5000                      │
 └─────────────────────┬────────────────────────────┘
                       │
@@ -123,31 +134,30 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 
 ## 🗺️ Trip Planning Workflow
 
- ① **Register / Login**
+```
+ ① Register / Login
         │
         ▼
- ② **Select District**          ──  Browse all 25 districts on a map
+ ② Select District          ──  Browse all 25 districts on a map
         │
         ▼
- ③ **Explore Places**            ──  React Native map + interactive place cards
+ ③ Explore Places            ──  React Native map + place cards
         │
         ▼
- ④ **Discover Transport**       ──  Browse schedules (Bus/Train/Flight) for the route
+ ④ Set Preferences           ──  Dates · people count · travel style
         │
         ▼
- ⑤ **Set Preferences**           ──  Travel dates · people count · comfort style
+ ⑤ Pick Hotel                ──  Ranked by budget, rating, proximity
         │
         ▼
- ⑥ **Pick Hotel**                ──  Ranked by budget, rating, and proximity
+ ⑥ Set Budget                ──  Per-category breakdown (LKR / USD / EUR)
         │
         ▼
- ⑦ **Set Budget**                ──  Per-category breakdown (LKR / USD / EUR)
+ ⑦ Confirm & Save Itinerary  ──  Stored to MongoDB trips collection
         │
         ▼
- ⑧ **Confirm & Save Itinerary**  ──  Stored to MongoDB trips collection
-        │
-        ▼
- ⑨ **Track Expenses**            ──  Real spend vs. budget with smart alerts
+ ⑧ Track Expenses            ──  Real spend vs. budget with alerts
+```
 
 ---
 
@@ -157,13 +167,13 @@ Data models managed by Mongoose:
 
 | Category | Collections |
 |---|---|
-| 👤 **Users** | `users` |
-| 🗺️ **Geography** | `districts`, `places` |
-| 🚌 **Transport** | `transports`, `transportschedules` |
-| 🏨 **Hotels** | `hotels` |
-| 🧳 **Trips & Budget** | `trips`, `expenses` |
-| ⭐ **Reviews** | `reviews` |
-| 🔔 **Notifications** | `notifications` |
+| 👤 Users | `users` |
+| 🗺️ Geography | `districts`, `places` |
+| 🚌 Transport | `transports`, `transportschedules` |
+| 🏨 Hotels | `hotels` |
+| 🧳 Trips & Budget | `trips`, `expenses` |
+| ⭐ Reviews | `reviews` |
+| 🔔 Notifications | `notifications` |
 
 ---
 
@@ -174,33 +184,41 @@ Travelgenie/
 ├── docs/                   # Architecture, API, deployment, and testing notes
 ├── Backend/                # Express API & MongoDB Logic
 │   └── src/
-│       ├── config/         # Database & Env config
-│       ├── middleware/     # Auth, Uploads, Errors
-│       ├── modules/        # Module-specific logic (Hotels, Trips, etc.)
-│       ├── routes/         # Central route register
-│       ├── utils/          # Standardized responses & helpers
-│       └── server.js       # Entry point
+│       ├── config/
+│       ├── middleware/
+│       ├── modules/
+│       ├── routes/
+│       ├── utils/
+│       └── server.js
 └── mobile/                 # React Native / Expo Mobile App
     └── src/
-        ├── components/     # Atomic UI elements
-        ├── constants/      # Theme & API config
-        ├── context/        # Global state (Auth, Planner)
-        ├── navigation/     # App routing logic
-        ├── screens/        # Main page components
-        └── utils/          # Formatters & Helpers
+        ├── api/
+        ├── components/
+        ├── constants/
+        ├── context/
+        ├── navigation/
+        ├── screens/
+        └── utils/
 ```
 
 ---
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+- **Node.js** 18+
+- **MongoDB** local instance or Atlas connection
+
 ### 1 — Backend
+
 ```bash
 cd Backend
 npm install
 ```
 
-Create a **`.env`** file in `Backend/`:
+Create a `.env` file:
+
 ```env
 NODE_ENV=development
 PORT=5000
@@ -210,12 +228,12 @@ JWT_EXPIRES_IN=7d
 CORS_ORIGINS=*
 ```
 
-Run the server:
 ```bash
 npm run dev   # → http://localhost:5000
 ```
 
-**Seed the database (Recommended for first run):**
+Seed the database (optional, first run):
+
 ```bash
 npm run db:seed-all        # Consolidated seed: Districts, Places, Hotels, Tags
 npm run db:seed-transports # Seeds 10,000+ transport schedules
@@ -224,34 +242,39 @@ npm run db:seed-expenses   # Seeds market price records and trends
 ```
 
 ### 2 — Mobile App
+
 ```bash
 cd mobile
 npm install
 ```
 
-Create a **`.env`** file in `mobile/`:
+Create a `.env` file:
+
 ```env
 EXPO_PUBLIC_API_BASE_URL=http://<YOUR_LAN_IP>:5000/api/v1
 ```
-*Note: For Android Emulator, the default fallback is `http://10.0.2.2:5000/api/v1`.*
 
-Start Metro:
+> **Android emulator**: use `http://10.0.2.2:5000/api/v1` (no `.env` file needed — it is the default fallback in `src/constants/apiConfig.js`).
+
 ```bash
-npm start
+npm start     # Opens the Expo Metro Bundler
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Runtime** | Node.js + Express.js |
-| **ODM / DB** | Mongoose + MongoDB Atlas |
-| **Auth** | JWT (JSON Web Tokens) + bcryptjs |
-| **Frontend** | React Native (Expo SDK 54) |
-| **Maps** | React Native Maps (GeoJSON) |
-| **Icons** | Lucide React Native / Expo Vector Icons |
+| Layer | Technology | Version |
+|---|---|---|
+| Backend runtime | Node.js + Express | 4.18 |
+| ODM | Mongoose | 8.0 |
+| Database | MongoDB | 6+ |
+| Authentication | JWT + bcryptjs | 9.0 / 2.4 |
+| File uploads | multer | 2.0 |
+| Email | nodemailer | 8.0 |
+| Mobile App | React Native + Expo | 0.81 / ~54.0.0 |
+| Navigation | React Navigation | 6.x |
+| Maps | react-native-maps | 1.20 |
 
 ---
 
@@ -259,9 +282,13 @@ npm start
 
 | Service | URL |
 |---|---|
-| **Backend API** | `http://localhost:5000` |
-| **Mobile Metro** | `http://localhost:8081` |
+| Backend API | `http://localhost:5000` |
+| Mobile dev | `http://localhost:8081` |
 
 ---
 
+<div align="center">
+
 Built with ❤️ for Sri Lanka 🇱🇰
+
+</div>
