@@ -20,7 +20,7 @@ An integrated multi-role mobile application supporting User, Guest, and Admin wo
 ## 🧳 Trip Itinerary Management
 
 - Linear Trip Planner orchestrating a smooth 6-step flow: District → Places → Preferences → Hotels → Budget → Finalize.
-- Persistent `TripPlannerContext` managing complex itinerary states during creation.
+- Post-planning workflow: Once saved, discover transit schedules (Bus/Train/Flight) and track real-time expenses.
 - Comprehensive Admin Trip Management with dedicated View and Edit screens matching the platform's design system.
 - Smart itinerary editor for admins featuring date-linking, auto hotel budget calculation, and quick budget presets.
 
