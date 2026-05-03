@@ -273,31 +273,30 @@ const AdminExpensesScreen = ({ navigation }) => {
   const handleSendAlert = async (trip) => {
     const defaultMsg = `Budget Alert: You have used ${Math.round(trip.pct)}% of your planned budget for "${trip.title}". Please review your expenses.`;
     
-    Alert.prompt(
+    Alert.alert(
       'Send Budget Alert',
-      `Target: ${trip.userId?.fullName}\n\nCustomize your message:`,
+      `Send a critical budget notification to ${trip.userId?.fullName || 'Traveler'}?\n\nMessage: "${defaultMsg}"`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Send Now', 
-          onPress: async (msg) => {
+          text: 'Send Alert', 
+          style: 'default',
+          onPress: async () => {
             try {
               await sendBudgetAlertApi({
                 userId: trip.userId?._id || trip.userId,
                 tripId: trip._id,
                 type: 'BUDGET_100',
-                message: msg?.trim() || defaultMsg
+                message: defaultMsg
               });
-              Alert.alert('Success', 'Alert sent to traveler');
+              Alert.alert('Success', 'Alert sent to traveler successfully.');
               loadAll();
             } catch (err) {
-              Alert.alert('Error', 'Failed to send notification');
+              Alert.alert('Error', getApiErrorMessage(err, 'Failed to send notification'));
             }
           }
         }
-      ],
-      'plain-text',
-      defaultMsg
+      ]
     );
   };
 
