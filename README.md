@@ -123,31 +123,21 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 
 ## 🗺️ Trip Planning Workflow
 
- ① **Register / Login**
-        │
-        ▼
- ② **Select District**          ──  Browse all 25 districts on a map
-        │
-        ▼
- ③ **Explore Places**            ──  React Native map + interactive place cards
-        │
-        ▼
- ④ **Discover Transport**       ──  Browse schedules (Bus/Train/Flight) for the route
-        │
-        ▼
- ⑤ **Set Preferences**           ──  Travel dates · people count · comfort style
-        │
-        ▼
- ⑥ **Pick Hotel**                ──  Ranked by budget, rating, and proximity
-        │
-        ▼
- ⑦ **Set Budget**                ──  Per-category breakdown (LKR / USD / EUR)
-        │
-        ▼
- ⑧ **Confirm & Save Itinerary**  ──  Stored to MongoDB trips collection
-        │
-        ▼
- ⑨ **Track Expenses**            ──  Real spend vs. budget with smart alerts
+```mermaid
+graph TD
+    A[<b>1. Authenticate</b><br/>Register or Login] --> B[<b>2. Select District</b><br/>Explore the 25 regions]
+    B --> C[<b>3. Explore Places</b><br/>Pick attractions]
+    C --> D[<b>4. Discover Transport</b><br/>Check schedules]
+    D --> E[<b>5. Set Preferences</b><br/>Dates & Comfort]
+    E --> F[<b>6. Pick Hotel</b><br/>Find the perfect stay]
+    F --> G[<b>7. Set Budget</b><br/>Review estimates]
+    G --> H[<b>8. Confirm & Save</b><br/>Cloud storage]
+    H --> I[<b>9. Track Expenses</b><br/>Live analytics]
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style I fill:#00ff00,stroke:#333,stroke-width:2px
+    style H fill:#4a90e2,stroke:#fff,color:#fff
+```
 
 ---
 
