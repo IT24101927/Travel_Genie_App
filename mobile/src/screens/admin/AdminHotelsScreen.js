@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -283,6 +283,9 @@ const AdminHotelsScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [showToTop, setShowToTop] = useState(false);
+
+  const listRef = useRef(null);
 
   const filtered = useMemo(() => {
     let result = hotels;
@@ -373,6 +376,11 @@ const AdminHotelsScreen = ({ route, navigation }) => {
     setTypeFilter('All');
     clearDrawerFilters();
   };
+
+  const handleListScroll = useCallback((e) => {
+    const next = e.nativeEvent.contentOffset.y > 400;
+    setShowToTop((prev) => (prev === next ? prev : next));
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -554,9 +562,12 @@ const AdminHotelsScreen = ({ route, navigation }) => {
         </View>
       ) : useDistrictSections ? (
         <SectionList
+          ref={listRef}
           style={{ flex: 1 }}
           sections={groupedHotels}
           keyExtractor={(item) => item._id}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => (
             <Pressable
@@ -612,9 +623,12 @@ const AdminHotelsScreen = ({ route, navigation }) => {
         />
       ) : (
         <FlatList
+          ref={listRef}
           style={{ flex: 1 }}
           data={filtered}
           keyExtractor={(item) => item._id}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
           renderItem={({ item }) => renderCard(item, district)}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 88 }]}
           refreshControl={
@@ -642,6 +656,21 @@ const AdminHotelsScreen = ({ route, navigation }) => {
       </Pressable>
 
       {/* ── Filter drawer ── */}
+      {showToTop && (
+        <Pressable
+          style={[styles.toTopBtn, { bottom: insets.bottom + 88 }]}
+          onPress={() => {
+            if (useDistrictSections) {
+              listRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, viewPosition: 0, animated: true });
+            } else {
+              listRef.current?.scrollToOffset({ offset: 0, animated: true });
+            }
+          }}
+        >
+          <Ionicons name="arrow-up" size={24} color={colors.white} />
+        </Pressable>
+      )}
+
       <Modal
         visible={filtersOpen}
         transparent
@@ -1071,6 +1100,22 @@ const styles = StyleSheet.create({
   currencyPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   currencyPillText: { color: colors.textMuted, fontSize: 11, fontWeight: '800' },
   currencyPillTextActive: { color: colors.white },
+  toTopBtn: {
+    position: 'absolute',
+    right: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 999
+  }
 });
 
 export default AdminHotelsScreen;

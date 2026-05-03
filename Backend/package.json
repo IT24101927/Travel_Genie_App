@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "db:check-hotels": "node src/scripts/checkHotels.js",
+    "db:seed-transports": "node src/scripts/seedTransports.js",
     "db:backfill-place-types": "node src/scripts/backfillPlaceTypesAndTags.js",
     "db:clean-place-tags": "node src/scripts/cleanOrphanedPlaceTags.js",
     "test": "echo \"Error: no test specified\" && exit 1"

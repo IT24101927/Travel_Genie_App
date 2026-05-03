@@ -36,7 +36,7 @@ const getPlaces = async (query) => {
     and.push({ $or: [{ name: rx }, { description: rx }, { tags: rx }] });
   }
 
-  const base = { isActive: true };
+  const base = query.includeInactive === 'true' ? {} : { isActive: true };
   const filter = and.length ? { ...base, $and: and } : base;
   return Place.find(filter).sort({ rating: -1, createdAt: -1 });
 };
