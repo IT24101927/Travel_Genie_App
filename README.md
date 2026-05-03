@@ -60,8 +60,8 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>03 · Trip Itinerary Management</strong> <em>(IT23361690)</em></summary>
 <br>
 
-- **6-Step Wizard**: Seamlessly orchestrates trip creation from District selection to final Budgeting.
-- **Itinerary Logic**: Multi-day scheduling with automated budget estimations.
+- **6-Step Linear Trip Planner**: Orchestrating a smooth 6-step flow: District → Places → Preferences → Hotels → Budget → Finalize.
+- **Post-planning workflow**: Once saved, discover transit schedules (Bus/Train/Flight) and track real-time expenses.
 - **State Persistence**: Global state management for session-resilient planning.
 
 </details>
@@ -123,31 +123,21 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 
 ## 🗺️ Trip Planning Workflow
 
- ① **Register / Login**
-        │
-        ▼
- ② **Select District**          ──  Browse all 25 districts on a map
-        │
-        ▼
- ③ **Explore Places**            ──  React Native map + interactive place cards
-        │
-        ▼
- ④ **Discover Transport**       ──  Browse schedules (Bus/Train/Flight) for the route
-        │
-        ▼
- ⑤ **Set Preferences**           ──  Travel dates · people count · comfort style
-        │
-        ▼
- ⑥ **Pick Hotel**                ──  Ranked by budget, rating, and proximity
-        │
-        ▼
- ⑦ **Set Budget**                ──  Per-category breakdown (LKR / USD / EUR)
-        │
-        ▼
- ⑧ **Confirm & Save Itinerary**  ──  Stored to MongoDB trips collection
-        │
-        ▼
- ⑨ **Track Expenses**            ──  Real spend vs. budget with smart alerts
+```mermaid
+graph TD
+    A[<b>1. Authenticate</b><br/>Register or Login] --> B[<b>2. Select District</b><br/>Explore the 25 regions]
+    B --> C[<b>3. Explore Places</b><br/>Pick attractions]
+    C --> D[<b>4. Set Preferences</b><br/>Dates & Comfort]
+    D --> E[<b>5. Pick Hotel</b><br/>Find the perfect stay]
+    E --> F[<b>6. Set Budget</b><br/>Review estimates]
+    F --> G[<b>7. Confirm & Save</b><br/>Cloud storage]
+    G --> H[<b>8. Discover Transport</b><br/>Add transit schedules]
+    H --> I[<b>9. Track Expenses</b><br/>Live analytics]
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style I fill:#00ff00,stroke:#333,stroke-width:2px
+    style G fill:#4a90e2,stroke:#fff,color:#fff
+```
 
 ---
 
