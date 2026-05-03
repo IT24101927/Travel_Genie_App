@@ -74,8 +74,6 @@ const TripStackNavigator = () => (
       initialParams={{ plannerMode: true }}
     />
     <TripStack.Screen name="PlannerBudget" component={TripPlannerBudgetScreen} />
-    <TripStack.Screen name="TripAddTransport" component={AddTransportScreen} />
-    <TripStack.Screen name="TripEditTransport" component={EditTransportScreen} />
   </TripStack.Navigator>
 );
 
