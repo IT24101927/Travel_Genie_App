@@ -124,9 +124,8 @@ const StayDistrictCard = ({ item, onPress, compact = false }) => {
         <Text style={styles.provinceBadgeText}>{item.province || 'Sri Lanka'}</Text>
       </View>
 
-      <View style={styles.hotelCountBadge}>
-        <Ionicons name="bed" size={12} color={colors.white} />
-        <Text style={styles.hotelCountText}>{item.hotelCount}</Text>
+      <View style={[styles.districtIdBadge, { backgroundColor: accent }]}>
+        <Text style={styles.districtIdText}>{item.district_id || '-'}</Text>
       </View>
 
       <View style={styles.cardBottom}>
@@ -134,9 +133,7 @@ const StayDistrictCard = ({ item, onPress, compact = false }) => {
           {item.name}
         </Text>
         <Text style={styles.cardSub} numberOfLines={1}>
-          {item.hotelCount > 0
-            ? `${item.hotelCount} stay${item.hotelCount !== 1 ? 's' : ''} available`
-            : 'Browse stays in this district'}
+          Find the perfect stay
         </Text>
         {!compact ? (
           <View style={styles.cardAction}>
@@ -257,28 +254,17 @@ const HotelDistrictListScreen = ({ navigation }) => {
 
   const renderHeader = () => (
     <View>
-      <LinearGradient
-        colors={[colors.primaryDark, colors.primary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
-      >
-        <View style={styles.heroTop}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="bed" size={22} color={colors.white} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroEyebrow}>Hotel Finder</Text>
-            <Text style={styles.heroTitle}>Choose where to stay</Text>
-            <Text style={styles.heroSub}>Pick a district and browse hotels nearby.</Text>
-          </View>
+      <View style={styles.intro}>
+        <View style={styles.introCopy}>
+          <Text style={styles.eyebrow}>Hotel Districts</Text>
+          <Text style={styles.title}>Where to Stay</Text>
+          <Text style={styles.subtitle}>Browse by district to discover the perfect accommodation.</Text>
         </View>
-
-        <View style={styles.heroStatsRow}>
-          <StatPill icon="map-outline" value={districts.length} label="Districts" />
-          <StatPill icon="bed-outline" value={hotels.length} label="Hotels" />
+        <View style={styles.countPill}>
+          <Ionicons name="map" size={14} color={colors.primary} />
+          <Text style={styles.countPillText}>{districts.length}</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.searchWrap}>
         <View style={styles.searchBox}>
@@ -329,7 +315,7 @@ const HotelDistrictListScreen = ({ navigation }) => {
               <Ionicons name="star" size={15} color={colors.warning} />
               <Text style={styles.sectionTitle}>Popular Stay Districts</Text>
             </View>
-            <Text style={styles.sectionSub}>Most hotels</Text>
+            <Text style={styles.sectionSub}>Highlights</Text>
           </View>
           <ScrollView
             horizontal
@@ -407,44 +393,36 @@ const styles = StyleSheet.create({
   loadingText: { color: colors.textMuted, fontSize: 14 },
   listContent: { paddingBottom: 120 },
 
-  hero: {
-    marginHorizontal: 12,
-    marginTop: 12,
-    borderRadius: 22,
-    padding: 16,
-    overflow: 'hidden',
+  intro: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroEyebrow: {
-    color: 'rgba(255,255,255,0.76)',
-    fontSize: 11,
+  introCopy: { flex: 1, paddingRight: 16 },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
+    marginBottom: 4,
   },
-  heroTitle: { color: colors.white, fontSize: 24, fontWeight: '900', marginTop: 2 },
-  heroSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600', marginTop: 3 },
-  heroStatsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  statPill: {
+  title: { color: colors.textPrimary, fontSize: 32, fontWeight: '900', letterSpacing: -0.5 },
+  subtitle: { color: colors.textMuted, fontSize: 14, fontWeight: '600', marginTop: 4, lineHeight: 20 },
+  countPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderRadius: 14,
+    gap: 6,
+    backgroundColor: colors.primary + '18',
     paddingHorizontal: 12,
-    paddingVertical: 9,
-    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 4,
   },
-  statValue: { color: colors.white, fontSize: 16, fontWeight: '900' },
-  statLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: '800' },
+  countPillText: { color: colors.primary, fontSize: 14, fontWeight: '800' },
 
   searchWrap: { paddingHorizontal: 12, paddingTop: 14 },
   searchBox: {
@@ -519,19 +497,18 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  hotelCountBadge: {
+  districtIdBadge: {
     position: 'absolute',
     top: 10,
     right: 10,
-    flexDirection: 'row',
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
   },
-  hotelCountText: { color: colors.white, fontSize: 11, fontWeight: '900' },
+  districtIdText: { color: colors.white, fontSize: 11, fontWeight: '900' },
   cardBottom: {
     position: 'absolute',
     left: 12,

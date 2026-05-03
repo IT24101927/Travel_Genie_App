@@ -8,6 +8,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TripListScreen from '../screens/trips/TripListScreen';
 import TripDetailsScreen from '../screens/trips/TripDetailsScreen';
 import TripFormScreen from '../screens/trips/TripFormScreen';
+import TripPlannerScreen from '../screens/trips/TripPlannerScreen';
+import TripPlannerPreferencesScreen from '../screens/trips/TripPlannerPreferencesScreen';
+import TripPlannerBudgetScreen from '../screens/trips/TripPlannerBudgetScreen';
+import { TripPlannerProvider } from '../context/TripPlannerContext';
 
 import DistrictListScreen from '../screens/places/DistrictListScreen';
 import PlaceListScreen from '../screens/places/PlaceListScreen';
@@ -52,6 +56,24 @@ const TripStackNavigator = () => (
     <TripStack.Screen name="TripList" component={TripListScreen} />
     <TripStack.Screen name="TripDetails" component={TripDetailsScreen} />
     <TripStack.Screen name="TripForm" component={TripFormScreen} />
+    <TripStack.Screen name="TripPlanner" component={TripPlannerScreen} />
+    <TripStack.Screen
+      name="PlannerDistrictPicker"
+      component={DistrictListScreen}
+      initialParams={{ plannerMode: true }}
+    />
+    <TripStack.Screen
+      name="PlannerPlacePicker"
+      component={PlaceListScreen}
+      initialParams={{ plannerMode: true }}
+    />
+    <TripStack.Screen name="PlannerPreferences" component={TripPlannerPreferencesScreen} />
+    <TripStack.Screen
+      name="PlannerHotelPicker"
+      component={HotelListScreen}
+      initialParams={{ plannerMode: true }}
+    />
+    <TripStack.Screen name="PlannerBudget" component={TripPlannerBudgetScreen} />
   </TripStack.Navigator>
 );
 
@@ -203,6 +225,7 @@ const MainTabNavigator = () => {
   }
 
   return (
+    <TripPlannerProvider>
     <Tab.Navigator
       initialRouteName={initialRouteName}
       tabBar={(props) => <CustomAnimatedTabBar {...props} insets={insets} />}
@@ -224,6 +247,7 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Alerts"    component={NotificationListScreen} />
       <Tab.Screen name="Profile"   component={ProfileStackNavigator} />
     </Tab.Navigator>
+    </TripPlannerProvider>
   );
 };
 
