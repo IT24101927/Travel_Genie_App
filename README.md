@@ -60,9 +60,13 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 <summary><strong>03 · Trip Itinerary Management</strong> <em>(IT23361690)</em></summary>
 <br>
 
-- **6-Step Linear Trip Planner**: Orchestrating a smooth 6-step flow: District → Places → Preferences → Hotels → Budget → Finalize.
-- **Post-planning workflow**: Once saved, discover transit schedules (Bus/Train/Flight) and track real-time expenses.
-- **State Persistence**: Global state management for session-resilient planning.
+- **Linear 6-Step Planner**: Orchestrating a smooth, focused flow: District → Places → Preferences → Hotels → Budget → Finalize.
+- **Intelligent Budget & Duration Sync**: Dynamic recalculation of trip span based on hotel checkout dates, with manual "Return Date" editing that automatically updates budget averages.
+- **Multi-Hotel Itineraries**: Support for selecting multiple hotels per trip, featuring individual night-stay badges and photo previews in the final summary.
+- **Persistent Planning Drafts**: Automated state saving to local storage ensures you never lose progress if you close the app mid-plan.
+- **Comprehensive Admin Trip Management**: Dedicated View and Edit screens matching the platform's design system with budget presets and date-linking.
+- **Rich Visual Itineraries**: Multi-hotel and multi-place support with high-fidelity previews, including individual night-stay tracking and thumbnails.
+- **Draft Persistence**: Session-resilient planning with automatic draft saving and state recovery across app restarts.
 
 </details>
 

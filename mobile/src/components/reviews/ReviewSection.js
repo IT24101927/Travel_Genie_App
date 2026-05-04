@@ -213,7 +213,7 @@ export default function ReviewSection({ targetType, targetId, targetName }) {
 
   // Form State
   const [form, setForm] = useState({
-    rating: 5,
+    rating: 0,
     title: '',
     comment: '',
     travelType: '',
@@ -253,7 +253,7 @@ export default function ReviewSection({ targetType, targetId, targetName }) {
       // Opening
       if (!editingId) {
         setForm({
-          rating: 5,
+          rating: 0,
           title: '',
           comment: '',
           travelType: '',
@@ -269,6 +269,10 @@ export default function ReviewSection({ targetType, targetId, targetName }) {
   };
 
   const handleSubmit = async () => {
+    if (form.rating === 0) {
+      Alert.alert('Required', 'Please select a star rating.');
+      return;
+    }
     if (form.comment.length < 10) {
       Alert.alert('Incomplete', 'Please share a bit more detail (at least 10 characters).');
       return;
@@ -475,7 +479,7 @@ export default function ReviewSection({ targetType, targetId, targetName }) {
             >
               <View style={styles.formSection}>
                 <Text style={styles.label}>Rate your stay *</Text>
-                <Stars value={form.rating} onChange={v => setForm(p => ({ ...p, rating: v }))} size={36} />
+                <Stars value={form.rating} onChange={v => setForm(p => ({ ...p, rating: v }))} size={30} />
               </View>
 
               <AppInput label="Review Title" placeholder="Summarize your trip" value={form.title} onChangeText={v => setForm(p => ({ ...p, title: v }))} />
@@ -598,21 +602,21 @@ const styles = StyleSheet.create({
   flagBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, minHeight: 400, maxHeight: height * 0.9 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalContent: { backgroundColor: colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: height * 0.94 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary },
-  formScroll: { padding: 24 },
-  formSection: { marginBottom: 25 },
-  label: { fontSize: 14, fontWeight: '800', color: colors.textPrimary, marginBottom: 10 },
+  formScroll: { padding: 16, paddingHorizontal: 24 },
+  formSection: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
   starsRow: { flexDirection: 'row' },
-  formRow: { flexDirection: 'row', marginBottom: 10 },
-  pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  formRow: { flexDirection: 'row', marginBottom: 4 },
+  pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  pill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  pillText: { fontSize: 13, color: colors.textSecondary, fontWeight: '700', textTransform: 'capitalize' },
+  pillText: { fontSize: 12, color: colors.textSecondary, fontWeight: '700', textTransform: 'capitalize' },
   pillTextActive: { color: colors.white },
-  toggleRow: { flexDirection: 'row', gap: 15 },
-  toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 25, paddingVertical: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  toggleRow: { flexDirection: 'row', gap: 12 },
+  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   toggleBtnYes: { backgroundColor: colors.success, borderColor: colors.success },
   toggleBtnNo: { backgroundColor: colors.danger, borderColor: colors.danger },
   toggleBtnText: { fontSize: 14, fontWeight: '800', color: colors.textMuted },

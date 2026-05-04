@@ -585,7 +585,7 @@ export default function PlaceListScreen({ navigation, route }) {
   const filtered = useMemo(() => {
     let list = allPlaces.map((p) => {
       if (!hasInterestSignals) return { ...p, matchScore: 0, matchReason: '' };
-      const { score, reason } = scorePlaceMatch(p, userInterests);
+      const { score, reason } = scorePlaceMatch(p, userInterests, isPlannerMode ? planner.preferences : null);
       return { ...p, matchScore: score, matchReason: reason };
     });
     if (selectedCat !== 'All') {
@@ -604,7 +604,7 @@ export default function PlaceListScreen({ navigation, route }) {
       );
     }
     return list;
-  }, [allPlaces, selectedCat, ratingFilter, matchesOnly, hasInterestSignals, userInterests]);
+  }, [allPlaces, selectedCat, ratingFilter, matchesOnly, hasInterestSignals, userInterests, isPlannerMode, planner.preferences]);
 
   const matchedCount = useMemo(
     () => filtered.filter((p) => Number(p.matchScore) > 0).length,
