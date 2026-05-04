@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const User = require('../users/user.model');
+const User = require('../users/models/user.model');
 const AppError = require('../../utils/appError');
 const { generateToken } = require('../../utils/jwt');
 
@@ -11,14 +11,15 @@ const loadOptionalModel = (requirePath) => {
   }
 };
 
-const Trip = loadOptionalModel('../trips/trip.model');
-const Place = loadOptionalModel('../places/place.model');
-const Hotel = loadOptionalModel('../hotels/hotel.model');
-const Expense = loadOptionalModel('../expenses/expense.model');
-const Review = loadOptionalModel('../reviews/review.model');
-const Notification = loadOptionalModel('../notifications/notification.model');
+const Trip = loadOptionalModel('../trips/models/trip.model');
+const Place = loadOptionalModel('../places/models/place.model');
+const Hotel = loadOptionalModel('../hotels/models/hotel.model');
+const Expense = loadOptionalModel('../expenses/models/expense.model');
+const Review = loadOptionalModel('../reviews/models/review.model');
+const Notification = loadOptionalModel('../notifications/models/notification.model');
 const Transport = loadOptionalModel('../transport/models/Transport');
 const TransportSchedule = loadOptionalModel('../transport/models/TransportSchedule');
+
 
 const safeCount = async (Model, filter = {}) => {
   if (!Model) return 0;

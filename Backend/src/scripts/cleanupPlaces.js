@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const { connectDatabase } = require('../config/db');
-const Place = require('../modules/places/place.model');
+const Place = require('../modules/places/models/place.model');
 
 async function cleanupPlaces() {
   try {

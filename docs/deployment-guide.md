@@ -22,30 +22,29 @@ This guide provides step-by-step instructions for deploying the **TravelGenie** 
 
 ---
 
-## 2. Backend Deployment (Render)
+## 2. Backend Deployment (Railway)
 
 1. **GitHub**: Push your code to a GitHub repository.
-2. **Create Web Service**: In Render Dashboard, click **New +** -> **Web Service**.
+2. **New Project**: In Railway Dashboard, click **New Project** -> **Deploy from GitHub repo**.
 3. **Configure**:
    - **Root Directory**: `Backend`
-   - **Build Command**: `npm install`
    - **Start Command**: `npm start`
 4. **Environment Variables**:
    - `NODE_ENV`: `production`
    - `MONGO_URI`: (Your Atlas URI from Step 1)
    - `JWT_SECRET`: (Generate a long random string)
    - `JWT_EXPIRES_IN`: `7d`
-   - `CORS_ORIGINS`: `*` (or your specific frontend domain)
-   - `UPLOAD_BASE_URL`: (Your Render URL, e.g., `https://travelgenie-api.onrender.com`)
+   - `CORS_ORIGINS`: `*`
+   - `UPLOAD_BASE_URL`: (Your Railway URL, e.g., `https://travelgenie-api.up.railway.app`)
 
-> [!CAUTION]
-> **Persistent Storage**: Render's free tier uses an ephemeral file system. Files uploaded via `multer` to the `uploads/` folder will be **deleted** when the service restarts. For production, consider using **Cloudinary** or **AWS S3**.
+> [!TIP]
+> **Why Railway?**: Unlike Render's free tier, Railway does not "sleep." This means your app will respond instantly during your Viva/Demo without any cold-start delays.
 
 ---
 
 ## 3. Seed Production Data
 
-Once the backend is live, you need to populate the cloud database with the initial data (districts, places, hotels).
+Once the backend is live on Railway, you need to populate the cloud database with the initial data.
 
 1. Locally, update your `Backend/.env` to point to the **Atlas MONGO_URI**.
 2. Run the seeding scripts:

@@ -1,6 +1,7 @@
-const Hotel = require('./hotel.model');
-const District = require('../places/district.model');
-const Place = require('../places/place.model');
+const Hotel = require('./models/hotel.model');
+const District = require('../places/models/district.model');
+const Place = require('../places/models/place.model');
+
 const AppError = require('../../utils/appError');
 
 const createHotel = async (userId, payload) => {

@@ -1,5 +1,6 @@
-const Expense = require('./expense.model');
-const Trip = require('../trips/trip.model');
+const Expense = require('./models/expense.model');
+const Trip = require('../trips/models/trip.model');
+
 const AppError = require('../../utils/appError');
 
 const ensureTripOwnership = async (tripId, userId, role) => {

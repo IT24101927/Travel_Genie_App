@@ -3,10 +3,11 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const { connectDatabase } = require('../config/db');
 
-const User = require('../modules/users/user.model');
-const Place = require('../modules/places/place.model');
-const Hotel = require('../modules/hotels/hotel.model');
-const Review = require('../modules/reviews/review.model');
+const User = require('../modules/users/models/user.model');
+const Place = require('../modules/places/models/place.model');
+const Hotel = require('../modules/hotels/models/hotel.model');
+const Review = require('../modules/reviews/models/review.model');
+
 
 const REVIEW_TITLES = [
   'Amazing Experience!',

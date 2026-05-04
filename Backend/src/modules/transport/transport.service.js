@@ -1,5 +1,5 @@
 const Transport = require('./models/Transport');
-const Trip = require('../trips/trip.model');
+const Trip = require('../trips/models/trip.model');
 const AppError = require('../../utils/appError');
 
 const verifyTripAccess = async (tripId, userId, role) => {

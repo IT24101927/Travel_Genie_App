@@ -8,13 +8,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import AppInput from '../../components/common/AppInput';
+import AppDatePicker from '../../components/common/AppDatePicker';
 import colors from '../../constants/colors';
+
 import { useTripPlanner } from '../../context/TripPlannerContext';
 import {
   navigateToPlannerHotelPicker,
@@ -82,7 +82,7 @@ const PrefCard = ({ icon, label, sub, active, onPress }) => (
 const TripPlannerPreferencesScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const planner = useTripPlanner();
-  const [showDatePicker, setShowDatePicker] = useState(false);
+
 
   const { preferences, updatePreferences, selectedDistrict } = planner;
   const { tripType, hotelType, nights, travelers, startDate: prefStartDate } = preferences;
@@ -115,28 +115,7 @@ const TripPlannerPreferencesScreen = ({ navigation }) => {
     (tripType === 'couple' && travelers >= 2) ||
     travelers >= maxTravelers;
 
-  const handleOpenDatePicker = () => {
-    Keyboard.dismiss();
-    const currentDate = parseInputDate(startDate) || parseInputDate(tomorrowInput()) || new Date();
-    const minDate = parseInputDate(todayInput()) || new Date();
 
-    if (Platform.OS === 'android') {
-      DateTimePickerAndroid.open({
-        value: currentDate,
-        mode: 'date',
-        display: 'calendar',
-        minimumDate: minDate,
-        onChange: (event, selectedDate) => {
-          if (event.type === 'set' && selectedDate) {
-            updatePreferences({ startDate: formatInputDate(selectedDate) });
-          }
-        },
-      });
-      return;
-    }
-
-    setShowDatePicker(true);
-  };
 
   const tripTypeOption = TRIP_TYPES.find((t) => t.value === tripType);
   const hotelTypeOption = HOTEL_TYPES.find((h) => h.value === hotelType);
@@ -285,14 +264,21 @@ const TripPlannerPreferencesScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <AppInput
+            <AppDatePicker
               label="Trip start date"
-              leftIcon="calendar-outline"
-              value={startDate}
-              editable={false}
-              onContainerPress={handleOpenDatePicker}
-              helperText={endDate ? `Return date: ${endDate}` : ''}
+              value={parseInputDate(startDate)}
+              onChange={(date) => updatePreferences({ startDate: formatInputDate(date) })}
+              mode="date"
+              minimumDate={parseInputDate(todayInput()) || new Date()}
+              placeholder="Select Start Date"
             />
+            {endDate ? (
+              <View style={styles.endDateHint}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.endDateHintText}>Return date: {endDate}</Text>
+              </View>
+            ) : null}
+
 
             <View style={styles.bigCounter}>
               <Pressable
@@ -371,22 +357,7 @@ const TripPlannerPreferencesScreen = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      {Platform.OS === 'ios' ? (
-        <DateTimePickerModal
-          isVisible={showDatePicker}
-          mode="date"
-          display="spinner"
-          isDarkModeEnabled={false}
-          themeVariant="light"
-          date={parseInputDate(startDate) || new Date()}
-          minimumDate={parseInputDate(todayInput()) || new Date()}
-          onConfirm={(selectedDate) => {
-            updatePreferences({ startDate: formatInputDate(selectedDate) });
-            setShowDatePicker(false);
-          }}
-          onCancel={() => setShowDatePicker(false)}
-        />
-      ) : null}
+
     </SafeAreaView>
   );
 };
@@ -484,6 +455,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.30,
     shadowRadius: 6,
   },
+  dateInput: {
+    backgroundColor: colors.surface2,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dateInputLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '800', marginBottom: 4 },
+  dateInputText: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
+  endDateHint: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 6, 
+    marginTop: -8, 
+    marginBottom: 12, 
+    marginLeft: 4 
+  },
+  endDateHintText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   prefIconBox: {
     width: 38,
     height: 38,

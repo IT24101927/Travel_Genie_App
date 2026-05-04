@@ -7,10 +7,16 @@ const {
   updateTransportHandler,
   deleteTransportHandler
 } = require('../controllers/transportController');
+const validate = require('../../../middleware/validateMiddleware');
+const {
+  transportValidation,
+  updateTransportValidation
+} = require('../transport.validation');
 const {
   getPublicTransportDistricts,
   getPublicTransportSchedules
 } = require('../controllers/transportAdmin.controller');
+
 
 const router = express.Router();
 
@@ -19,10 +25,11 @@ router.get('/schedules', getPublicTransportSchedules);
 
 router.use(protect);
 
-router.post('/', createTransportHandler);
+router.post('/', transportValidation, validate, createTransportHandler);
 router.get('/', getTransportsHandler);
 router.get('/:id', getTransportHandler);
-router.put('/:id', updateTransportHandler);
+router.put('/:id', updateTransportValidation, validate, updateTransportHandler);
 router.delete('/:id', deleteTransportHandler);
+
 
 module.exports = router;

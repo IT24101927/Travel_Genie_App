@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 const { connectDatabase } = require('../config/db');
-const User = require('../modules/users/user.model');
-const Trip = require('../modules/trips/trip.model');
-const Place = require('../modules/places/place.model');
-const Hotel = require('../modules/hotels/hotel.model');
+const User = require('../modules/users/models/user.model');
+const Trip = require('../modules/trips/models/trip.model');
+const Place = require('../modules/places/models/place.model');
+const Hotel = require('../modules/hotels/models/hotel.model');
+
 
 const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;

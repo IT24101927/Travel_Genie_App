@@ -11,7 +11,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const mongoose = require('mongoose');
 const axios    = require('axios');
-const Place    = require('../modules/places/place.model');
+const Place    = require('../modules/places/models/place.model');
 
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
 const HEADERS  = { 'User-Agent': 'TravelGenieApp/2.0 (educational-project)', Accept: 'application/json' };

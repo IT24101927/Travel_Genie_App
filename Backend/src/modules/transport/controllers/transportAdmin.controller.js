@@ -51,43 +51,68 @@ const buildScheduleQuery = (queryParams = {}, { activeOnly = false } = {}) => {
     filter.district = new RegExp(`^${escapeRegex(String(queryParams.district).trim())}$`, 'i');
   }
 
-  if (queryParams.from) {
-    const fromRegex = new RegExp(escapeRegex(String(queryParams.from).trim()), 'i');
-    filter.$or = filter.$or || [];
-    filter.$or.push({ $or: [{ departureStation: fromRegex }, { district: fromRegex }] });
+  const andFilters = [];
+
+  // 1. Specific field searches (if provided directly)
+  if (queryParams.departureStation || queryParams.from) {
+    const val = queryParams.departureStation || queryParams.from;
+    const regex = new RegExp(escapeRegex(String(val).trim()), 'i');
+    andFilters.push({ $or: [{ departureStation: regex }, { district: regex }] });
   }
 
-  if (queryParams.to) {
-    const toRegex = new RegExp(escapeRegex(String(queryParams.to).trim()), 'i');
-    filter.$or = filter.$or || [];
-    filter.$or.push({ $or: [{ arrivalStation: toRegex }, { district: toRegex }] });
+  if (queryParams.arrivalStation || queryParams.to) {
+    const val = queryParams.arrivalStation || queryParams.to;
+    const regex = new RegExp(escapeRegex(String(val).trim()), 'i');
+    andFilters.push({ $or: [{ arrivalStation: regex }, { district: regex }] });
   }
 
+  if (queryParams.provider) {
+    const regex = new RegExp(escapeRegex(String(queryParams.provider).trim()), 'i');
+    andFilters.push({ provider: regex });
+  }
+
+  if (queryParams.routeNo) {
+    const regex = new RegExp(escapeRegex(String(queryParams.routeNo).trim()), 'i');
+    andFilters.push({ routeNo: regex });
+  }
+
+  // 2. Global search (if provided)
   if (search) {
+    const isNumeric = /^\d+$/.test(search);
     const searchRegex = new RegExp(escapeRegex(search), 'i');
-    filter.$or = filter.$or || [];
-    filter.$or.push({
-      $or: [
-        { provider: searchRegex },
-        { routeName: searchRegex },
-        { routeNo: searchRegex },
-        { departureStation: searchRegex },
-        { arrivalStation: searchRegex },
-        { district: searchRegex },
-        { province: searchRegex },
-        { bookingChannel: searchRegex },
-        { tags: searchRegex }
-      ]
-    });
+    const searchGroup = [
+      { provider: searchRegex },
+      { routeName: searchRegex },
+      { routeNo: searchRegex },
+      { departureStation: searchRegex },
+      { arrivalStation: searchRegex },
+      { district: searchRegex },
+      { province: searchRegex },
+      { bookingChannel: searchRegex },
+      { tags: searchRegex }
+    ];
+
+    // If search is numeric, prioritize routeNo by putting it first or handling specifically
+    if (isNumeric) {
+      andFilters.push({
+        $or: [
+          { routeNo: searchRegex },
+          ...searchGroup.filter((item) => !item.routeNo)
+        ]
+      });
+    } else {
+      andFilters.push({ $or: searchGroup });
+    }
   }
 
-  if (filter.$or && filter.$or.length > 0) {
-    filter.$and = filter.$or;
-    delete filter.$or;
+  if (andFilters.length > 0) {
+    filter.$and = andFilters;
   }
 
   return filter;
 };
+
+
 
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 100;

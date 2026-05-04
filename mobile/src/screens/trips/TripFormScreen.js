@@ -4,8 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import AppInput from '../../components/common/AppInput';
+import AppDatePicker from '../../components/common/AppDatePicker';
 import AppButton from '../../components/common/AppButton';
 import ErrorText from '../../components/common/ErrorText';
+
 import colors from '../../constants/colors';
 import { createTripApi, updateTripApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -31,6 +33,12 @@ const TripFormScreen = ({ navigation, route }) => {
   const [saving, setSaving] = useState(false);
 
   const statuses = ['planned', 'ongoing', 'completed', 'cancelled'];
+
+  const handleDateChange = (key, date) => {
+    const iso = date.toISOString().slice(0, 10);
+    setForm(p => ({ ...p, [key]: iso }));
+  };
+
 
   const onSave = async () => {
     if (!isRequired(form.title) || !isRequired(form.destination)) {
@@ -100,12 +108,27 @@ const TripFormScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>Timeline & Budget</Text>
           <View style={styles.row}>
             <View style={styles.flexHalf}>
-              <AppInput label="Start Date" value={form.startDate} onChangeText={(text) => setForm((p) => ({ ...p, startDate: text }))} placeholder="YYYY-MM-DD" />
+              <AppDatePicker
+                label="Start Date"
+                mode="date"
+                value={form.startDate ? new Date(form.startDate) : null}
+                onChange={(date) => handleDateChange('startDate', date)}
+                placeholder="Select Date"
+                minimumDate={new Date(new Date().setHours(0,0,0,0))}
+              />
             </View>
+
             <View style={styles.flexHalf}>
-              <AppInput label="End Date" value={form.endDate} onChangeText={(text) => setForm((p) => ({ ...p, endDate: text }))} placeholder="YYYY-MM-DD" />
+              <AppDatePicker
+                label="End Date"
+                mode="date"
+                value={form.endDate ? new Date(form.endDate) : null}
+                onChange={(date) => handleDateChange('endDate', date)}
+                placeholder="Select Date"
+              />
             </View>
           </View>
+
           <AppInput label="Budget Estimate" keyboardType="decimal-pad" value={form.budget} onChangeText={(text) => setForm((p) => ({ ...p, budget: text }))} placeholder="1000" />
         </View>
 

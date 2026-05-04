@@ -5,9 +5,12 @@ const path = require('path');
 const { connectDatabase } = require('../config/db');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-const District = require('../modules/places/district.model');
-const Place = require('../modules/places/place.model');
-const Hotel = require('../modules/hotels/hotel.model');
+const District = require('../modules/places/models/district.model');
+
+const Place = require('../modules/places/models/place.model');
+
+const Hotel = require('../modules/hotels/models/hotel.model');
+
 const { readCsvRows } = require('./csvHelpers');
 const { buildPlaceTagMap, deriveWebsitePlaceType } = require('../modules/places/placeTaxonomy');
 

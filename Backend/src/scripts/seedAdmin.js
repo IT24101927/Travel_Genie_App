@@ -4,7 +4,7 @@
  */
 const mongoose = require('mongoose');
 const { connectDatabase } = require('../config/db');
-const User = require('../modules/users/user.model');
+const User = require('../modules/users/models/user.model');
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@travelgenie.com';
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@123';
