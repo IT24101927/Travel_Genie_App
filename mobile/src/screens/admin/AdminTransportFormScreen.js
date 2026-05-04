@@ -429,7 +429,13 @@ const normalizeScheduleToForm = (schedule) => ({
 
 const getCopy = (type) => TYPE_COPY[type] || TYPE_COPY.other;
 const getPreset = (type) => TYPE_PRESETS[type] || TYPE_PRESETS.other;
-const isValidTime = (value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '').trim());
+const isValidTime = (value) => /^([0-1]?\d|2[0-3])[:.][0-5]\d$/.test(String(value || '').trim());
+const normalizeTime = (val) => {
+  const s = String(val || '').trim().replace('.', ':');
+  const [hh, mm] = s.split(':');
+  return `${hh.padStart(2, '0')}:${mm}`;
+};
+
 const parseTagsText = (value) => String(value || '').split(',').map((tag) => tag.trim()).filter(Boolean);
 const isBusType = (type) => ['public-bus', 'express-bus'].includes(type);
 
@@ -928,8 +934,8 @@ const AdminTransportFormScreen = ({ navigation, route }) => {
     serviceClass: form.serviceClass.trim() || 'Standard',
     departureStation: form.departureStation.trim(),
     arrivalStation: form.arrivalStation.trim(),
-    departureTime: form.departureTime.trim(),
-    arrivalTime: form.arrivalTime.trim(),
+    departureTime: normalizeTime(form.departureTime),
+    arrivalTime: normalizeTime(form.arrivalTime),
     duration: Number(form.duration) || 0,
     ticketPriceLKR: Number(form.ticketPriceLKR) || 0,
     operatingDays: form.operatingDays,
