@@ -22,7 +22,9 @@ const updateMyProfile = asyncHandler(async (req, res) => {
   };
 
   if (req.file) {
-    payload.profileImage = `/uploads/profiles/${req.file.filename}`;
+    payload.profileImage = req.file.path.startsWith('http') 
+      ? req.file.path 
+      : `/uploads/profiles/${req.file.filename}`;
   }
 
   Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);

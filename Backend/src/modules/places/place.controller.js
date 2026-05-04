@@ -21,7 +21,9 @@ const createPlaceHandler = asyncHandler(async (req, res) => {
   });
 
   if (req.file) {
-    payload.image_url = `/uploads/places/${req.file.filename}`;
+    payload.image_url = req.file.path.startsWith('http') 
+      ? req.file.path 
+      : `/uploads/places/${req.file.filename}`;
   }
 
   const place = await createPlace(req.user.userId, payload);
@@ -48,7 +50,9 @@ const updatePlaceHandler = asyncHandler(async (req, res) => {
   }
 
   if (req.file) {
-    payload.image_url = `/uploads/places/${req.file.filename}`;
+    payload.image_url = req.file.path.startsWith('http') 
+      ? req.file.path 
+      : `/uploads/places/${req.file.filename}`;
   }
 
   const place = await updatePlace(req.params.id, payload);
@@ -63,7 +67,9 @@ const uploadPlaceImageHandler = asyncHandler(async (req, res) => {
     });
   }
 
-  const imageUrl = `/uploads/places/${req.file.filename}`;
+  const imageUrl = req.file.path.startsWith('http') 
+    ? req.file.path 
+    : `/uploads/places/${req.file.filename}`;
   return sendSuccess(res, 200, 'Image uploaded successfully', { imageUrl });
 });
 

@@ -19,7 +19,10 @@ const env = {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
-  uploadBaseUrl: process.env.UPLOAD_BASE_URL || ''
+  uploadBaseUrl: process.env.UPLOAD_BASE_URL || '',
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || ''
 };
 
 module.exports = env;

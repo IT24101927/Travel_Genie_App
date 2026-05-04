@@ -36,6 +36,10 @@ exports.deleteDistrict = asyncHandler(async (req, res) => {
 
 exports.uploadDistrictImage = asyncHandler(async (req, res) => {
   if (!req.file) return apiResponse.sendError(res, 400, 'No image file provided');
-  const imageUrl = `/uploads/districts/${req.file.filename}`;
+  
+  const imageUrl = req.file.path.startsWith('http') 
+    ? req.file.path 
+    : `/uploads/districts/${req.file.filename}`;
+    
   apiResponse.sendSuccess(res, 200, 'Image uploaded successfully', { imageUrl });
 });
