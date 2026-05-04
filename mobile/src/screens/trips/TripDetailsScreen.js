@@ -14,6 +14,7 @@ import { formatCurrency } from '../../utils/currencyFormat';
 import { formatDate } from '../../utils/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getTransportTypeMeta, getStatusMeta, formatLkr } from '../../utils/transportOptions';
+import { useTripPlanner } from '../../context/TripPlannerContext';
 
 const formatPlanAmount = (amount) =>
   `LKR ${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -66,6 +67,7 @@ const BudgetBar = ({ label, amount, total, color }) => {
 
 const TripDetailsScreen = ({ navigation, route }) => {
   const trip = route.params?.trip;
+  const planner = useTripPlanner();
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [transports, setTransports] = useState([]);
@@ -109,6 +111,11 @@ const TripDetailsScreen = ({ navigation, route }) => {
       },
     ]);
   };
+
+  const handleEditPlan = useCallback(() => {
+    planner?.startEditTrip?.(trip);
+    navigation.navigate('TripPlanner', { trip });
+  }, [navigation, planner, trip]);
 
   if (!trip) {
     return (
@@ -403,7 +410,7 @@ const TripDetailsScreen = ({ navigation, route }) => {
             <View style={styles.actionsRow}>
               <Pressable
                 style={[styles.actionBtn, styles.actionBtnPrimary, { width: '100%' }]}
-                onPress={() => navigation.navigate('TripPlanner', { trip })}
+                onPress={handleEditPlan}
               >
                 <Ionicons name="map-outline" size={18} color={colors.white} />
                 <Text style={styles.actionBtnTextPrimary}>Edit Plan</Text>

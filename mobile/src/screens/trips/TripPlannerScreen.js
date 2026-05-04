@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import ErrorText from '../../components/common/ErrorText';
 import FallbackImage from '../../components/common/FallbackImage';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import colors from '../../constants/colors';
 import { createTripApi, updateTripApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -23,11 +24,9 @@ import { getHotelImageCandidates } from '../../utils/hotelImages';
 import { useTripPlanner } from '../../context/TripPlannerContext';
 import {
   navigateToPlannerDistrictPicker,
-  navigateToPlannerPlacePicker,
   navigateToPlannerPreferences,
   navigateToPlannerHotelPicker,
   navigateToPlannerBudget,
-  navigateToTripList,
 } from '../../navigation/tripPlannerFlow';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -65,6 +64,19 @@ const addDays = (value, days) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
+const diffDays = (startStr, endStr) => {
+  if (!startStr || !endStr) return 0;
+  const s = new Date(startStr + 'T00:00:00');
+  const e = new Date(endStr + 'T00:00:00');
+  return Math.max(0, Math.round((e - s) / 86400000));
+};
+
+const parseIsoDate = (isoStr) => {
+  if (!isoStr) return new Date();
+  const [y, m, d] = isoStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 const toIsoDate = (value) => (value ? `${value}T00:00:00.000Z` : '');
 const getPlaceId = (p) => String(p?._id || p?.place_id || p?.id || '');
 const getHotelId = (h) => String(h?._id || h?.hotel_id || h?.id || '');
@@ -82,6 +94,9 @@ const normalizeHotelForTrip = (hotel) => hotel ? ({
   rating: Number(hotel?.rating || 0), starClass: Number(hotel?.star_class || 0),
   pricePerNight: getHotelNightlyPriceLkr(hotel), address: hotel?.address_text || '',
   lat: hotel?.lat ?? null, lng: hotel?.lng ?? null,
+  nights: Number(hotel?.nights || 0),
+  checkIn: hotel?.checkIn || null,
+  checkOut: hotel?.checkOut || null,
 }) : null;
 
 // ── Context Card ──────────────────────────────────────────────────────────────
@@ -125,19 +140,25 @@ const BudRow = ({ emoji, label, amount, pct, perDay, budDays, sym, dotColor }) =
 );
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
-const TripPlannerScreen = ({ navigation }) => {
+const TripPlannerScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const planner = useTripPlanner();
+  const initializedEditTripRef = useRef(null);
+  const routeTrip = route?.params?.trip;
+  const routeTripId = routeTrip?._id || routeTrip?.id;
 
   const {
     editingTrip, selectedDistrict, selectedPlaces, preferences,
-    selectedHotel, selectedHotels,
+    selectedHotel, selectedHotels, tripDays, setTripDays,
     tripName, setTripName, totalBudget, hotelBudget, notes, setNotes,
   } = planner;
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const { tripType, hotelType, nights, travelers, startDate: prefStartDate } = preferences;
   const startDate = prefStartDate || '';
-  const endDate = useMemo(() => addDays(startDate, nights), [nights, startDate]);
+  const actualDays = tripDays ? Number(tripDays) : nights;
+  const endDate = useMemo(() => addDays(startDate, actualDays), [actualDays, startDate]);
 
   // ── Budget breakdown with split ────────────────────────────────────────────
   const budCurrency = 'LKR';
@@ -146,7 +167,7 @@ const TripPlannerScreen = ({ navigation }) => {
   const budHotel = Number(hotelBudget || 0);
   const budRemaining = Math.max(budTotal - budHotel, 0);
   const split = normalizeSplit(null); // uses 55/30/15 default
-  const budDays = Math.max(nights, 1);
+  const budDays = Math.max(actualDays, 1);
   const budFood = Math.round(budRemaining * (split.food / 100));
   const budTravel = Math.round(budRemaining * (split.transport / 100));
   const budMisc = budRemaining - budFood - budTravel;
@@ -163,6 +184,12 @@ const TripPlannerScreen = ({ navigation }) => {
   const hotelPrice = displayHotel ? getHotelNightlyPriceLkr(displayHotel) : 0;
   const totalHotels = (selectedHotels || []).length;
 
+  useEffect(() => {
+    if (!routeTripId || !routeTrip || initializedEditTripRef.current === routeTripId) return;
+    planner.startEditTrip?.(routeTrip);
+    initializedEditTripRef.current = routeTripId;
+  }, [planner, routeTrip, routeTripId]);
+
   // ── Auto-fill name ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!tripName && selectedDistrict?.name) {
@@ -172,6 +199,18 @@ const TripPlannerScreen = ({ navigation }) => {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const handleReturnDateChange = (date) => {
+    setShowDatePicker(false);
+    if (!date || !startDate) return;
+    const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const newDays = diffDays(startDate, iso);
+    if (newDays < 1) {
+      setError('Return date must be after departure date.');
+      return;
+    }
+    setTripDays(String(newDays));
+  };
 
   const handleSave = async () => {
     const total = Number(totalBudget || 0);
@@ -207,7 +246,7 @@ const TripPlannerScreen = ({ navigation }) => {
       selectedPlaces: selectedPlaces.map(normalizePlaceForTrip),
       selectedHotel: normalizeHotelForTrip(displayHotel),
       selectedHotels: hotelsPayload,
-      tripType, travelers, nights, hotelType,
+      tripType, travelers, nights: actualDays, hotelType,
       currency: budCurrency, budgetBreakdown,
     };
 
@@ -243,6 +282,15 @@ const TripPlannerScreen = ({ navigation }) => {
             <Text style={s.headerTag}>Trip Planner · Step 6</Text>
             <Text style={s.headerTitle}>{editingTrip ? 'Update Trip' : 'Finalize Trip'}</Text>
           </View>
+          <Pressable 
+            style={[s.iconBtn, { marginLeft: 8 }]} 
+            onPress={() => {
+              planner.cancelPlanning?.();
+              navigation.navigate('TripList');
+            }}
+          >
+            <Ionicons name="close" size={24} color={colors.white} />
+          </Pressable>
           <Pressable style={s.saveHeaderBtn} onPress={handleSave} disabled={saving}>
             <Text style={s.saveHeaderText}>{saving ? 'Saving…' : editingTrip ? 'Update' : 'Save'}</Text>
           </Pressable>
@@ -256,7 +304,7 @@ const TripPlannerScreen = ({ navigation }) => {
           <View style={s.pill}><Ionicons name="location-outline" size={12} color={colors.white} />
             <Text style={s.pillText}>{selectedPlaces.length} place{selectedPlaces.length !== 1 ? 's' : ''}</Text></View>
           <View style={s.pill}><Ionicons name="moon-outline" size={12} color={colors.white} />
-            <Text style={s.pillText}>{nights} night{nights !== 1 ? 's' : ''}</Text></View>
+            <Text style={s.pillText}>{actualDays} night{actualDays !== 1 ? 's' : ''}</Text></View>
           <View style={s.pill}><Ionicons name="people-outline" size={12} color={colors.white} />
             <Text style={s.pillText}>{travelers} traveler{travelers !== 1 ? 's' : ''}</Text></View>
           {budTotal > 0 && (
@@ -273,87 +321,7 @@ const TripPlannerScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
 
-          {/* ── Context Cards (Change buttons) ── */}
-          <View style={s.card}>
-            <View style={s.cardHeader}>
-              <View style={s.cardIconWrap}><Ionicons name="list-outline" size={18} color={colors.primary} /></View>
-              <Text style={s.cardTitle}>Trip Summary</Text>
-            </View>
-
-            <CtxCard
-              icon="map-outline"
-              label="Destination"
-              name={selectedDistrict?.name || 'Not selected'}
-              sub={selectedDistrict?.province ? `${selectedDistrict.province} Province` : null}
-              onPress={() => navigateToPlannerDistrictPicker(navigation)}
-            />
-            <CtxCard
-              emoji="📅"
-              label="Preferences"
-              name={`${nights} ${nights === 1 ? 'night' : 'nights'}`}
-              sub={`${travelers} ${travelers === 1 ? 'person' : 'people'} · ${tripType || 'any'}`}
-              onPress={() => navigateToPlannerPreferences(navigation)}
-            />
-            <CtxCard
-              emoji="🏨"
-              label={`Hotel${totalHotels > 1 ? 's' : ''}`}
-              name={totalHotels > 0
-                ? (totalHotels === 1 ? (displayHotel?.name || 'Selected') : `${totalHotels} hotels selected`)
-                : 'Not selected'}
-              sub={displayHotel && hotelPrice > 0 ? `${fmtMoney(hotelPrice, sym)} / night` : null}
-              onPress={() => navigateToPlannerHotelPicker(navigation)}
-            />
-            <CtxCard
-              emoji="💰"
-              label="Budget"
-              name={budTotal > 0 ? fmtMoney(budTotal, sym) : 'Not set'}
-              sub={budTotal > 0 ? budCurrency : null}
-              onPress={() => navigateToPlannerBudget(navigation)}
-            />
-          </View>
-
-          {/* ── Hotel preview card ── */}
-          {displayHotel && (
-            <View style={s.card}>
-              <View style={s.cardHeader}>
-                <View style={s.cardIconWrap}><Ionicons name="bed-outline" size={18} color={colors.primary} /></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.cardTitle}>Your Hotel{totalHotels > 1 ? 's' : ''}</Text>
-                  {totalHotels > 1 && <Text style={s.cardSub}>{totalHotels} selected</Text>}
-                </View>
-              </View>
-              <View style={s.hotelPreview}>
-                <FallbackImage
-                  uri={getHotelImageCandidates(displayHotel)}
-                  style={s.hotelImg}
-                  iconName="bed-outline"
-                  iconSize={22}
-                  placeholderColor={colors.primary + '18'}
-                  placeholderIconColor={colors.primary}
-                />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.hotelName} numberOfLines={1}>{displayHotel.name}</Text>
-                  <Text style={s.hotelSub} numberOfLines={1}>
-                    {displayHotel.address_text || displayHotel.hotel_type || 'Hotel'}
-                  </Text>
-                  {hotelPrice > 0 && (
-                    <Text style={s.hotelPrice}>{fmtMoney(hotelPrice, sym)} / night</Text>
-                  )}
-                </View>
-              </View>
-              {totalHotels > 1 && selectedHotels.slice(1).map((h, i) => (
-                <View key={i} style={s.extraHotelRow}>
-                  <View style={s.extraHotelDot} />
-                  <Text style={s.extraHotelName} numberOfLines={1}>{h.name}</Text>
-                  <Text style={s.extraHotelPrice}>
-                    {getHotelNightlyPriceLkr(h) > 0 ? fmtMoney(convertFromLKR(getHotelNightlyPriceLkr(h), budCurrency), sym) + '/n' : ''}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* ── Trip Details Form ── */}
+          {/* ── 1. Trip Details Form ── */}
           <View style={s.card}>
             <View style={s.cardHeader}>
               <View style={s.cardIconWrap}><Ionicons name="create-outline" size={18} color={colors.primary} /></View>
@@ -379,34 +347,6 @@ const TripPlannerScreen = ({ navigation }) => {
               </View>
             </View>
 
-            {/* Dates row */}
-            <View style={s.datesRow}>
-              <View style={s.dateField}>
-                <Text style={s.fieldLabel}>Departure</Text>
-                <View style={[s.inputWrap, s.inputWrapReadOnly]}>
-                  <Ionicons name="calendar-outline" size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
-                  <Text style={s.inputReadOnly}>{startDate || '—'}</Text>
-                </View>
-                <Pressable onPress={() => navigateToPlannerPreferences(navigation)}>
-                  <Text style={s.fieldHint}>🔒 Set in preferences · <Text style={s.fieldHintLink}>change</Text></Text>
-                </Pressable>
-              </View>
-              <View style={s.dateField}>
-                <Text style={s.fieldLabel}>Return</Text>
-                <View style={[s.inputWrap, s.inputWrapReadOnly]}>
-                  <Ionicons name="calendar-outline" size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
-                  <Text style={s.inputReadOnly}>{endDate || '—'}</Text>
-                </View>
-              </View>
-            </View>
-
-            {nights > 0 && (
-              <View style={s.nightsBadge}>
-                <Ionicons name="calendar-outline" size={13} color={colors.primary} />
-                <Text style={s.nightsBadgeText}>{nights} night{nights !== 1 ? 's' : ''} · {budDays} day{budDays !== 1 ? 's' : ''}</Text>
-              </View>
-            )}
-
             {/* Notes */}
             <View>
               <View style={s.notesLabelRow}>
@@ -426,56 +366,177 @@ const TripPlannerScreen = ({ navigation }) => {
             </View>
           </View>
 
-          {/* ── Budget Breakdown ── */}
+          {/* ── 2. Trip Summary ── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <View style={s.cardIconWrap}><Ionicons name="list-outline" size={18} color={colors.primary} /></View>
+              <Text style={s.cardTitle}>Trip Summary</Text>
+            </View>
+
+            <CtxCard
+              icon="map-outline"
+              label="Destination"
+              name={selectedDistrict?.name || 'Not selected'}
+              sub={selectedDistrict?.province ? `${selectedDistrict.province} Province` : null}
+              onPress={() => navigateToPlannerDistrictPicker(navigation)}
+            />
+            <CtxCard
+              emoji="📅"
+              label="Preferences"
+              name={`${actualDays} ${actualDays === 1 ? 'night' : 'nights'}`}
+              sub={`${travelers} ${travelers === 1 ? 'person' : 'people'} · ${tripType || 'any'}`}
+              onPress={() => navigateToPlannerPreferences(navigation)}
+            />
+            
+            <View style={s.datesRow}>
+              <View style={s.dateField}>
+                <Text style={s.fieldLabel}>Departure</Text>
+                <View style={[s.inputWrap, s.inputWrapReadOnly]}>
+                  <Ionicons name="calendar-outline" size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
+                  <Text style={s.inputReadOnly}>{startDate || '—'}</Text>
+                </View>
+                <Pressable onPress={() => navigateToPlannerPreferences(navigation)}>
+                  <Text style={s.fieldHint}>🔒 Set in preferences — <Text style={s.fieldHintLink}>change</Text></Text>
+                </Pressable>
+              </View>
+              <View style={s.dateField}>
+                <Text style={s.fieldLabel}>Return</Text>
+                <Pressable onPress={() => setShowDatePicker(true)}>
+                  <View style={s.inputWrap}>
+                    <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                    <Text style={s.inputTextBold}>{endDate || '—'}</Text>
+                  </View>
+                </Pressable>
+                <Text style={s.fieldHint}>Change trip duration</Text>
+              </View>
+            </View>
+
+            <DateTimePickerModal
+              isVisible={showDatePicker}
+              mode="date"
+              date={parseIsoDate(endDate)}
+              minimumDate={parseIsoDate(startDate)}
+              onConfirm={handleReturnDateChange}
+              onCancel={() => setShowDatePicker(false)}
+            />
+
+            {actualDays > 0 && (
+              <View style={s.nightsBadge}>
+                <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+                <Text style={s.nightsBadgeText}>{actualDays} night{actualDays !== 1 ? 's' : ''} · {budDays} day{budDays !== 1 ? 's' : ''}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* ── 3. Your Places ── */}
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <View style={s.cardIconWrap}><Ionicons name="location-outline" size={18} color={colors.primary} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.cardTitle}>Your Places</Text>
+                <Text style={s.cardSub}>{selectedPlaces.length} destination{selectedPlaces.length !== 1 ? 's' : ''} selected</Text>
+              </View>
+            </View>
+            <View style={{ gap: 12 }}>
+              {selectedPlaces.map((p, i) => (
+                <View key={i} style={s.placeRow}>
+                  <FallbackImage
+                    uri={p.image}
+                    style={s.placeImg}
+                    iconName="location-outline"
+                    iconSize={18}
+                    placeholderColor={colors.primary + '10'}
+                    placeholderIconColor={colors.primary}
+                  />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.placeName} numberOfLines={1}>{p.name}</Text>
+                    {p.type ? <Text style={s.placeType}>{p.type}</Text> : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+            <Pressable style={s.adjustBtn} onPress={() => navigateToPlannerDistrictPicker(navigation)}>
+              <Text style={s.adjustBtnText}>Adjust Places</Text>
+              <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+            </Pressable>
+          </View>
+
+          {/* ── 4. Your Hotels ── */}
+          {displayHotel && (
+            <View style={s.card}>
+              <View style={s.cardHeader}>
+                <View style={s.cardIconWrap}><Ionicons name="bed-outline" size={18} color={colors.primary} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>Your Hotels</Text>
+                  <Text style={s.cardSub}>{totalHotels} hotel{totalHotels !== 1 ? 's' : ''} selected</Text>
+                </View>
+              </View>
+
+              <View style={{ gap: 14 }}>
+                {(selectedHotels && selectedHotels.length > 0 ? selectedHotels : (displayHotel ? [displayHotel] : [])).map((h, i) => {
+                  const hPrice = getHotelNightlyPriceLkr(h);
+                  const hNights = Number(h.nights) || nights || 1;
+                  return (
+                    <View key={i} style={s.hotelItemCard}>
+                      <View style={s.hotelPreview}>
+                        <FallbackImage
+                          uri={getHotelImageCandidates(h)}
+                          style={s.hotelImg}
+                          iconName="bed-outline"
+                          iconSize={22}
+                          placeholderColor={colors.primary + '18'}
+                          placeholderIconColor={colors.primary}
+                        />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <Text style={s.hotelName} numberOfLines={1}>{h.name}</Text>
+                            <View style={s.hotelNightsBadge}>
+                              <Text style={s.hotelNightsText}>{hNights} nt{hNights !== 1 ? 's' : ''}</Text>
+                            </View>
+                          </View>
+                          <Text style={s.hotelSub} numberOfLines={1}>
+                            {h.address_text || h.hotel_type || 'Hotel'}
+                          </Text>
+                          {hPrice > 0 && (
+                            <Text style={s.hotelPrice}>{fmtMoney(convertFromLKR(hPrice, budCurrency), sym)} / night</Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+              
+              <Pressable style={s.adjustBtn} onPress={() => navigateToPlannerHotelPicker(navigation)}>
+                <Text style={s.adjustBtnText}>Change Hotels</Text>
+                <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+              </Pressable>
+            </View>
+          )}
+
+          {/* ── 5. Budget Breakdown ── */}
           {budTotal > 0 && (
             <View style={s.card}>
               <View style={s.cardHeader}>
                 <View style={s.cardIconWrap}><Ionicons name="pie-chart-outline" size={18} color={colors.primary} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.cardTitle}>Budget Breakdown</Text>
-                  <Text style={s.cardSub}>
-                    How your {fmtMoney(budTotal, sym)} {budCurrency} budget is split
-                  </Text>
+                  <Text style={s.cardSub}>How your {fmtMoney(budTotal, sym)} budget is split</Text>
                 </View>
               </View>
 
-              {/* Stacked bar */}
               <View style={s.budBar}>
                 {pctHotel > 0 && <View style={[s.budSeg, { flex: pctHotel, backgroundColor: colors.info }]} />}
                 {pctFood > 0 && <View style={[s.budSeg, { flex: pctFood, backgroundColor: colors.success }]} />}
                 {pctTravel > 0 && <View style={[s.budSeg, { flex: pctTravel, backgroundColor: colors.warning }]} />}
                 {pctMisc > 0 && <View style={[s.budSeg, { flex: pctMisc, backgroundColor: colors.accent }]} />}
               </View>
-
-              {/* Hotel row */}
-              <BudRow
-                emoji="🏨" label="Hotel"
-                amount={budHotel} pct={pctHotel}
-                sym={sym} dotColor={colors.info}
-              />
-
-              {/* Remaining divider */}
-              <View style={s.budDivider}>
-                <Text style={s.budDividerText}>Remaining — {fmtMoney(budRemaining, sym)}</Text>
+              
+              <View style={{ gap: 4 }}>
+                <BudRow emoji="🏨" label="Hotel" amount={budHotel} pct={pctHotel} sym={sym} dotColor={colors.info} />
+                <BudRow emoji="🍽️" label="Food" amount={budFood} pct={pctFood} sym={sym} dotColor={colors.success} />
+                <BudRow emoji="🚗" label="Travel" amount={budTravel} pct={pctTravel} sym={sym} dotColor={colors.warning} />
               </View>
-
-              <BudRow
-                emoji="🍽️" label="Food & Dining"
-                amount={budFood} pct={pctFood}
-                perDay={foodPerDay} budDays={budDays}
-                sym={sym} dotColor={colors.success}
-              />
-              <BudRow
-                emoji="🚗" label="Transport"
-                amount={budTravel} pct={pctTravel}
-                perDay={travelPerDay} budDays={budDays}
-                sym={sym} dotColor={colors.warning}
-              />
-              <BudRow
-                emoji="✨" label="Activities & Misc"
-                amount={budMisc} pct={pctMisc}
-                sym={sym} dotColor={colors.accent}
-              />
 
               <Pressable style={s.adjustBtn} onPress={() => navigateToPlannerBudget(navigation)}>
                 <Text style={s.adjustBtnText}>Adjust Budget</Text>
@@ -484,30 +545,22 @@ const TripPlannerScreen = ({ navigation }) => {
             </View>
           )}
 
-          {/* ── Trip info summary ── */}
-          <View style={s.card}>
-            <View style={s.infoGrid}>
-              <View style={s.infoItem}>
-                <Ionicons name="map-outline" size={14} color={colors.primary} />
-                <Text style={s.infoLabel}>District</Text>
-                <Text style={s.infoValue} numberOfLines={1}>{selectedDistrict?.name || '—'}</Text>
-              </View>
-              <View style={s.infoItem}>
-                <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-                <Text style={s.infoLabel}>Dates</Text>
-                <Text style={s.infoValue} numberOfLines={1}>{startDate && endDate ? `${startDate} → ${endDate}` : '—'}</Text>
-              </View>
-              <View style={s.infoItem}>
-                <Ionicons name="people-outline" size={14} color={colors.primary} />
-                <Text style={s.infoLabel}>Travelers</Text>
-                <Text style={s.infoValue}>{travelers}</Text>
-              </View>
-              <View style={s.infoItem}>
-                <Ionicons name="location-outline" size={14} color={colors.primary} />
-                <Text style={s.infoLabel}>Places</Text>
-                <Text style={s.infoValue}>{selectedPlaces.length}</Text>
-              </View>
+          {/* ── Ready to go message ── */}
+          <View style={s.readySection}>
+            <View style={s.readyIcon}>
+              <Ionicons name="airplane" size={28} color={colors.white} />
             </View>
+            <Text style={s.readyTitle}>Your Trip is Ready!</Text>
+            <Text style={s.readyText}>Everything looks perfect. Save your trip now to start your Sri Lankan journey.</Text>
+            
+            <Pressable 
+              style={[s.largeSaveBtn, saving && s.saveBtnDisabled]} 
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={s.largeSaveBtnText}>{saving ? 'Creating Trip...' : 'Confirm & Save Trip'}</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.white} />
+            </Pressable>
           </View>
 
           <ErrorText message={error} />
@@ -603,6 +656,7 @@ const s = StyleSheet.create({
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface2, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 12, height: 48 },
   inputWrapReadOnly: { opacity: 0.75 },
   input: { flex: 1, fontSize: 15, fontWeight: '800', color: colors.textPrimary },
+  inputTextBold: { flex: 1, fontSize: 15, fontWeight: '900', color: colors.textPrimary },
   inputReadOnly: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.textSecondary },
   datesRow: { flexDirection: 'row', gap: 10 },
   dateField: { flex: 1, gap: 6 },
@@ -646,6 +700,25 @@ const s = StyleSheet.create({
   saveBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: colors.white, fontSize: 13, fontWeight: '900' },
+
+  // Ready section
+  readySection: { alignItems: 'center', paddingVertical: 20, paddingHorizontal: 10, gap: 12 },
+  readyIcon: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  readyTitle: { fontSize: 22, fontWeight: '900', color: colors.textPrimary },
+  readyText: { fontSize: 14, fontWeight: '700', color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  largeSaveBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primary, paddingHorizontal: 30, paddingVertical: 16, borderRadius: 16, width: '100%', justifyContent: 'center', marginTop: 10, elevation: 4, shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  largeSaveBtnText: { color: colors.white, fontSize: 16, fontWeight: '900' },
+
+  // Places summary
+  placeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  placeImg: { width: 44, height: 44, borderRadius: 10 },
+  placeName: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
+  placeType: { fontSize: 11, fontWeight: '700', color: colors.textMuted, marginTop: 1 },
+
+  // Hotel items
+  hotelItemCard: { gap: 8 },
+  hotelNightsBadge: { backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginLeft: 8 },
+  hotelNightsText: { color: colors.white, fontSize: 11, fontWeight: '900' },
 });
 
 export default TripPlannerScreen;

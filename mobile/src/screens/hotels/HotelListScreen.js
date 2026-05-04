@@ -365,75 +365,79 @@ const HotelGridCard = memo(({ item, isSelected, onPress, displayCurrency, select
   const matchReason = item?.matchReason || '';
 
   return (
-    <TouchableOpacity
+    <View
       style={[
         ls.hotelCard,
         { width: COL_W, height: HOTEL_H },
         isSelected && ls.hotelCardSelected,
         plannerSelected && ls.hotelCardPlannerSelected,
       ]}
-      onPress={() => onPress(item)}
-      activeOpacity={0.88}
     >
-      <FallbackImage
-        uri={getHotelImageCandidates(item)}
+      <Pressable
         style={StyleSheet.absoluteFill}
-        iconName="bed-outline"
-        iconSize={36}
-        placeholderColor={meta.color + '22'}
-        placeholderIconColor={meta.color}
+        onPress={() => onPress(item)}
+        activeOpacity={0.88}
       >
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.86)']}
-          style={ls.hotelGrad}
-        />
-      </FallbackImage>
+        <FallbackImage
+          uri={getHotelImageCandidates(item)}
+          style={StyleSheet.absoluteFill}
+          iconName="bed-outline"
+          iconSize={36}
+          placeholderColor={meta.color + '22'}
+          placeholderIconColor={meta.color}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.86)']}
+            style={ls.hotelGrad}
+          />
+        </FallbackImage>
 
-      <View style={[ls.hotelTypePin, { backgroundColor: meta.color + 'EE' }]}>
-        <Text style={ls.hotelTypeEmoji}>{meta.emoji}</Text>
-      </View>
-
-      {price ? (
-        <View style={ls.hotelPriceBadge}>
-          <Text style={ls.hotelPriceText}>{formatHotelPrice(price, displayCurrency)}</Text>
-          <Text style={ls.hotelPriceSub}>/nt</Text>
+        <View style={[ls.hotelTypePin, { backgroundColor: meta.color + 'EE' }]}>
+          <Text style={ls.hotelTypeEmoji}>{meta.emoji}</Text>
         </View>
-      ) : null}
 
-      {Number(item.rating) > 0 && Number(item.review_count) > 0 && (
-        <View style={ls.hotelRating}>
-          <Ionicons name="star" size={10} color={colors.warning} />
-          <Text style={ls.hotelRatingText}>{Number(item.rating).toFixed(1)}</Text>
-          <Text style={ls.hotelRatingCount}>({item.review_count})</Text>
-        </View>
-      )}
-
-      <View style={[ls.hotelContent, hasPlannerAction && ls.hotelContentPlanner]}>
-        {matchScore > 0 && matchReason ? (
-          <Text style={ls.hotelMatchReason} numberOfLines={1}>🎯 {matchReason}</Text>
+        {price ? (
+          <View style={ls.hotelPriceBadge}>
+            <Text style={ls.hotelPriceText}>{formatHotelPrice(price, displayCurrency)}</Text>
+            <Text style={ls.hotelPriceSub}>/nt</Text>
+          </View>
         ) : null}
-        <Text style={ls.hotelName} numberOfLines={1}>{item.name}</Text>
-        <View style={ls.hotelLocRow}>
-          <Ionicons name="location" size={10} color="rgba(255,255,255,0.85)" />
-          <Text style={ls.hotelLoc} numberOfLines={1}>
-            {item.address_text || getDistrictName(item)}
-          </Text>
-        </View>
+
+        {Number(item.rating) > 0 && Number(item.review_count) > 0 && (
+          <View style={ls.hotelRating}>
+            <Ionicons name="star" size={10} color={colors.warning} />
+            <Text style={ls.hotelRatingText}>{Number(item.rating).toFixed(1)}</Text>
+            <Text style={ls.hotelRatingCount}>({item.review_count})</Text>
+          </View>
+        )}
+      </Pressable>
+
+      <View style={[ls.hotelContent, hasPlannerAction && ls.hotelContentPlanner]} pointerEvents="box-none">
+        <Pressable onPress={() => onPress(item)}>
+          {matchScore > 0 && matchReason ? (
+            <Text style={ls.hotelMatchReason} numberOfLines={1}>🎯 {matchReason}</Text>
+          ) : null}
+          <Text style={ls.hotelName} numberOfLines={1}>{item.name}</Text>
+          <View style={ls.hotelLocRow}>
+            <Ionicons name="location" size={10} color="rgba(255,255,255,0.85)" />
+            <Text style={ls.hotelLoc} numberOfLines={1}>
+              {item.address_text || getDistrictName(item)}
+            </Text>
+          </View>
+        </Pressable>
+
         {hasPlannerAction ? (
-          <View style={ls.hotelActionRow}>
-            <View style={ls.detailsHint}>
+          <View style={ls.hotelActionRow} pointerEvents="box-none">
+            <Pressable style={ls.detailsHint} onPress={() => onPress(item)}>
               <Ionicons name="information-circle-outline" size={12} color="rgba(255,255,255,0.9)" />
               <Text style={ls.detailsHintText}>Details</Text>
-            </View>
+            </Pressable>
             {plannerSelected ? (
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                 <Pressable
                   style={[ls.plannerCheck, ls.plannerCheckActive, { paddingHorizontal: 6 }]}
-                  onPress={(event) => {
-                    event?.stopPropagation?.();
-                    // Pass to toggle, which we will change to 'Edit'
-                    onToggleTrip?.(item);
-                  }}
+                  hitSlop={8}
+                  onPress={() => onToggleTrip?.(item)}
                 >
                   <Text style={ls.plannerCheckText}>{plannerSelected.nights || 1}nt · Edit</Text>
                 </Pressable>
@@ -441,10 +445,8 @@ const HotelGridCard = memo(({ item, isSelected, onPress, displayCurrency, select
             ) : (
               <Pressable
                 style={ls.plannerCheck}
-                onPress={(event) => {
-                  event?.stopPropagation?.();
-                  onToggleTrip?.(item);
-                }}
+                hitSlop={8}
+                onPress={() => onToggleTrip?.(item)}
               >
                 <Ionicons name="add" size={14} color={colors.white} />
                 <Text style={ls.plannerCheckText}>Select</Text>
@@ -453,7 +455,7 @@ const HotelGridCard = memo(({ item, isSelected, onPress, displayCurrency, select
           </View>
         ) : null}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 });
 
@@ -787,13 +789,76 @@ const HotelListScreen = ({ route, navigation }) => {
     return d;
   });
 
+  const totalNightsSelected = useMemo(() =>
+    (planner?.selectedHotels || []).reduce((sum, h) => sum + Number(h.nights || 0), 0),
+    [planner?.selectedHotels]
+  );
+  const plannedDuration = Number(planner?.preferences?.nights || 0);
+  const nightsNeeded = plannedDuration - totalNightsSelected;
+
+  const isStayOverlapping = useCallback((start, end, excludeId = null) => {
+    const normalize = (d) => new Date(new Date(d).toISOString().slice(0, 10)).getTime();
+    const s = normalize(start);
+    const e = normalize(end);
+    return (planner?.selectedHotels || []).some(h => {
+      if (getHotelId(h) === excludeId) return false;
+      const hs = normalize(h.checkIn);
+      const he = normalize(h.checkOut);
+      return (s < he) && (e > hs);
+    });
+  }, [planner?.selectedHotels]);
+
   useEffect(() => {
-    if (nightsModalHotel && planner?.selectedHotels) {
-      const existing = planner.selectedHotels.find(h => getHotelId(h) === getHotelId(nightsModalHotel));
-      if (existing?.checkIn) setCheckInDate(new Date(existing.checkIn));
-      if (existing?.checkOut) setCheckOutDate(new Date(existing.checkOut));
+    if (nightsModalHotel) {
+      const existing = (planner?.selectedHotels || []).find(h => getHotelId(h) === getHotelId(nightsModalHotel));
+      if (existing?.checkIn) {
+        setCheckInDate(new Date(existing.checkIn));
+        setCheckOutDate(new Date(existing.checkOut));
+      } else {
+        // Smart Sequential Initialization: Prefer following the latest stay
+        const tripStartStr = planner?.preferences?.startDate;
+        const tripNights = Number(planner?.preferences?.nights || 1);
+        if (tripStartStr) {
+          const tripStart = new Date(tripStartStr);
+          const selected = planner?.selectedHotels || [];
+          
+          let suggestedIn = tripStart;
+          if (selected.length > 0) {
+            // Find the latest checkout date among selected hotels
+            const sorted = [...selected].sort((a, b) => new Date(b.checkOut) - new Date(a.checkOut));
+            suggestedIn = new Date(sorted[0].checkOut);
+          }
+          
+          const tripEnd = new Date(tripStart);
+          tripEnd.setDate(tripEnd.getDate() + tripNights);
+          
+          // If the suggested check-in is at/past trip end OR overlaps with an existing stay, find first gap
+          const dOutTest = new Date(suggestedIn); dOutTest.setDate(dOutTest.getDate() + 1);
+          if (suggestedIn >= tripEnd || isStayOverlapping(suggestedIn, dOutTest)) {
+            let foundGap = false;
+            for (let i = 0; i < tripNights; i++) {
+              const d1 = new Date(tripStart); d1.setDate(d1.getDate() + i);
+              const d2 = new Date(d1); d2.setDate(d2.getDate() + 1);
+              if (!isStayOverlapping(d1, d2)) {
+                suggestedIn = d1;
+                foundGap = true;
+                break;
+              }
+            }
+          }
+          
+          setCheckInDate(suggestedIn);
+          const finalOut = new Date(suggestedIn);
+          finalOut.setDate(finalOut.getDate() + 1);
+          setCheckOutDate(finalOut);
+        } else {
+          const d1 = new Date(); d1.setDate(d1.getDate() + 1);
+          const d2 = new Date(d1); d2.setDate(d2.getDate() + 1);
+          setCheckInDate(d1); setCheckOutDate(d2);
+        }
+      }
     }
-  }, [nightsModalHotel, planner?.selectedHotels]);
+  }, [nightsModalHotel, planner?.selectedHotels, isStayOverlapping, planner?.preferences?.startDate, planner?.preferences?.nights]);
 
   const [datePickerMode, setDatePickerMode] = useState(null);
   const listRef = useRef(null);
@@ -926,7 +991,7 @@ const HotelListScreen = ({ route, navigation }) => {
   const filteredHotels = useMemo(() => {
     let list = hotels.map((h) => {
       if (!hasInterestSignals) return { ...h, matchScore: 0, matchReason: '' };
-      const { score, reason } = scoreHotelMatch(h, userInterests, userTravelStyle);
+      const { score, reason } = scoreHotelMatch(h, userInterests, userTravelStyle, isPlannerMode ? planner.preferences : null);
       return { ...h, matchScore: score, matchReason: reason };
     });
     if (selectedDistrict) {
@@ -978,7 +1043,7 @@ const HotelListScreen = ({ route, navigation }) => {
       );
     }
     return list;
-  }, [hotels, selectedDistrict, typeFilter, search, sortKey, isPlannerMode, placeCentroid, plannerSelectedPlaceIds, matchesOnly, hasInterestSignals, userInterests, userTravelStyle, ratingFilter]);
+  }, [hotels, selectedDistrict, typeFilter, search, sortKey, isPlannerMode, placeCentroid, plannerSelectedPlaceIds, matchesOnly, hasInterestSignals, userInterests, userTravelStyle, ratingFilter, planner.preferences]);
 
   const matchedHotelCount = useMemo(
     () => filteredHotels.filter((h) => Number(h.matchScore) > 0).length,
@@ -1086,8 +1151,6 @@ const HotelListScreen = ({ route, navigation }) => {
   }, [displayCurrency, handleDistrictSelect, handleHotelPress, handleToggleTripHotel, isPlannerMode, planner?.selectedHotels, selectedHotelId, showDistrictPicker]);
 
   const renderHeader = () => {
-    if (!selectedDistrict) return null;
-
     return (
       <View>
         <LinearGradient
@@ -1180,8 +1243,7 @@ const HotelListScreen = ({ route, navigation }) => {
               style={{ flex: 1 }}
             >
               {(isPlannerMode ? PREF_FILTERS : TYPE_FILTERS).map((f) => {
-                // In planner mode chips use pref keys ('any','budget'…); 'any' acts as 'all'
-                const chipKey = isPlannerMode ? f.key : f.key;
+                const chipKey = f.key;
                 const active = isPlannerMode
                   ? typeFilter === chipKey || (chipKey === 'any' && typeFilter === 'all')
                   : typeFilter === chipKey;
@@ -1196,7 +1258,6 @@ const HotelListScreen = ({ route, navigation }) => {
                       isPref && ls.typeChipPref,
                     ]}
                     onPress={() => {
-                      // In planner mode, map 'any' back to 'all' for the state
                       const nextKey = isPlannerMode && f.key === 'any' ? 'all' : f.key;
                       handleTypeFilterChange(nextKey);
                     }}
@@ -1214,6 +1275,50 @@ const HotelListScreen = ({ route, navigation }) => {
                 );
               })}
             </ScrollView>
+          </View>
+        )}
+
+        {showDistrictPicker && (
+          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+            <View style={ls.provinceScroll}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ls.provinceScrollContent}>
+                {PROVINCES.map((p) => (
+                  <Pressable
+                    key={p}
+                    style={[ls.provinceChip, selectedProvince === p && ls.provinceChipActive]}
+                    onPress={() => setSelectedProvince(p)}
+                  >
+                    <Text style={[ls.provinceChipText, selectedProvince === p && ls.provinceChipTextActive]}>{p}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={ls.sectionHeaderAlt}>
+              <View style={ls.sectionTitleGroupAlt}>
+                <Ionicons name="flame-outline" size={18} color="#FF9800" />
+                <Text style={ls.sectionTitleAlt}>Popular Stay Districts</Text>
+              </View>
+              <Text style={ls.sectionSubAlt}>Top choices</Text>
+            </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={[ls.featuredRowAlt, { paddingLeft: 0, paddingRight: 32, marginBottom: 24 }]}
+            >
+              {popularDistricts.map((d, i) => (
+                <DistrictCard key={d.name} item={d} index={i} onPress={handleDistrictSelect} />
+              ))}
+            </ScrollView>
+
+            <View style={ls.sectionHeaderAlt}>
+              <View style={ls.sectionTitleGroupAlt}>
+                <Ionicons name="grid-outline" size={18} color={colors.primary} />
+                <Text style={ls.sectionTitleAlt}>All Hotel Districts</Text>
+              </View>
+              <Text style={ls.sectionSubAlt}>{filteredDistrictList.length} areas</Text>
+            </View>
           </View>
         )}
 
@@ -1404,14 +1509,21 @@ const HotelListScreen = ({ route, navigation }) => {
 
         <View style={{ flex: 1 }} />
 
-        <Pressable
-          style={[plannerStyles.nextBtn, !(planner?.selectedHotels?.length > 0) && plannerStyles.nextBtnDisabled]}
-          disabled={!(planner?.selectedHotels?.length > 0)}
-          onPress={handlePlannerContinue}
-        >
-          <Text style={plannerStyles.nextBtnText}>Next</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.white} />
-        </Pressable>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Pressable
+            style={[plannerStyles.nextBtn, totalNightsSelected !== plannedDuration && plannerStyles.nextBtnDisabled]}
+            disabled={totalNightsSelected !== plannedDuration}
+            onPress={handlePlannerContinue}
+          >
+            <Text style={plannerStyles.nextBtnText}>Next</Text>
+            <Ionicons name="arrow-forward" size={16} color={colors.white} />
+          </Pressable>
+          {nightsNeeded !== 0 && (
+            <Text style={{ fontSize: 10, fontWeight: '800', color: nightsNeeded > 0 ? colors.warning : colors.danger, marginTop: 2 }}>
+              {nightsNeeded > 0 ? `Need ${nightsNeeded} more nt` : `Too many nights (${Math.abs(nightsNeeded)} extra)`}
+            </Text>
+          )}
+        </View>
       </View>
 
       {(planner?.selectedHotels?.length || 0) > 0 ? (
@@ -1422,7 +1534,11 @@ const HotelListScreen = ({ route, navigation }) => {
           style={plannerStyles.bottomChipScroll}
         >
           {(planner.selectedHotels || []).map((hotel) => (
-            <View key={getHotelId(hotel)} style={plannerStyles.selectedChip}>
+            <Pressable
+              key={getHotelId(hotel)}
+              style={plannerStyles.selectedChip}
+              onPress={() => setNightsModalHotel(hotel)}
+            >
               <FallbackImage
                 uri={getHotelImageCandidates(hotel)}
                 style={plannerStyles.selectedChipImage}
@@ -1449,7 +1565,7 @@ const HotelListScreen = ({ route, navigation }) => {
               >
                 <Ionicons name="close" size={11} color={colors.white} />
               </Pressable>
-            </View>
+            </Pressable>
           ))}
         </ScrollView>
       ) : (
@@ -1570,9 +1686,16 @@ const HotelListScreen = ({ route, navigation }) => {
                 const totalEstimatedCost = nightlyPrice * currentNights;
 
                 const handleIncrement = () => {
-                  if (maxNightsAllowed && currentNights >= maxNightsAllowed) return;
-                  const newOut = new Date(checkInDate);
-                  newOut.setDate(newOut.getDate() + currentNights + 1);
+                  if (maxNightsAllowed && currentNights >= maxNightsAllowed) {
+                    Alert.alert('Trip Capacity', `You only have ${maxNightsAllowed} nights remaining in your trip.`);
+                    return;
+                  }
+                  const newOut = new Date(checkOutDate);
+                  newOut.setDate(newOut.getDate() + 1);
+                  if (isStayOverlapping(checkInDate, newOut, getHotelId(nightsModalHotel))) {
+                    Alert.alert('Stay Overlap', 'This extension conflicts with another hotel already in your trip.');
+                    return;
+                  }
                   setCheckOutDate(newOut);
                 };
 
@@ -1693,13 +1816,16 @@ const HotelListScreen = ({ route, navigation }) => {
                         </View>
                         {tripNightsCap && (
                           <View style={{ marginBottom: 12 }}>
-                            <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden', flexDirection: 'row' }}>
-                              {usedOthers > 0 && <View style={{ width: `${Math.min(100, (usedOthers / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.border }} />}
-                              <View style={{ width: `${Math.min(100, (currentNights / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.primary, borderLeftWidth: usedOthers > 0 ? 1 : 0, borderLeftColor: colors.background }} />
+                            <View style={{ height: 8, backgroundColor: colors.border + '55', borderRadius: 4, overflow: 'hidden', flexDirection: 'row' }}>
+                              {usedOthers > 0 && <View style={{ width: `${Math.min(100, (usedOthers / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.textMuted + '88' }} />}
+                              <View style={{ width: `${Math.min(100, (currentNights / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.primary, borderLeftWidth: usedOthers > 0 ? 1 : 0, borderLeftColor: colors.surface2 }} />
                             </View>
-                            <Text style={{ fontSize: 10, color: colors.textSecondary, textAlign: 'right', marginTop: 4, fontWeight: '700' }}>
-                              {totalUsed} / {tripNightsCap} nights used
-                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4, gap: 4 }}>
+                              <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '700' }}>
+                                {totalUsed} / {tripNightsCap} nights used
+                              </Text>
+                              {totalUsed === tripNightsCap && <Ionicons name="checkmark-circle" size={10} color={colors.primary} />}
+                            </View>
                           </View>
                         )}
 
@@ -1781,27 +1907,43 @@ const HotelListScreen = ({ route, navigation }) => {
           isVisible={!!datePickerMode}
           mode="date"
           date={datePickerMode === 'checkIn' ? checkInDate : checkOutDate}
-          minimumDate={datePickerMode === 'checkOut' ? new Date(checkInDate.getTime() + 86400000) : new Date()}
+          minimumDate={new Date()}
           onConfirm={(date) => {
             const tripNightsCap = planner?.preferences?.nights ? Math.max(1, Number(planner?.preferences?.nights)) : null;
             const usedOthers = planner?.selectedHotels?.reduce((sum, h) => {
               if (getHotelId(h) === getHotelId(nightsModalHotel)) return sum;
               return sum + (h.nights || 1);
             }, 0) || 0;
-            const maxNightsAllowed = tripNightsCap ? Math.max(1, tripNightsCap - usedOthers) : null;
+            const maxNightsAllowed = tripNightsCap ? Math.max(1, tripNightsCap - usedOthers) : 30;
 
             if (datePickerMode === 'checkIn') {
+              if (isStayOverlapping(date, checkOutDate, getHotelId(nightsModalHotel))) {
+                Alert.alert('Stay Overlap', 'Selected check-in conflicts with another hotel already in your trip.');
+                setDatePickerMode(null);
+                return;
+              }
               setCheckInDate(date);
-              let newDiff = Math.ceil((checkOutDate - date) / 86400000);
-              if (newDiff < 1) newDiff = 1;
-              if (maxNightsAllowed && newDiff > maxNightsAllowed) newDiff = maxNightsAllowed;
+              let diff = Math.ceil((checkOutDate - date) / 86400000);
+              if (diff < 1) diff = 1;
+              if (diff > maxNightsAllowed) {
+                diff = maxNightsAllowed;
+                Alert.alert('Nights Adjusted', `Check-out was adjusted to stay within your ${tripNightsCap}-night trip limit.`);
+              }
               const nextOut = new Date(date);
-              nextOut.setDate(nextOut.getDate() + newDiff);
+              nextOut.setDate(nextOut.getDate() + diff);
               setCheckOutDate(nextOut);
             } else {
+              if (isStayOverlapping(checkInDate, date, getHotelId(nightsModalHotel))) {
+                Alert.alert('Stay Overlap', 'Selected check-out conflicts with another hotel already in your trip.');
+                setDatePickerMode(null);
+                return;
+              }
               let diff = Math.ceil((date - checkInDate) / 86400000);
               if (diff < 1) diff = 1;
-              if (maxNightsAllowed && diff > maxNightsAllowed) diff = maxNightsAllowed;
+              if (diff > maxNightsAllowed) {
+                diff = maxNightsAllowed;
+                Alert.alert('Nights Adjusted', `Stay capped at ${maxNightsAllowed} nights to fit your ${tripNightsCap}-night trip limit.`);
+              }
               const nextOut = new Date(checkInDate);
               nextOut.setDate(nextOut.getDate() + diff);
               setCheckOutDate(nextOut);

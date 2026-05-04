@@ -438,10 +438,7 @@ export default function DistrictListScreen({ route, navigation }) {
         <View style={plannerStyles.banner}>
           <Pressable
             style={plannerStyles.bannerBack}
-            onPress={() => {
-              planner?.cancelPlanning?.();
-              navigateToTripList(navigation);
-            }}
+            onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={18} color={colors.white} />
           </Pressable>
@@ -449,6 +446,15 @@ export default function DistrictListScreen({ route, navigation }) {
             <Text style={plannerStyles.bannerEyebrow}>Trip planner · Step 1</Text>
             <Text style={plannerStyles.bannerTitle}>Pick a district for your trip</Text>
           </View>
+          <Pressable 
+            style={plannerStyles.bannerCancel} 
+            onPress={() => {
+              planner?.cancelPlanning?.();
+              navigateToTripList(navigation);
+            }}
+          >
+            <Text style={plannerStyles.bannerCancelText}>Cancel</Text>
+          </Pressable>
         </View>
       ) : null}
       <View style={styles.intro}>
@@ -1113,4 +1119,15 @@ const plannerStyles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   bannerTitle: { color: colors.white, fontSize: 15, fontWeight: '900', marginTop: 2 },
+  bannerCancel: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  bannerCancelText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '900',
+  },
 });

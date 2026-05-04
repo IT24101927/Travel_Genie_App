@@ -59,16 +59,26 @@ const SOURCE_LABELS = {
   default:        'Default',
 };
 
+const diffDaysLocal = (startStr, endStr) => {
+  if (!startStr || !endStr) return 0;
+  const s = new Date(startStr + 'T00:00:00');
+  const e = new Date(endStr + 'T00:00:00');
+  return Math.max(0, Math.round((e - s) / 86400000));
+};
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 const TripPlannerBudgetScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const planner = useTripPlanner();
-  const { preferences, selectedHotels, selectedDistrict, setTotalBudget: saveTotalBudget, setHotelBudget: saveHotelBudget } = planner;
+  const { 
+    preferences, selectedHotels, selectedDistrict, 
+    totalBudget: plannerTotalBudget, setTotalBudget: saveTotalBudget, 
+    hotelBudget: plannerHotelBudget, setHotelBudget: saveHotelBudget,
+    tripDays, setTripDays, cancelPlanning
+  } = useTripPlanner();
 
   const [currency, setCurrency]               = useState('LKR');
-  const [totalRaw, setTotalRaw]               = useState(planner.totalBudget ? String(planner.totalBudget) : '');
-  const [hotelRaw, setHotelRaw]               = useState(planner.hotelBudget ? String(planner.hotelBudget) : '');
-  const [tripDays, setTripDays]               = useState('');
+  const [totalRaw, setTotalRaw]               = useState(plannerTotalBudget ? String(plannerTotalBudget) : '');
+  const [hotelRaw, setHotelRaw]               = useState(plannerHotelBudget ? String(plannerHotelBudget) : '');
   const [split, setSplit]               = useState({ ...DAILY_SPLIT_DEFAULT });
   const [splitTouched, setSplitTouched] = useState(false);
   const [splitSource, setSplitSource]   = useState('rule-default');
@@ -80,7 +90,17 @@ const TripPlannerBudgetScreen = ({ navigation }) => {
   const totalNum     = Number(totalRaw) || 0;
   const hotelNum     = Number(hotelRaw) || 0;
   const nights       = Number(preferences?.nights) || 1;
-  const minDays      = Math.max(nights, 1);
+  const lastCheckOut = useMemo(() => 
+    (selectedHotels || []).reduce((max, h) => (h.checkOut && h.checkOut > max ? h.checkOut : max), ''),
+    [selectedHotels]
+  );
+  const autoTripDays = useMemo(() => 
+    (preferences?.startDate && lastCheckOut)
+      ? Math.max(1, diffDaysLocal(preferences.startDate, lastCheckOut))
+      : nights,
+    [preferences?.startDate, lastCheckOut, nights]
+  );
+  const minDays      = Math.max(autoTripDays, nights);
   const ruleDays     = Math.max(Number(tripDays) || minDays, 1);
   const remaining    = Math.max(totalNum - hotelNum, 0);
   const perDayBudget = ruleDays > 0 ? Math.round(remaining / ruleDays) : 0;
@@ -211,7 +231,7 @@ const TripPlannerBudgetScreen = ({ navigation }) => {
             <Text style={s.headerTag}>Trip Planner · Step 5</Text>
             <Text style={s.headerTitle}>Set Your Budget</Text>
           </View>
-          <Pressable style={s.cancelBtn} onPress={() => { planner.cancelPlanning?.(); navigateToTripList(navigation); }}>
+          <Pressable style={s.cancelBtn} onPress={() => { cancelPlanning?.(); navigateToTripList(navigation); }}>
             <Text style={s.cancelText}>Cancel</Text>
           </Pressable>
         </View>

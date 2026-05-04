@@ -272,12 +272,7 @@ const TripPlannerPreferencesScreen = ({ navigation }) => {
               minimumDate={parseInputDate(todayInput()) || new Date()}
               placeholder="Select Start Date"
             />
-            {endDate ? (
-              <View style={styles.endDateHint}>
-                <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.endDateHintText}>Return date: {endDate}</Text>
-              </View>
-            ) : null}
+
 
 
             <View style={styles.bigCounter}>
@@ -464,15 +459,7 @@ const styles = StyleSheet.create({
   },
   dateInputLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '800', marginBottom: 4 },
   dateInputText: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
-  endDateHint: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 6, 
-    marginTop: -8, 
-    marginBottom: 12, 
-    marginLeft: 4 
-  },
-  endDateHintText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+
   prefIconBox: {
     width: 38,
     height: 38,
