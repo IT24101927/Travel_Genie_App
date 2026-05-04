@@ -33,6 +33,21 @@ export const STYLE_TO_HOTEL_TYPES = {
   backpacker: ['hostel', 'guesthouse', 'lodge'],
 };
 
+export const TRIP_TYPE_TO_INTERESTS = {
+  couple: ['photography', 'nature', 'relax'],
+  family: ['family', 'relax', 'nature'],
+  solo: ['adventure', 'photography', 'culture'],
+  friends: ['nightlife', 'adventure', 'food'],
+};
+
+export const PREF_TYPE_TO_STYLE = {
+  budget: 'budget',
+  luxury: 'luxury',
+  midrange: 'relax',
+  boutique: 'boutique',
+  villa: 'relax',
+};
+
 export const INTEREST_TO_HOTEL_AMENITIES = {
   beaches: ['beach', 'pool', 'sea view', 'ocean view'],
   relax: ['spa', 'pool', 'massage', 'wellness'],
@@ -53,22 +68,37 @@ export const getUserInterests = (user) =>
     .map(normalize)
     .filter(Boolean);
 
+export const getPlannerInterests = (preferences) => {
+  const interests = [];
+  if (preferences?.tripType) {
+    const tripInterests = TRIP_TYPE_TO_INTERESTS[preferences.tripType] || [];
+    interests.push(...tripInterests);
+  }
+  return interests.map(normalize);
+};
+
 export const getUserTravelStyle = (user) => normalize(user?.travelStyle);
 
-export const scorePlaceMatch = (place, interests) => {
-  if (!interests?.length) return { score: 0, reason: '', tags: [] };
+export const scorePlaceMatch = (place, interests, preferences = null) => {
+  const allInterests = [...(interests || [])];
+  if (preferences) {
+    allInterests.push(...getPlannerInterests(preferences));
+  }
+  
+  const uniqueInterests = Array.from(new Set(allInterests));
+  if (!uniqueInterests.length) return { score: 0, reason: '', tags: [] };
 
-  const interestSet = new Set(interests);
+  const interestSet = new Set(uniqueInterests);
   const placeTags = Array.isArray(place?.tags) ? place.tags : [];
   const matchedTags = placeTags.filter((t) => interestSet.has(normalize(t)));
 
   const type = getPlaceType(place);
   const preferredTypes = new Set(
-    interests.map((i) => INTEREST_TO_PLACE_TYPE[i]).filter(Boolean)
+    uniqueInterests.map((i) => INTEREST_TO_PLACE_TYPE[i]).filter(Boolean)
   );
   const typeMatched = preferredTypes.has(type);
 
-  const score = matchedTags.length * 2 + (typeMatched ? 1 : 0);
+  let score = matchedTags.length * 2 + (typeMatched ? 1 : 0);
 
   let reason = '';
   if (matchedTags.length > 0) {
@@ -80,8 +110,19 @@ export const scorePlaceMatch = (place, interests) => {
   return { score, reason, tags: matchedTags };
 };
 
-export const scoreHotelMatch = (hotel, interests, travelStyle) => {
-  if (!interests?.length && !travelStyle) return { score: 0, reason: '', tags: [] };
+export const scoreHotelMatch = (hotel, interests, travelStyle, preferences = null) => {
+  const allInterests = [...(interests || [])];
+  let effectiveStyle = travelStyle;
+
+  if (preferences) {
+    allInterests.push(...getPlannerInterests(preferences));
+    if (preferences.hotelType && preferences.hotelType !== 'any') {
+      effectiveStyle = PREF_TYPE_TO_STYLE[preferences.hotelType] || effectiveStyle;
+    }
+  }
+
+  const uniqueInterests = Array.from(new Set(allInterests));
+  if (!uniqueInterests.length && !effectiveStyle) return { score: 0, reason: '', tags: [] };
 
   const hotelType = normalize(hotel?.hotel_type);
   const amenities = Array.isArray(hotel?.amenities) ? hotel.amenities : [];
@@ -92,15 +133,15 @@ export const scoreHotelMatch = (hotel, interests, travelStyle) => {
   const matchedTags = [];
 
   // Travel-style → hotel-type bonus
-  const styleTypes = STYLE_TO_HOTEL_TYPES[travelStyle] || [];
+  const styleTypes = STYLE_TO_HOTEL_TYPES[effectiveStyle] || [];
   if (hotelType && styleTypes.includes(hotelType)) {
     score += 2;
-    reasons.push(`Fits your ${travelStyle} style`);
+    reasons.push(`Fits your ${effectiveStyle} style`);
   }
 
   // Interest → amenity bonuses
   const matchedAmenitySet = new Set();
-  interests.forEach((interest) => {
+  uniqueInterests.forEach((interest) => {
     const wanted = INTEREST_TO_HOTEL_AMENITIES[interest] || [];
     wanted.forEach((needle) => {
       const hit = amenityTokens.find((a) => a.includes(needle));

@@ -17,6 +17,21 @@ const getHotelKey = (h) => String(h?._id || h?.id || '');
 
 const STORAGE_KEY_PREFIX = 'TRIP_PLANNER_DRAFT_';
 
+const getInitialPlannerState = () => ({
+  isPlanning: false,
+  editingTrip: null,
+  selectedDistrict: null,
+  selectedPlaces: [],
+  preferences: initialPreferences,
+  selectedHotel: null,
+  selectedHotels: [],
+  tripName: '',
+  totalBudget: '',
+  hotelBudget: '',
+  tripDays: '',
+  notes: '',
+});
+
 export const TripPlannerProvider = ({ children }) => {
   const { user } = useAuth();
   const [isReady, setIsReady] = useState(false);
@@ -31,6 +46,7 @@ export const TripPlannerProvider = ({ children }) => {
   const [tripName, setTripName] = useState('');
   const [totalBudget, setTotalBudget] = useState('');
   const [hotelBudget, setHotelBudget] = useState('');
+  const [tripDays, setTripDays] = useState('');
   const [notes, setNotes] = useState('');
 
   const userKey = user?._id || user?.id || 'guest';
@@ -43,7 +59,11 @@ export const TripPlannerProvider = ({ children }) => {
         const json = await AsyncStorage.getItem(storageKey);
         if (json) {
           const draft = JSON.parse(json);
-          setIsPlanning(draft.isPlanning || false);
+          if (!draft?.isPlanning) {
+            await AsyncStorage.removeItem(storageKey);
+            return;
+          }
+          setIsPlanning(false);
           setEditingTrip(draft.editingTrip || null);
           setSelectedDistrict(draft.selectedDistrict || null);
           setSelectedPlaces(draft.selectedPlaces || []);
@@ -53,6 +73,7 @@ export const TripPlannerProvider = ({ children }) => {
           setTripName(draft.tripName || '');
           setTotalBudget(draft.totalBudget || '');
           setHotelBudget(draft.hotelBudget || '');
+          setTripDays(draft.tripDays || '');
           setNotes(draft.notes || '');
         }
       } catch (e) {
@@ -69,6 +90,11 @@ export const TripPlannerProvider = ({ children }) => {
     if (!isReady) return;
     const saveDraft = async () => {
       try {
+        if (!isPlanning) {
+          await AsyncStorage.removeItem(storageKey);
+          return;
+        }
+
         const draft = {
           isPlanning,
           editingTrip,
@@ -80,6 +106,7 @@ export const TripPlannerProvider = ({ children }) => {
           tripName,
           totalBudget,
           hotelBudget,
+          tripDays,
           notes,
         };
         await AsyncStorage.setItem(storageKey, JSON.stringify(draft));
@@ -90,8 +117,30 @@ export const TripPlannerProvider = ({ children }) => {
     saveDraft();
   }, [
     isReady, storageKey, isPlanning, editingTrip, selectedDistrict, selectedPlaces, 
-    preferences, selectedHotel, selectedHotels, tripName, totalBudget, hotelBudget, notes
+    preferences, selectedHotel, selectedHotels, tripName, totalBudget, hotelBudget, tripDays, notes
   ]);
+
+  const applyPlannerState = useCallback((next) => {
+    setIsPlanning(next.isPlanning);
+    setEditingTrip(next.editingTrip);
+    setSelectedDistrict(next.selectedDistrict);
+    setSelectedPlaces(next.selectedPlaces);
+    setPreferences(next.preferences);
+    setSelectedHotel(next.selectedHotel);
+    setSelectedHotels(next.selectedHotels);
+    setTripName(next.tripName);
+    setTotalBudget(next.totalBudget);
+    setHotelBudget(next.hotelBudget);
+    setTripDays(next.tripDays);
+    setNotes(next.notes);
+  }, []);
+
+  const resetPlannerState = useCallback((planning = false) => {
+    applyPlannerState({
+      ...getInitialPlannerState(),
+      isPlanning: planning,
+    });
+  }, [applyPlannerState]);
 
   const addOrUpdateSelectedHotel = useCallback((hotel, nightsInfo) => {
     const key = getHotelKey(hotel);
@@ -145,52 +194,47 @@ export const TripPlannerProvider = ({ children }) => {
   }, []);
 
   const startNewTrip = useCallback(() => {
+    resetPlannerState(true);
+  }, [resetPlannerState]);
+
+  const resumePlanning = useCallback(() => {
     setIsPlanning(true);
-    setEditingTrip(null);
-    setSelectedDistrict(null);
-    setSelectedPlaces([]);
-    setPreferences(initialPreferences);
-    setSelectedHotel(null);
-    setSelectedHotels([]);
-    setTripName('');
-    setTotalBudget('');
-    setHotelBudget('');
-    setNotes('');
   }, []);
 
   const startEditTrip = useCallback((trip) => {
     if (!trip) return;
-    setIsPlanning(true);
-    setEditingTrip(trip);
-    setSelectedDistrict({
-      district_id: trip.districtId,
-      name: trip.districtName || trip.destination,
-      province: trip.province,
+    applyPlannerState({
+      isPlanning: true,
+      editingTrip: trip,
+      selectedDistrict: {
+        district_id: trip.districtId,
+        name: trip.districtName || trip.destination,
+        province: trip.province,
+      },
+      selectedPlaces: Array.isArray(trip.selectedPlaces) ? trip.selectedPlaces : [],
+      preferences: {
+        tripType: trip.tripType || 'couple',
+        hotelType: trip.hotelType || 'any',
+        nights: Number(trip.nights || 3),
+        travelers: Number(trip.travelers || 2),
+        startDate: trip.startDate ? String(trip.startDate).slice(0, 10) : null,
+      },
+      selectedHotel: trip.selectedHotel || null,
+      selectedHotels: Array.isArray(trip.selectedHotels) ? trip.selectedHotels : (trip.selectedHotel ? [trip.selectedHotel] : []),
+      tripName: trip.title || '',
+      totalBudget: trip.budget ? String(trip.budget) : '',
+      hotelBudget: trip.budgetBreakdown?.hotel ? String(trip.budgetBreakdown.hotel) : '',
+      notes: trip.notes || '',
     });
-    setSelectedPlaces(Array.isArray(trip.selectedPlaces) ? trip.selectedPlaces : []);
-    setPreferences({
-      tripType: trip.tripType || 'couple',
-      hotelType: trip.hotelType || 'any',
-      nights: Number(trip.nights || 3),
-      travelers: Number(trip.travelers || 2),
-      startDate: trip.startDate ? String(trip.startDate).slice(0, 10) : null,
-    });
-    setSelectedHotel(trip.selectedHotel || null);
-    setSelectedHotels(Array.isArray(trip.selectedHotels) ? trip.selectedHotels : (trip.selectedHotel ? [trip.selectedHotel] : []));
-    setTripName(trip.title || '');
-    setTotalBudget(trip.budget ? String(trip.budget) : '');
-    setHotelBudget(trip.budgetBreakdown?.hotel ? String(trip.budgetBreakdown.hotel) : '');
-    setNotes(trip.notes || '');
-  }, []);
+  }, [applyPlannerState]);
 
   const finishPlanning = useCallback(async () => {
-    setIsPlanning(false);
-  }, []);
+    resetPlannerState(false);
+  }, [resetPlannerState]);
 
   const cancelPlanning = useCallback(() => {
-    setIsPlanning(false);
-    setEditingTrip(null);
-  }, []);
+    resetPlannerState(false);
+  }, [resetPlannerState]);
 
   const value = useMemo(
     () => ({
@@ -221,8 +265,12 @@ export const TripPlannerProvider = ({ children }) => {
       setHotelBudget,
       notes,
       setNotes,
+      tripDays,
+      setTripDays,
       startNewTrip,
       startEditTrip,
+      resumePlanning,
+      hasDraft: !!selectedDistrict || selectedPlaces.length > 0,
       finishPlanning,
       cancelPlanning,
     }),
@@ -245,8 +293,10 @@ export const TripPlannerProvider = ({ children }) => {
       totalBudget,
       hotelBudget,
       notes,
+      tripDays,
       startNewTrip,
       startEditTrip,
+      resumePlanning,
       finishPlanning,
       cancelPlanning,
     ]

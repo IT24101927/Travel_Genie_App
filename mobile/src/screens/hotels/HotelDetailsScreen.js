@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Linking,
@@ -217,12 +218,75 @@ const HotelDetailsScreen = ({ route, navigation }) => {
   });
   const [datePickerMode, setDatePickerMode] = useState(null);
 
+  const totalNightsSelected = useMemo(() =>
+    (planner?.selectedHotels || []).reduce((sum, h) => sum + Number(h.nights || 0), 0),
+    [planner?.selectedHotels]
+  );
+  const plannedDuration = Number(planner?.preferences?.nights || 0);
+  const nightsNeeded = plannedDuration - totalNightsSelected;
+
+  const isStayOverlapping = useCallback((start, end, excludeId = null) => {
+    const normalize = (d) => new Date(new Date(d).toISOString().slice(0, 10)).getTime();
+    const s = normalize(start);
+    const e = normalize(end);
+    return (planner?.selectedHotels || []).some(h => {
+      if (getHotelId(h) === excludeId) return false;
+      const hs = normalize(h.checkIn);
+      const he = normalize(h.checkOut);
+      return (s < he) && (e > hs);
+    });
+  }, [planner?.selectedHotels]);
+
   useEffect(() => {
-    if (showPlannerModal && plannerSelectedHotel) {
-      if (plannerSelectedHotel.checkIn) setCheckInDate(new Date(plannerSelectedHotel.checkIn));
-      if (plannerSelectedHotel.checkOut) setCheckOutDate(new Date(plannerSelectedHotel.checkOut));
+    if (showPlannerModal) {
+      if (plannerSelectedHotel) {
+        if (plannerSelectedHotel.checkIn) setCheckInDate(new Date(plannerSelectedHotel.checkIn));
+        if (plannerSelectedHotel.checkOut) setCheckOutDate(new Date(plannerSelectedHotel.checkOut));
+      } else {
+        // Smart Sequential Initialization: Prefer following the latest stay
+        const tripStartStr = planner?.preferences?.startDate;
+        const tripNights = Number(planner?.preferences?.nights || 1);
+        if (tripStartStr) {
+          const tripStart = new Date(tripStartStr);
+          const selected = planner?.selectedHotels || [];
+          
+          let suggestedIn = tripStart;
+          if (selected.length > 0) {
+            // Find the latest checkout date among selected hotels
+            const sorted = [...selected].sort((a, b) => new Date(b.checkOut) - new Date(a.checkOut));
+            suggestedIn = new Date(sorted[0].checkOut);
+          }
+          
+          const tripEnd = new Date(tripStart);
+          tripEnd.setDate(tripEnd.getDate() + tripNights);
+          
+          // If the suggested check-in is at/past trip end OR overlaps with an existing stay, find first gap
+          const dOutTest = new Date(suggestedIn); dOutTest.setDate(dOutTest.getDate() + 1);
+          if (suggestedIn >= tripEnd || isStayOverlapping(suggestedIn, dOutTest)) {
+            let foundGap = false;
+            for (let i = 0; i < tripNights; i++) {
+              const d1 = new Date(tripStart); d1.setDate(d1.getDate() + i);
+              const d2 = new Date(d1); d2.setDate(d2.getDate() + 1);
+              if (!isStayOverlapping(d1, d2)) {
+                suggestedIn = d1;
+                foundGap = true;
+                break;
+              }
+            }
+          }
+          
+          setCheckInDate(suggestedIn);
+          const finalOut = new Date(suggestedIn);
+          finalOut.setDate(finalOut.getDate() + 1);
+          setCheckOutDate(finalOut);
+        } else {
+          const d1 = new Date(); d1.setDate(d1.getDate() + 1);
+          const d2 = new Date(d1); d2.setDate(d2.getDate() + 1);
+          setCheckInDate(d1); setCheckOutDate(d2);
+        }
+      }
     }
-  }, [showPlannerModal, plannerSelectedHotel]);
+  }, [showPlannerModal, plannerSelectedHotel, isStayOverlapping, planner?.preferences?.startDate, planner?.preferences?.nights]);
   useFocusEffect(
     useCallback(() => {
       loadHotel();
@@ -539,27 +603,46 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                   {planner?.selectedHotels?.length || 0} selected
                 </Text>
               </View>
+
+              {(planner?.selectedHotels?.length || 0) > 0 ? (
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => planner.clearSelectedHotels?.()}
+                  style={ds.plannerClearLink}
+                >
+                  <Ionicons name="close-circle" size={14} color={colors.textMuted} />
+                  <Text style={ds.plannerClearLinkText}>Clear all</Text>
+                </Pressable>
+              ) : null}
+
               <View style={{ flex: 1 }} />
-              <Pressable
-                style={[ds.plannerNextBtn, !(planner?.selectedHotels?.length > 0) && ds.plannerNextBtnDisabled]}
-                disabled={!(planner?.selectedHotels?.length > 0)}
-                onPress={() => navigateToPlannerBudget(navigation)}
-              >
-                <Text style={ds.plannerNextText}>Next</Text>
-                <Ionicons name="arrow-forward" size={16} color={colors.white} />
-              </Pressable>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Pressable
+                  style={[ds.plannerNextBtn, totalNightsSelected !== plannedDuration && ds.plannerNextBtnDisabled]}
+                  disabled={totalNightsSelected !== plannedDuration}
+                  onPress={() => navigateToPlannerBudget(navigation)}
+                >
+                  <Text style={ds.plannerNextText}>Next</Text>
+                  <Ionicons name="arrow-forward" size={16} color={colors.white} />
+                </Pressable>
+                {nightsNeeded !== 0 && (
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: nightsNeeded > 0 ? colors.warning : colors.danger, marginTop: 2 }}>
+                    {nightsNeeded > 0 ? `Need ${nightsNeeded} more nt` : `Too many nights (${Math.abs(nightsNeeded)} extra)`}
+                  </Text>
+                )}
+              </View>
             </View>
 
             {plannerSelectedHotel ? (
-              <View style={ds.plannerActiveChip}>
+              <Pressable style={ds.plannerActiveChip} onPress={() => setShowPlannerModal(true)}>
                 <Ionicons name="bed" size={12} color={colors.primary} />
                 <Text style={ds.plannerActiveText} numberOfLines={1}>
                   Staying {plannerSelectedHotel.nights || 1} nt here
                 </Text>
-                <Pressable onPress={() => setShowPlannerModal(true)} style={ds.plannerEditBtn}>
+                <View style={ds.plannerEditBtn}>
                   <Text style={ds.plannerEditText}>Edit</Text>
-                </Pressable>
-              </View>
+                </View>
+              </Pressable>
             ) : (
               <Pressable style={ds.plannerSelectBtn} onPress={() => setShowPlannerModal(true)}>
                 <Ionicons name="add-circle-outline" size={16} color={colors.white} />
@@ -640,9 +723,16 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                 const totalEstimatedCost = nightlyPriceValue * currentNights;
 
                 const handleIncrement = () => {
-                  if (maxNightsAllowed && currentNights >= maxNightsAllowed) return;
-                  const newOut = new Date(checkInDate);
-                  newOut.setDate(newOut.getDate() + currentNights + 1);
+                  if (maxNightsAllowed && currentNights >= maxNightsAllowed) {
+                    Alert.alert('Trip Capacity', `You only have ${maxNightsAllowed} nights remaining in your trip.`);
+                    return;
+                  }
+                  const newOut = new Date(checkOutDate);
+                  newOut.setDate(newOut.getDate() + 1);
+                  if (isStayOverlapping(checkInDate, newOut, getHotelId(hotel))) {
+                    Alert.alert('Stay Overlap', 'This extension conflicts with another hotel already in your trip.');
+                    return;
+                  }
                   setCheckOutDate(newOut);
                 };
 
@@ -690,13 +780,16 @@ const HotelDetailsScreen = ({ route, navigation }) => {
                         
                         {tripNightsCap && (
                           <View style={{ marginBottom: 16 }}>
-                            <View style={ds.progressBarTrack}>
-                              {usedOthers > 0 && <View style={{ width: `${Math.min(100, (usedOthers / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.border }} />}
-                              <View style={{ width: `${Math.min(100, (currentNights / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.primary, borderLeftWidth: usedOthers > 0 ? 1 : 0, borderLeftColor: colors.background }} />
+                            <View style={{ height: 8, backgroundColor: colors.border + '55', borderRadius: 4, overflow: 'hidden', flexDirection: 'row' }}>
+                              {usedOthers > 0 && <View style={{ width: `${Math.min(100, (usedOthers / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.textMuted + '88' }} />}
+                              <View style={{ width: `${Math.min(100, (currentNights / tripNightsCap) * 100)}%`, height: '100%', backgroundColor: colors.primary, borderLeftWidth: usedOthers > 0 ? 1 : 0, borderLeftColor: colors.surface2 }} />
                             </View>
-                            <Text style={ds.progressText}>
-                              {totalUsed} / {tripNightsCap} nights used
-                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4, gap: 4 }}>
+                              <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '700' }}>
+                                {totalUsed} / {tripNightsCap} nights used
+                              </Text>
+                              {totalUsed === tripNightsCap && <Ionicons name="checkmark-circle" size={10} color={colors.primary} />}
+                            </View>
                           </View>
                         )}
 
@@ -774,27 +867,43 @@ const HotelDetailsScreen = ({ route, navigation }) => {
           isVisible={!!datePickerMode}
           mode="date"
           date={datePickerMode === 'checkIn' ? checkInDate : checkOutDate}
-          minimumDate={datePickerMode === 'checkOut' ? new Date(checkInDate.getTime() + 86400000) : new Date()}
+          minimumDate={new Date()}
           onConfirm={(date) => {
             const tripNightsCap = planner?.preferences?.nights ? Math.max(1, Number(planner?.preferences?.nights)) : null;
             const usedOthers = planner?.selectedHotels?.reduce((sum, h) => {
               if (getHotelId(h) === getHotelId(hotel)) return sum;
               return sum + (h.nights || 1);
             }, 0) || 0;
-            const maxNightsAllowed = tripNightsCap ? Math.max(1, tripNightsCap - usedOthers) : null;
+            const maxNightsAllowed = tripNightsCap ? Math.max(1, tripNightsCap - usedOthers) : 30;
 
             if (datePickerMode === 'checkIn') {
+              if (isStayOverlapping(date, checkOutDate, getHotelId(hotel))) {
+                Alert.alert('Stay Overlap', 'Selected check-in conflicts with another hotel already in your trip.');
+                setDatePickerMode(null);
+                return;
+              }
               setCheckInDate(date);
-              let newDiff = Math.ceil((checkOutDate - date) / 86400000);
-              if (newDiff < 1) newDiff = 1;
-              if (maxNightsAllowed && newDiff > maxNightsAllowed) newDiff = maxNightsAllowed;
+              let diff = Math.ceil((checkOutDate - date) / 86400000);
+              if (diff < 1) diff = 1;
+              if (diff > maxNightsAllowed) {
+                diff = maxNightsAllowed;
+                Alert.alert('Nights Adjusted', `Check-out was adjusted to stay within your ${tripNightsCap}-night trip limit.`);
+              }
               const nextOut = new Date(date);
-              nextOut.setDate(nextOut.getDate() + newDiff);
+              nextOut.setDate(nextOut.getDate() + diff);
               setCheckOutDate(nextOut);
             } else {
+              if (isStayOverlapping(checkInDate, date, getHotelId(hotel))) {
+                Alert.alert('Stay Overlap', 'Selected check-out conflicts with another hotel already in your trip.');
+                setDatePickerMode(null);
+                return;
+              }
               let diff = Math.ceil((date - checkInDate) / 86400000);
               if (diff < 1) diff = 1;
-              if (maxNightsAllowed && diff > maxNightsAllowed) diff = maxNightsAllowed;
+              if (diff > maxNightsAllowed) {
+                diff = maxNightsAllowed;
+                Alert.alert('Nights Adjusted', `Stay capped at ${maxNightsAllowed} nights to fit your ${tripNightsCap}-night trip limit.`);
+              }
               const nextOut = new Date(checkInDate);
               nextOut.setDate(nextOut.getDate() + diff);
               setCheckOutDate(nextOut);
@@ -1155,6 +1264,14 @@ const ds = StyleSheet.create({
     borderColor: colors.border,
   },
   plannerActiveText: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  plannerClearLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  plannerClearLinkText: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
   plannerEditBtn: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   plannerEditText: { color: colors.white, fontSize: 11, fontWeight: '800' },
   plannerSelectBtn: {

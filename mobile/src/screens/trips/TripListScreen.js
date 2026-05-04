@@ -12,7 +12,7 @@ import colors from '../../constants/colors';
 import { getTripsApi } from '../../api/tripApi';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { useTripPlanner } from '../../context/TripPlannerContext';
-import { navigateToPlannerDistrictPicker } from '../../navigation/tripPlannerFlow';
+import { navigateToPlannerDistrictPicker, navigateToPlannerSummary } from '../../navigation/tripPlannerFlow';
 import WelcomeGuide from '../../components/common/WelcomeGuide';
 
 const StatBox = ({ icon, value, label, color }) => (
@@ -59,6 +59,11 @@ const TripListScreen = ({ navigation }) => {
     navigateToPlannerDistrictPicker(navigation);
   };
 
+  const resumeTripPlanner = () => {
+    planner.resumePlanning();
+    navigateToPlannerSummary(navigation);
+  };
+
   const ListHeader = () => (
     <View style={styles.headerBlock}>
       <View style={styles.heroSection}>
@@ -78,6 +83,24 @@ const TripListScreen = ({ navigation }) => {
           <StatBox icon="checkmark-circle-outline" value={completedCount} label="Done" color={colors.statusCompleted} />
         </View>
       ) : null}
+
+      {planner.hasDraft && (
+        <Pressable onPress={resumeTripPlanner} style={styles.resumeBanner}>
+          <View style={styles.resumeIconBox}>
+            <Ionicons name="time-outline" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.resumeTitle}>Resume Trip Plan</Text>
+            <Text style={styles.resumeSub}>
+              Continue with {planner.selectedDistrict?.name || 'your draft'}
+            </Text>
+          </View>
+          <View style={styles.resumeBadge}>
+            <Text style={styles.resumeBadgeText}>DRAFT</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
+        </Pressable>
+      )}
 
       <Pressable onPress={startTripPlanner} style={styles.planCta}>
         <LinearGradient
@@ -228,6 +251,48 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
+    marginBottom: 8,
+  },
+  resumeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+    gap: 12,
+  },
+  resumeIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resumeTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: colors.textPrimary,
+  },
+  resumeSub: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  resumeBadge: {
+    backgroundColor: colors.warning + '18',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  resumeBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: colors.warning,
   },
   planCtaGrad: {
     flexDirection: 'row',
