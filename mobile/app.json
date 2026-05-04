@@ -23,7 +23,7 @@
     "extra": {
       "apiBaseUrl": "http://10.0.2.2:5000/api/v1",
       "eas": {
-        "projectId": "7b11564f-973c-4e2f-b1d3-22a9af7f419b"
+        "projectId": "2489f95e-7e3e-4823-8a63-652814af5507"
       }
     },
     "plugins": [
