@@ -361,7 +361,7 @@ const AdminHotelFormScreen = ({ route, navigation }) => {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true, aspect: [16, 9], quality: 0.7
     });
     if (!result.canceled && result.assets?.length > 0) {

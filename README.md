@@ -14,7 +14,7 @@ TravelGenie helps users plan multi-day trips across Sri Lanka — select a distr
 
 🔥 **Multi-Role Support**: Switch between 🌍 **Guest Mode** (browse destinations without an account), 🎒 **User Mode** (full trip planning), and 👑 **Admin Mode** (advanced dashboard and moderation rights).
 
-[📖 Backend Docs](Backend/README.md) · [📱 Mobile Docs](mobile/README.md)
+[📖 Backend Docs](Backend/README.md) · [📱 Mobile Docs](mobile/README.md) · [🚀 Deployment Guide](docs/deployment-guide.md)
 
 </div>
 
