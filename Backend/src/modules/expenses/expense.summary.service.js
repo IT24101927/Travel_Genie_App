@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
-const Expense = require('./expense.model');
-const Trip = require('../trips/trip.model');
+const Expense = require('./models/expense.model');
+const Trip = require('../trips/models/trip.model');
+
 const AppError = require('../../utils/appError');
 
 const toObjectId = (value) => new mongoose.Types.ObjectId(value);

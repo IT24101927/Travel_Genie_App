@@ -1,4 +1,4 @@
-const Trip = require('./trip.model');
+const Trip = require('./models/trip.model');
 const AppError = require('../../utils/appError');
 
 const createTrip = async (userId, payload) => {

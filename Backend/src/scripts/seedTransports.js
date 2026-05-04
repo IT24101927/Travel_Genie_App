@@ -476,8 +476,9 @@ const transportData = [
   }
 ];
 
-const Place = require('../modules/places/place.model');
-const Hotel = require('../modules/hotels/hotel.model');
+const Place = require('../modules/places/models/place.model');
+const Hotel = require('../modules/hotels/models/hotel.model');
+
 
 const CITIES_AND_PROVINCES = {
   'Colombo': 'Western',

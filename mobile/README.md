@@ -39,6 +39,14 @@ An integrated multi-role mobile application supporting User, Guest, and Admin wo
 - **Real-Time Data Sync**: Immediate UI updates for average ratings and review counts upon approval of feedback.
 - **Social Trust System**: Interaction badges for traveler types (Business, Family, etc.) and community helpfulness voting.
 - **Admin Governance Dashboard**: Specialized mobile interface for flagging, approving, or rejecting user reviews to ensure platform safety.
+ 
+## 🎨 Design System & Atomic Components
+ 
+- **Premium UI Foundation**: A custom-built design system using a curated color palette (`colors.js`), consistent spacing, and modern typography.
+- **High-Fidelity Components**: Specialized atomic components like `AppDatePicker` (with iOS spinner mode & manual formatting), `AppSelect` (custom bottom-sheet selectors), and `AppInput` for a unified, professional feel.
+- **Micro-Animations**: Strategic use of `Pressable` states and `LinearGradient` to create a responsive, "alive" interface.
+- **Glassmorphism & Gradients**: Modern aesthetic utilizing translucent overlays and vibrant gradients across hero sections and action cards.
+
 
 ---
 

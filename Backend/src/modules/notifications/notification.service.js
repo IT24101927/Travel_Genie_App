@@ -1,4 +1,4 @@
-const Notification = require('./notification.model');
+const Notification = require('./models/notification.model');
 const AppError = require('../../utils/appError');
 
 const createNotification = async (payload) => {

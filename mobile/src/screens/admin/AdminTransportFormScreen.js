@@ -17,8 +17,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
 import AppButton from '../../components/common/AppButton';
+import AppDatePicker from '../../components/common/AppDatePicker';
 import AppInput from '../../components/common/AppInput';
 import AppSelect from '../../components/common/AppSelect';
+
 import colors from '../../constants/colors';
 import { getDistrictsApi } from '../../api/districtApi';
 import {
@@ -772,6 +774,21 @@ const AdminTransportFormScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [typeConfirmed, setTypeConfirmed] = useState(isEditing);
+  
+  const parseTimeStr = (timeStr) => {
+    if (!timeStr) return new Date();
+    const [hh, mm] = timeStr.split(/[:.]/);
+    const d = new Date();
+    d.setHours(parseInt(hh) || 0, parseInt(mm) || 0, 0, 0);
+    return d;
+  };
+
+  const handleTimeConfirm = (key, date) => {
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    handleChange(key, `${hh}:${mm}`);
+  };
+
 
   const typeMeta = useMemo(() => getTransportTypeMeta(form.type || 'other'), [form.type]);
   const typeCopy = useMemo(() => getCopy(form.type || 'other'), [form.type]);
@@ -1180,23 +1197,26 @@ const AdminTransportFormScreen = ({ navigation, route }) => {
             <Text style={styles.sectionTitle}>Schedule & Fare</Text>
             <View style={styles.twoCol}>
               <View style={styles.half}>
-                <AppInput
-                  label="Depart HH:mm *"
-                  value={form.departureTime}
-                  onChangeText={(value) => handleChange('departureTime', value)}
+                <AppDatePicker
+                  label="Depart Time *"
+                  mode="time"
+                  value={parseTimeStr(form.departureTime)}
+                  onChange={(date) => handleTimeConfirm('departureTime', date)}
                   placeholder="05:55"
                   leftIcon="time-outline"
                 />
               </View>
               <View style={styles.half}>
-                <AppInput
-                  label="Arrive HH:mm *"
-                  value={form.arrivalTime}
-                  onChangeText={(value) => handleChange('arrivalTime', value)}
+                <AppDatePicker
+                  label="Arrive Time *"
+                  mode="time"
+                  value={parseTimeStr(form.arrivalTime)}
+                  onChange={(date) => handleTimeConfirm('arrivalTime', date)}
                   placeholder="08:42"
                   leftIcon="time"
                 />
               </View>
+
             </View>
             <View style={styles.twoCol}>
               <View style={styles.half}>

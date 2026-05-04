@@ -148,7 +148,43 @@ const TypeFilter = ({ type, active, onPress }) => {
   );
 };
 
-const ScheduleAdminCard = ({ item, onEdit, onDelete }) => {
+const SearchBar = React.memo(({ value, onChange, onClear }) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleChange = (text) => {
+    setLocalValue(text);
+    onChange(text);
+  };
+
+  return (
+    <View style={styles.searchBar}>
+      <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search route, station, district..."
+        placeholderTextColor={colors.textMuted}
+        value={localValue}
+        onChangeText={handleChange}
+        returnKeyType="search"
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
+      {localValue ? (
+        <Pressable onPress={() => { setLocalValue(''); onClear(); }}>
+          <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+});
+
+
+const ScheduleAdminCard = React.memo(({ item, onEdit, onDelete }) => {
+
   const meta = getTransportTypeMeta(item.type);
   const bookingMeta = getBookingChannelMeta(item.bookingChannel);
   const routeLabel = [item.routeNo, item.routeName].filter(Boolean).join(' · ') || meta.label;
@@ -218,7 +254,8 @@ const ScheduleAdminCard = ({ item, onEdit, onDelete }) => {
       </View>
     </View>
   );
-};
+});
+
 
 /* ─────────────── Insights tab content ─────────────── */
 
@@ -405,6 +442,8 @@ const AdminTransportsScreen = ({ navigation }) => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchField, setSearchField] = useState('all'); // all, from, to, provider
+
 
   // Insights state
   const [insightsData, setInsightsData] = useState(null);
@@ -416,22 +455,46 @@ const AdminTransportsScreen = ({ navigation }) => {
   const listRef = useRef(null);
   const searchTimer = useRef(null);
   const isFirstLoad = useRef(true);
+  const requestId = useRef(0);
+
 
   const handleSearchChange = useCallback((text) => {
-    setSearch(text);
+    setSearch(text); // Immediate update for UI stability
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => setDebouncedSearch(text), 400);
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(text);
+    }, 350);
   }, []);
 
+
+  const handleClearSearch = useCallback(() => {
+    setSearch('');
+    setDebouncedSearch('');
+  }, []);
+
+
   const loadData = useCallback(async ({ silent = false, pageNum = 1, append = false } = {}) => {
+    const currentRequestId = ++requestId.current;
     try {
       if (!silent && !append) setLoading(true);
       if (append) setLoadingMore(true);
       setError('');
       const params = { page: pageNum, limit: PAGE_SIZE };
       if (selectedType !== 'all') params.type = selectedType;
-      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+      
+      const query = debouncedSearch.trim();
+      if (query) {
+        if (searchField === 'all') params.search = query;
+        else if (searchField === 'from') params.departureStation = query;
+        else if (searchField === 'to') params.arrivalStation = query;
+        else if (searchField === 'provider') params.provider = query;
+      }
+
+      
       const res = await adminGetTransportSchedulesApi(params);
+      
+      if (currentRequestId !== requestId.current) return;
+
       const data = res?.data || {};
       const newSchedules = data.schedules || [];
       setSchedules((prev) => (append ? [...prev, ...newSchedules] : newSchedules));
@@ -439,13 +502,20 @@ const AdminTransportsScreen = ({ navigation }) => {
       setTotalPages(data.totalPages || 1);
       setTotal(data.total || newSchedules.length);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to fetch transport schedules.'));
+      if (currentRequestId === requestId.current) {
+        setError(getApiErrorMessage(err, 'Failed to fetch transport schedules.'));
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
-      setLoadingMore(false);
+      if (currentRequestId === requestId.current) {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+      }
     }
-  }, [selectedType, debouncedSearch]);
+  }, [selectedType, debouncedSearch, searchField]);
+
+
+
 
   const loadInsights = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -470,7 +540,8 @@ const AdminTransportsScreen = ({ navigation }) => {
   useEffect(() => {
     if (isFirstLoad.current) { isFirstLoad.current = false; return; }
     loadData({ silent: true });
-  }, [debouncedSearch, selectedType]);
+  }, [debouncedSearch, selectedType, searchField]);
+
 
   useEffect(() => {
     if (tab === 'insights' && !insightsLoaded.current) {
@@ -524,7 +595,7 @@ const AdminTransportsScreen = ({ navigation }) => {
     );
   };
 
-  const renderHeader = () => (
+  const ListHeader = useMemo(() => (
     <View>
       <TopHeader
         navigation={navigation}
@@ -534,24 +605,37 @@ const AdminTransportsScreen = ({ navigation }) => {
         insightsStat={insightsStat}
       />
 
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search route, station, district..."
-          placeholderTextColor={colors.textMuted}
-          value={search}
-          onChangeText={handleSearchChange}
-          returnKeyType="search"
-        />
-        {search ? (
-          <Pressable onPress={() => { setSearch(''); setDebouncedSearch(''); }}>
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-          </Pressable>
-        ) : null}
+      <View style={styles.searchByRow}>
+
+        <Text style={styles.searchByLabel}>Search by:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.searchByPills}>
+          {[
+            { id: 'all', label: 'All', icon: 'apps-outline' },
+            { id: 'from', label: 'Depart', icon: 'location-outline' },
+            { id: 'to', label: 'Arrive', icon: 'flag-outline' }
+          ].map((f) => (
+            <Pressable
+              key={f.id}
+              style={[styles.searchByPill, searchField === f.id && styles.searchByPillActive]}
+              onPress={() => setSearchField(f.id)}
+            >
+              <Ionicons name={f.icon} size={12} color={searchField === f.id ? colors.white : colors.textMuted} />
+              <Text style={[styles.searchByPillText, searchField === f.id && styles.searchByPillTextActive]}>{f.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
 
+      <SearchBar
+        value={search}
+        onChange={handleSearchChange}
+        onClear={handleClearSearch}
+      />
+
+
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
+
         {TYPE_FILTERS.map((type) => (
           <TypeFilter
             key={type}
@@ -569,7 +653,9 @@ const AdminTransportsScreen = ({ navigation }) => {
 
       <ErrorText message={error} />
     </View>
-  );
+  ), [navigation, tab, schedulesStat, insightsStat, search, handleSearchChange, selectedType, total, error, searchField]);
+
+
 
   const renderFooter = () => {
     if (!loadingMore) return null;
@@ -626,7 +712,7 @@ const AdminTransportsScreen = ({ navigation }) => {
         ref={listRef}
         data={schedules}
         keyExtractor={(item) => item._id}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={ListHeader}
         ListFooterComponent={renderFooter}
         onScroll={handleListScroll}
         scrollEventThrottle={16}
@@ -794,6 +880,20 @@ const styles = StyleSheet.create({
   resultHeader: { paddingHorizontal: 16, marginTop: 18, marginBottom: 2 },
   resultTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '900' },
   resultSub: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginTop: 2 },
+
+  searchByRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 10, gap: 10 },
+  searchByLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  searchByPills: { gap: 6 },
+  searchByPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.surface, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 10, paddingVertical: 5
+  },
+  searchByPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  searchByPillText: { color: colors.textMuted, fontSize: 11, fontWeight: '900' },
+  searchByPillTextActive: { color: colors.white },
+
 
   /* ── Schedule cards (kept) ── */
   card: {

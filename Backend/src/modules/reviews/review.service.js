@@ -1,8 +1,9 @@
-const Review = require('./review.model');
+const Review = require('./models/review.model');
 const AppError = require('../../utils/appError');
 const mongoose = require('mongoose');
-const Place = require('../places/place.model');
-const Hotel = require('../hotels/hotel.model');
+const Place = require('../places/models/place.model');
+const Hotel = require('../hotels/models/hotel.model');
+
 const NotificationService = require('../notifications/notification.service');
 
 const createReview = async (user, payload) => {

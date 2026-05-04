@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
-const Notification = require('../modules/notifications/notification.model');
-const User = require('../modules/users/user.model');
-const Trip = require('../modules/trips/trip.model');
+const Notification = require('../modules/notifications/models/notification.model');
+const User = require('../modules/users/models/user.model');
+const Trip = require('../modules/trips/models/trip.model');
+
 
 const seedAlerts = async () => {
   try {

@@ -1,5 +1,6 @@
-const Place = require('./place.model');
-const District = require('./district.model');
+const Place = require('./models/place.model');
+const District = require('./models/district.model');
+
 const AppError = require('../../utils/appError');
 
 const escapeRegExp = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

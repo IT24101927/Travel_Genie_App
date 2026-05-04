@@ -5,9 +5,10 @@ const path = require('path');
 // Load env
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-const PriceRecord = require('../modules/expenses/priceRecord.model');
-const Place = require('../modules/places/place.model');
-const Hotel = require('../modules/hotels/hotel.model');
+const PriceRecord = require('../modules/expenses/models/priceRecord.model');
+const Place = require('../modules/places/models/place.model');
+const Hotel = require('../modules/hotels/models/hotel.model');
+
 
 const seedData = async () => {
   try {

@@ -16,11 +16,15 @@
       "supportsTablet": true
     },
     "android": {
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.kavishal.travelgeniemobile"
     },
     "web": {},
     "extra": {
-      "apiBaseUrl": "http://10.0.2.2:5000/api/v1"
+      "apiBaseUrl": "http://10.0.2.2:5000/api/v1",
+      "eas": {
+        "projectId": "7b11564f-973c-4e2f-b1d3-22a9af7f419b"
+      }
     },
     "plugins": [
       "@react-native-community/datetimepicker"

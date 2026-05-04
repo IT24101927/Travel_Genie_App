@@ -1,4 +1,4 @@
-const User = require('../users/user.model');
+const User = require('../users/models/user.model');
 const env = require('../../config/env');
 const AppError = require('../../utils/appError');
 const { generateToken } = require('../../utils/jwt');

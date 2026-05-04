@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const { connectDatabase } = require('../config/db');
-const Place = require('../modules/places/place.model');
-const Hotel = require('../modules/hotels/hotel.model');
+const Place = require('../modules/places/models/place.model');
+const Hotel = require('../modules/hotels/models/hotel.model');
+
 
 async function restoreHotelPlaces() {
   try {

@@ -1,17 +1,22 @@
 const express = require('express');
 
-const authRoutes = require('../modules/auth/auth.routes');
-const userRoutes = require('../modules/users/user.routes');
-const tripRoutes = require('../modules/trips/trip.routes');
-const placeRoutes = require('../modules/places/place.routes');
-const districtRoutes = require('../modules/places/district.routes');
-const hotelRoutes = require('../modules/hotels/hotel.routes');
-const expenseRoutes = require('../modules/expenses/expense.routes');
-const reviewRoutes = require('../modules/reviews/review.routes');
-const notificationRoutes = require('../modules/notifications/notification.routes');
+const authRoutes = require('../modules/auth/routes/auth.routes');
+
+const userRoutes = require('../modules/users/routes/user.routes');
+
+const tripRoutes = require('../modules/trips/routes/trip.routes');
+const placeRoutes = require('../modules/places/routes/place.routes');
+const districtRoutes = require('../modules/places/routes/district.routes');
+
+const hotelRoutes = require('../modules/hotels/routes/hotel.routes');
+const expenseRoutes = require('../modules/expenses/routes/expense.routes');
+const reviewRoutes = require('../modules/reviews/routes/review.routes');
+const notificationRoutes = require('../modules/notifications/routes/notification.routes');
+
 const transportRoutes = require('../modules/transport/routes/transportRoutes');
 const transportAdminRoutes = require('../modules/transport/routes/transportAdmin.routes');
-const adminRoutes = require('../modules/admin/admin.routes');
+const adminRoutes = require('../modules/admin/routes/admin.routes');
+
 
 const router = express.Router();
 

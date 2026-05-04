@@ -11,13 +11,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 
+
 import AppButton from '../../components/common/AppButton';
+import AppDatePicker from '../../components/common/AppDatePicker';
 import AppInput from '../../components/common/AppInput';
 import AppSelect from '../../components/common/AppSelect';
 import ErrorText from '../../components/common/ErrorText';
+
 import colors from '../../constants/colors';
 import { createTransportApi } from '../../api/transportApi';
 import { getTripsApi } from '../../api/tripApi';
@@ -103,7 +105,7 @@ const AddTransportScreen = ({ navigation, route }) => {
     return next;
   });
   const [trips, setTrips] = useState([]);
-  const [pickerTarget, setPickerTarget] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -120,11 +122,7 @@ const AddTransportScreen = ({ navigation, route }) => {
 
   const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
-  const handleDateConfirm = (date) => {
-    if (pickerTarget === 'departure') set('departureDate', date);
-    if (pickerTarget === 'arrival') set('arrivalDate', date);
-    setPickerTarget(null);
-  };
+
 
   const handleSubmit = async () => {
     if (!form.fromLocation.trim()) return setError('Departure location is required.');
@@ -206,23 +204,24 @@ const AddTransportScreen = ({ navigation, route }) => {
               placeholder="Kandy, Ella, Galle Fort..."
               leftIcon="flag-outline"
             />
-            <AppInput
+            <AppDatePicker
               label="Departure Date and Time"
-              value={formatDateTime(form.departureDate)}
-              editable={false}
-              onContainerPress={() => setPickerTarget('departure')}
+              value={form.departureDate}
+              onChange={(date) => set('departureDate', date)}
               leftIcon="calendar-outline"
-              rightIcon="chevron-down-outline"
+              minimumDate={new Date(new Date().setHours(0,0,0,0))}
             />
-            <AppInput
+
+            <AppDatePicker
               label="Arrival Date and Time"
-              value={formatDateTime(form.arrivalDate)}
-              editable={false}
-              onContainerPress={() => setPickerTarget('arrival')}
+              value={form.arrivalDate}
+              onChange={(date) => set('arrivalDate', date)}
               leftIcon="time-outline"
-              rightIcon="chevron-down-outline"
               placeholder="Optional"
+              minimumDate={form.departureDate ? new Date(form.departureDate) : new Date()}
             />
+
+
           </View>
 
           <View style={styles.card}>
@@ -334,17 +333,7 @@ const AddTransportScreen = ({ navigation, route }) => {
           <AppButton title="Cancel" variant="secondary" onPress={() => navigation.goBack()} />
         </ScrollView>
 
-        <DateTimePickerModal
-          isVisible={!!pickerTarget}
-          mode="datetime"
-          date={
-            pickerTarget === 'arrival' && form.arrivalDate
-              ? new Date(form.arrivalDate)
-              : new Date(form.departureDate)
-          }
-          onConfirm={handleDateConfirm}
-          onCancel={() => setPickerTarget(null)}
-        />
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
