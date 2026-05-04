@@ -15,7 +15,9 @@ const createHotelHandler = asyncHandler(async (req, res) => {
   };
 
   if (req.file) {
-    payload.image_url = `/uploads/hotels/${req.file.filename}`;
+    payload.image_url = req.file.path.startsWith('http') 
+      ? req.file.path 
+      : `/uploads/hotels/${req.file.filename}`;
   }
 
   const hotel = await createHotel(req.user.userId, payload);
@@ -36,7 +38,9 @@ const uploadHotelImageHandler = asyncHandler(async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No image uploaded' });
   }
-  const imageUrl = `/uploads/hotels/${req.file.filename}`;
+  const imageUrl = req.file.path.startsWith('http') 
+    ? req.file.path 
+    : `/uploads/hotels/${req.file.filename}`;
   return sendSuccess(res, 200, 'Image uploaded successfully', { imageUrl });
 });
 
@@ -48,7 +52,9 @@ const updateHotelHandler = asyncHandler(async (req, res) => {
   }
 
   if (req.file) {
-    payload.image_url = `/uploads/hotels/${req.file.filename}`;
+    payload.image_url = req.file.path.startsWith('http') 
+      ? req.file.path 
+      : `/uploads/hotels/${req.file.filename}`;
   }
 
   const hotel = await updateHotel(req.params.id, payload);
