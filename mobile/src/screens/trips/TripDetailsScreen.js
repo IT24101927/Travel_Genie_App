@@ -128,10 +128,11 @@ const TripDetailsScreen = ({ navigation, route }) => {
   const statusColor = getStatusColor(trip.status);
   const selectedPlaces = Array.isArray(trip.selectedPlaces) ? trip.selectedPlaces : [];
   const selectedHotel = trip.selectedHotel && typeof trip.selectedHotel === 'object' ? trip.selectedHotel : null;
+  const selectedHotels = Array.isArray(trip.selectedHotels) && trip.selectedHotels.length > 0 ? trip.selectedHotels : null;
   const rawBudgetBreakdown = trip.budgetBreakdown && typeof trip.budgetBreakdown === 'object' ? trip.budgetBreakdown : null;
   const budgetBreakdown = rawBudgetBreakdown && Object.keys(rawBudgetBreakdown).length ? rawBudgetBreakdown : null;
   const hasPlannerDetails = !!(
-    trip.districtName || trip.province || selectedPlaces.length || selectedHotel || trip.travelers || trip.nights || budgetBreakdown
+      trip.districtName || trip.province || selectedPlaces.length || selectedHotel || selectedHotels || trip.travelers || trip.nights || budgetBreakdown
   );
 
   return (
@@ -208,7 +209,22 @@ const TripDetailsScreen = ({ navigation, route }) => {
               ) : null}
             </View>
 
-            {selectedHotel ? (
+            {selectedHotels ? (
+              selectedHotels.map((hotel, i) => (
+                <View key={`hotel-${i}`} style={styles.hotelRow}>
+                  <View style={styles.hotelIconBox}>
+                    <Ionicons name="bed-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.infoLabel}>Selected hotel</Text>
+                    <Text style={styles.infoValue} numberOfLines={1}>{hotel.name}</Text>
+                    {hotel.pricePerNight ? (
+                      <Text style={styles.hotelPrice}>{formatPlanAmount(hotel.pricePerNight)} / night</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))
+            ) : selectedHotel ? (
               <View style={styles.hotelRow}>
                 <View style={styles.hotelIconBox}>
                   <Ionicons name="bed-outline" size={20} color={colors.primary} />

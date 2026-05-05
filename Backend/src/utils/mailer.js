@@ -17,6 +17,9 @@ const getTransporter = () => {
       host: env.smtpHost,
       port: env.smtpPort,
       secure: env.smtpSecure,
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
       auth: {
         user: env.smtpUser,
         pass: env.smtpPass
@@ -33,15 +36,19 @@ const sendMail = async ({ to, subject, html, text }) => {
     return { sent: false, reason: 'SMTP not configured' };
   }
 
-  await mailer.sendMail({
-    from: env.smtpFrom || env.smtpUser,
-    to,
-    subject,
-    html,
-    text
-  });
-
-  return { sent: true };
+  try {
+    await mailer.sendMail({
+      from: env.smtpFrom || env.smtpUser,
+      to,
+      subject,
+      html,
+      text
+    });
+    return { sent: true };
+  } catch (error) {
+    console.error('Mail Error:', error);
+    return { sent: false, reason: error.message };
+  }
 };
 
 module.exports = {

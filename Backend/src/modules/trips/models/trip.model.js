@@ -62,6 +62,10 @@ const tripSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null
     },
+    selectedHotels: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: []
+    },
     tripType: {
       type: String,
       enum: ['solo', 'couple', 'family', 'group'],
