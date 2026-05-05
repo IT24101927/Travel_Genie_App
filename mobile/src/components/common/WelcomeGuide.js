@@ -23,21 +23,21 @@ const STEPS = [
     title: "Welcome to TravelGenie",
     description: "Your ultimate companion for exploring the wonders of Sri Lanka. Discover hidden gems with ease.",
     icon: "sparkles",
-    image: require('../../../assets/onboarding/welcome_hero.png'),
+    image: require('../../../assets/onboarding/welcome_hero.jpg'),
     color: colors.primary
   },
   {
     title: "Plan Your Perfect Trip",
     description: "Use our multi-step planner to pick a district, select must-visit places, and find the best hotels.",
     icon: "trail-sign",
-    image: require('../../../assets/onboarding/planner_demo.png'),
+    image: require('../../../assets/onboarding/planner_demo.jpg'),
     color: "#0E7C5F"
   },
   {
     title: "Smart Expense Tracking",
     description: "Keep your budget on track with live market price benchmarks and travel smarter than ever.",
     icon: "wallet",
-    image: require('../../../assets/onboarding/expense_demo.png'),
+    image: require('../../../assets/onboarding/expense_demo.jpg'),
     color: "#4F46E5"
   }
 ];
